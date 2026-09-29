@@ -11,6 +11,18 @@ test-results/
 tmp/
 .tmp/
 
+# Home-directory state (RS-TC-03, RS-SC-02): these belong under the resolved
+# home directory, never in a work tree, and are listed here so a stray
+# REPO_SIGNAL_HOME=. run cannot stage a credential, an archive or a backup
+config.json
+credentials.json
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+backups/
+
 # Forge workflow engine output — generated per run, never task work,
 # excluded from work attribution and auto-commit (verify.ts ENGINE_OWNED_PREFIXES)
 docs/engine-run.log
