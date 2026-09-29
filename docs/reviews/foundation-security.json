@@ -1,0 +1,13 @@
+{
+  "taskId": "RS-FND-REV-01",
+  "taskDigest": "4e9f0d5b8f543d095b21d78d69b72afa38062a1308783dd63dfbd4d46db3c449",
+  "reviewer": "Doug McCusker",
+  "reviewedAt": "2026-09-29T12:28:11.147Z",
+  "decision": "approved",
+  "evidence": [
+    {
+      "path": "docs/reviews/RS-FND-REV-01-console-review.md",
+      "sha256": "d3fe1c87d15fe6c7500d52fbbd34c5d2c86cd9eba00d396ff04fa6d39b012a0f"
+    }
+  ]
+}
