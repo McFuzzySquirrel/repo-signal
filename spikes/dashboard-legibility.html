@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RepoSignal legibility spike: throwaway design artifact, not the dashboard</title>
+    <style>
+      /* Throwaway spike styles. Hand written, no remote font, no remote asset,
+         no animation, no transition. System fonts only. */
+      :root {
+        --paper: #fbfbf9;
+        --panel: #ffffff;
+        --ink: #16202b;
+        --ink-muted: #4a5560;
+        --rule: #7d858d;
+        --series: #1c4f8b;
+        --gap-mark: #8a3b1f;
+        --banner-ink: #7a2d12;
+        --banner-paper: #fdf1e7;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        background: var(--paper);
+      }
+      body {
+        margin: 0;
+        padding: 0 1rem 4rem;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 1rem;
+        line-height: 1.55;
+      }
+      .skip-link {
+        position: absolute;
+        left: -9999px;
+        top: 0;
+        background: var(--panel);
+        color: var(--ink);
+        border: 2px solid var(--ink);
+        padding: 0.5rem 0.75rem;
+        z-index: 1;
+      }
+      .skip-link:focus {
+        left: 0.5rem;
+        top: 0.5rem;
+      }
+      .page {
+        max-width: 68rem;
+        margin: 0 auto;
+      }
+      .artifact-banner {
+        border: 2px solid var(--banner-ink);
+        background: var(--banner-paper);
+        color: var(--banner-ink);
+        padding: 0.85rem 1rem;
+        margin: 1rem 0;
+        font-weight: 600;
+      }
+      .artifact-banner p {
+        margin: 0.4rem 0 0;
+        font-weight: 400;
+      }
+      h1 {
+        font-size: 1.7rem;
+        line-height: 1.25;
+        margin: 1.25rem 0 0.5rem;
+      }
+      h2 {
+        font-size: 1.3rem;
+        margin: 2.25rem 0 0.5rem;
+        padding-bottom: 0.25rem;
+        border-bottom: 2px solid var(--rule);
+      }
+      h3 {
+        font-size: 1.1rem;
+        margin: 1.25rem 0 0.35rem;
+      }
+      h4 {
+        font-size: 0.98rem;
+        margin: 1.1rem 0 0.3rem;
+      }
+      p {
+        margin: 0.5rem 0;
+      }
+      .lede {
+        color: var(--ink-muted);
+        max-width: 46rem;
+      }
+      .note {
+        color: var(--ink-muted);
+        font-size: 0.92rem;
+        max-width: 46rem;
+      }
+      .questions li,
+      .order-list li {
+        margin: 0.3rem 0;
+      }
+      .panel-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(21rem, 1fr));
+        gap: 1.25rem;
+        align-items: start;
+        margin-top: 1rem;
+      }
+      .panel {
+        background: var(--panel);
+        border: 2px solid var(--rule);
+        padding: 0.85rem 1rem 1.25rem;
+      }
+      .panel h3 {
+        margin-top: 0;
+      }
+      .shape-label {
+        display: inline-block;
+        border: 1px solid var(--ink);
+        padding: 0.1rem 0.45rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem;
+      }
+      .block {
+        border-top: 1px solid var(--rule);
+        padding-top: 0.35rem;
+        margin-top: 0.9rem;
+      }
+      .block > h4:first-child {
+        margin-top: 0;
+      }
+      dl.values {
+        margin: 0.35rem 0 0;
+        display: grid;
+        grid-template-columns: minmax(9rem, auto) 1fr;
+        gap: 0.15rem 0.75rem;
+      }
+      dl.values dt {
+        color: var(--ink-muted);
+      }
+      dl.values dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+      }
+      figure {
+        margin: 0.5rem 0 0;
+      }
+      figcaption {
+        color: var(--ink-muted);
+        font-size: 0.9rem;
+        margin-top: 0.3rem;
+      }
+      figure svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid var(--rule);
+        background: var(--panel);
+      }
+      .axis-line {
+        stroke: var(--rule);
+        stroke-width: 1.5;
+      }
+      .tick-label,
+      .day-label {
+        fill: var(--ink-muted);
+        font-size: 11px;
+        font-family: system-ui, sans-serif;
+      }
+      .series-line {
+        fill: none;
+        stroke: var(--series);
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .gap-rule {
+        stroke: var(--gap-mark);
+        stroke-width: 1.5;
+        stroke-dasharray: 4 3;
+      }
+      .gap-label {
+        fill: var(--gap-mark);
+        font-size: 11px;
+        font-weight: 600;
+        font-family: system-ui, sans-serif;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.9rem;
+        font-variant-numeric: tabular-nums;
+      }
+      caption {
+        text-align: left;
+        color: var(--ink-muted);
+        font-size: 0.9rem;
+        padding-bottom: 0.35rem;
+      }
+      th,
+      td {
+        border: 1px solid var(--rule);
+        padding: 0.2rem 0.4rem;
+        text-align: right;
+      }
+      thead th,
+      tbody th {
+        text-align: left;
+      }
+      tr.gap-row td,
+      tr.gap-row th {
+        text-align: left;
+        color: var(--gap-mark);
+        font-weight: 600;
+      }
+      .order-card {
+        background: var(--panel);
+        border: 2px solid var(--rule);
+        padding: 0.75rem 1rem 1rem;
+        margin: 0.85rem 0;
+      }
+      .order-card h3 {
+        margin: 0 0 0.35rem;
+      }
+      footer {
+        margin-top: 3rem;
+        border-top: 2px solid var(--rule);
+        padding-top: 0.75rem;
+        color: var(--ink-muted);
+        font-size: 0.92rem;
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to the three panels</a>
+    <div class="page">
+      <header>
+        <div class="artifact-banner">
+          Throwaway design artifact. This page is not the RepoSignal dashboard.
+          <p>
+            It is a single static file. Nothing under <code>src</code> imports it, no command serves
+            it, and no test drives the product through it. Every number on it was typed in by hand
+            for this review and is invented. The page is kept as decision evidence for the
+            chart-order review and is safe to delete once that decision is recorded.
+          </p>
+        </div>
+        <h1>Which number comes first? A legibility spike for the repository detail page</h1>
+        <p class="lede">
+          Three invented histories are shown side by side: a series that climbs, a series that
+          holds still, and a series that falls away across the same fourteen days. Each panel is
+          drawn twice, once per acquisition metric and once per interest metric, and each panel
+          carries the same values as a table, so nothing here exists only as a picture. The point of
+          the page is to let a person choose the order the sections appear in on the real page.
+        </p>
+        <p class="note">
+          The words spiking, flat and decaying in the panel labels are vocabulary for this review
+          only. They name the shape of invented data so the three cases can be told apart. They are
+          not claims about any repository and the dashboard would never show them.
+        </p>
+      </header>
+
+      <main id="main">
+        <section aria-labelledby="how-to-use-heading">
+          <h2 id="how-to-use-heading">How to use this page, and what it asks you to decide</h2>
+          <p>
+            Open the three panels and compare them. Then record the answers below in
+            <code>docs/reviews/dashboard-legibility-spike.json</code>. No agent writes that file; a
+            person does, and no task of mine may claim it passed.
+          </p>
+          <ol class="questions">
+            <li>Which number should a maintainer see first on the repository detail page?</li>
+            <li>
+              Does the small-repository panel need a treatment of its own, or is the same layout
+              legible enough at those values?
+            </li>
+            <li>
+              Does unique cloners earn its own chart, or does it stay a headline number beside the
+              clones chart?
+            </li>
+            <li>Should the falling-away case be charted at all, or should the page state it as data it cannot read?</li>
+            <li>Is this page kept as decision evidence, or deleted once the decision is recorded?</li>
+          </ol>
+          <p class="note">
+            Every panel states a window of 2026-03-01 to 2026-03-14, and every panel contains one
+            day with no stored observation. That is deliberate: the order you pick has to be
+            legible while a day is missing, not only when the archive is complete.
+          </p>
+        </section>
+
+        <section aria-labelledby="orders-heading">
+          <h2 id="orders-heading">Three candidate section orders</h2>
+          <p>
+            The same panel is laid out three ways below. Nothing is recommended here, and no
+            candidate is marked as chosen; the decision is the reviewer's. The panels further down
+            this page are laid out in candidate A, so a reviewer can change one block to compare.
+          </p>
+
+          <div class="order-card">
+            <h3>Candidate A: current absolute numbers, then acquisition, then interest</h3>
+            <ol class="order-list">
+              <li>Current numbers, absolute values first</li>
+              <li>Acquisition chart</li>
+              <li>Interest chart</li>
+              <li>Clones against stars</li>
+              <li>Comparison with the previous week</li>
+              <li>The values behind both charts</li>
+            </ol>
+            <p class="note">The maintainer reads a number before any picture. What this costs: the answer is above the fold only if the numbers are short.</p>
+          </div>
+
+          <div class="order-card">
+            <h3>Candidate B: acquisition chart first, then current numbers</h3>
+            <ol class="order-list">
+              <li>Acquisition chart</li>
+              <li>Current numbers, absolute values first</li>
+              <li>Interest chart</li>
+              <li>Clones against stars</li>
+              <li>Comparison with the previous week</li>
+              <li>The values behind both charts</li>
+            </ol>
+            <p class="note">The maintainer sees the shape of the archive before any single value. What this costs: a reader who only wants today's number scrolls past a picture first.</p>
+          </div>
+
+          <div class="order-card">
+            <h3>Candidate C: clones against stars first, then the charts</h3>
+            <ol class="order-list">
+              <li>Clones against stars</li>
+              <li>Current numbers, absolute values first</li>
+              <li>Acquisition chart</li>
+              <li>Interest chart</li>
+              <li>Comparison with the previous week</li>
+              <li>The values behind both charts</li>
+            </ol>
+            <p class="note">The maintainer sees the two recognition numbers compared before anything else. What this costs: the two numbers come from different units, so the reader has no scale for either one first.</p>
+          </div>
+        </section>
+
+        <section aria-labelledby="panels-heading">
+          <h2 id="panels-heading">The three invented histories, laid out in candidate A</h2>
+          <p>
+            Repository names are invented. Each panel is a separate section with its own heading, so
+            the page can be read by heading without moving the pointer.
+          </p>
+
+          <div class="panel-grid">
+            <section class="panel" data-panel="spiking" aria-labelledby="panel-spiking-heading">
+              <h3 id="panel-spiking-heading">Panel A: sample-org/queue-worker</h3>
+              <p class="shape-label">Shape: spiking. Review vocabulary only.</p>
+
+              <div class="block">
+                <h4>1. Current numbers, absolute values first</h4>
+                <dl class="values">
+                  <dt>Clones, most recent 7 days</dt>
+                  <dd>386 clones over 7 stored days, 2026-03-08 to 2026-03-14</dd>
+                  <dt>Unique cloners, most recent 7 days</dt>
+                  <dd>172 unique cloners over the same 7 stored days</dd>
+                  <dt>Repository page views, most recent 7 days</dt>
+                  <dd>1103 views over the same 7 stored days</dd>
+                  <dt>Clones, whole 14-day window</dt>
+                  <dd>421 clones over 13 stored days of 14 calendar days</dd>
+                  <dt>Stars on the repository</dt>
+                  <dd>412 stars, counted once, not per day</dd>
+                </dl>
+                <p class="note">
+                  Days with no stored observation in this window: 2026-03-05.
+                </p>
+              </div>
+
+              <div class="block">
+                <h4>2. Acquisition chart: clones per stored day</h4>
+                <figure>
+                  <svg viewBox="0 0 560 210" role="img" aria-labelledby="chart-a1-title chart-a1-desc">
+                    <title id="chart-a1-title">Clones per stored day for sample-org/queue-worker, 2026-03-01 to 2026-03-14</title>
+                    <desc id="chart-a1-desc">The line rises across the window. The line is drawn as two separate strokes because 2026-03-05 has no stored observation and no line is drawn across that day. The same values are in the table at the end of this panel.</desc>
+                    <line class="axis-line" x1="58" y1="20" x2="58" y2="170" />
+                    <line class="axis-line" x1="58" y1="170" x2="512" y2="170" />
+                    <text class="tick-label" x="50" y="174" text-anchor="end">0</text>
+                    <text class="tick-label" x="50" y="136.5" text-anchor="end">20</text>
+                    <text class="tick-label" x="50" y="99" text-anchor="end">40</text>
+                    <text class="tick-label" x="50" y="61.5" text-anchor="end">60</text>
+                    <text class="tick-label" x="50" y="24" text-anchor="end">80</text>
+                    <text class="day-label" x="58" y="188">2026-03-01</text>
+                    <text class="day-label" x="500" y="188" text-anchor="end">2026-03-14</text>
+                    <line class="gap-rule" x1="194" y1="20" x2="194" y2="170" />
+                    <text class="gap-label" x="200" y="32">no stored observation</text>
+                    <polyline class="series-line" points="58,164.4 92,162.5 126,160.6 160,162.5" />
+                    <polyline class="series-line" points="228,156.9 262,147.5 296,113.8 330,80 364,66.9 398,55.6 432,61.3 466,50 500,38.8" />
+                  </svg>
+                  <figcaption>
+                    Clones per stored day. Two strokes, because 2026-03-05 has no stored
+                    observation and the line is not drawn across it. The vertical dashed rule marks
+                    that day. The axis runs from 0 to 80 clones, one step above the longest stored
+                    day in this panel, 70 clones on 2026-03-14, so the shorter values near the
+                    start stay readable instead of hugging the top.
+                  </figcaption>
+                </figure>
+              </div>
+
+              <div class="block">
+                <h4>3. Interest chart: repository page views per stored day</h4>
+                <figure>
+                  <svg viewBox="0 0 560 210" role="img" aria-labelledby="chart-a2-title chart-a2-desc">
+                    <title id="chart-a2-title">Repository page views per stored day for sample-org/queue-worker, 2026-03-01 to 2026-03-14</title>
+                    <desc id="chart-a2-desc">The line rises across the window. The line is drawn as two separate strokes because 2026-03-05 has no stored observation and no line is drawn across that day. The same values are in the table at the end of this panel.</desc>
+                    <line class="axis-line" x1="58" y1="20" x2="58" y2="170" />
+                    <line class="axis-line" x1="58" y1="170" x2="512" y2="170" />
+                    <text class="tick-label" x="50" y="174" text-anchor="end">0</text>
+                    <text class="tick-label" x="50" y="136.5" text-anchor="end">50</text>
+                    <text class="tick-label" x="50" y="99" text-anchor="end">100</text>
+                    <text class="tick-label" x="50" y="61.5" text-anchor="end">150</text>
+                    <text class="tick-label" x="50" y="24" text-anchor="end">200</text>
+                    <text class="day-label" x="58" y="188">2026-03-01</text>
+                    <text class="day-label" x="500" y="188" text-anchor="end">2026-03-14</text>
+                    <line class="gap-rule" x1="194" y1="20" x2="194" y2="170" />
+                    <text class="gap-label" x="200" y="32">no stored observation</text>
+                    <polyline class="series-line" points="58,155 92,152 126,150.5 160,153.5" />
+                    <polyline class="series-line" points="228,146.8 262,136.3 296,102.5 330,65 364,50 398,38.8 432,44 466,35 500,27.5" />
+                  </svg>
+                  <figcaption>
+                    Repository page views per stored day. Same break at 2026-03-05, same two
+                    strokes. The axis runs from 0 to 200 views, one step above the longest stored
+                    day in this panel, 190 views on 2026-03-14. The two charts in this panel are
+                    not drawn on a shared scale.
+                  </figcaption>
+                </figure>
+              </div>
+
+              <div class="block">
+                <h4>4. Clones against stars</h4>
+                <p>
+                  Unique cloners over the 14-day window: 196, over 13 stored days. Stars on the
+                  repository: 412, counted once. Of those two numbers, unique cloners is the
+                  smaller. A clone is a clone; nothing on this page calls either number adoption.
+                </p>
+              </div>
+
+              <div class="block">
+                <h4>5. Comparison with the previous week</h4>
+                <p>
+                  Not stated. The seven days before the most recent week, 2026-03-01 to 2026-03-07,
+                  hold 6 stored days and one day with no stored observation, 2026-03-05, so the two
+                  windows are not comparable and no change is written here. The slot is kept so the
+                  reviewer can place it in the order.
+                </p>
+              </div>
+
+              <div class="block">
+                <h4>6. The values behind both charts</h4>
+                <figure>
+                  <table>
+                    <caption>
+                      Every calendar day in the window for this panel, including the day with no
+                      stored observation. This table is the text alternative for both charts above.
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Day</th>
+                        <th scope="col">Clones</th>
+                        <th scope="col">Views</th>
+                        <th scope="col">Unique cloners</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><th scope="row">2026-03-01</th><td>3</td><td>20</td><td>2</td></tr>
+                      <tr><th scope="row">2026-03-02</th><td>4</td><td>24</td><td>3</td></tr>
+                      <tr><th scope="row">2026-03-03</th><td>5</td><td>26</td><td>4</td></tr>
+                      <tr><th scope="row">2026-03-04</th><td>4</td><td>22</td><td>3</td></tr>
+                      <tr class="gap-row"><th scope="row">2026-03-05</th><td colspan="3">No stored observation on this day. The chart shows a break here and no line is drawn across it.</td></tr>
+                      <tr><th scope="row">2026-03-06</th><td>7</td><td>31</td><td>5</td></tr>
+                      <tr><th scope="row">2026-03-07</th><td>12</td><td>45</td><td>7</td></tr>
+                      <tr><th scope="row">2026-03-08</th><td>30</td><td>90</td><td>14</td></tr>
+                      <tr><th scope="row">2026-03-09</th><td>48</td><td>140</td><td>21</td></tr>
+                      <tr><th scope="row">2026-03-10</th><td>55</td><td>160</td><td>24</td></tr>
+                      <tr><th scope="row">2026-03-11</th><td>61</td><td>175</td><td>27</td></tr>
+                      <tr><th scope="row">2026-03-12</th><td>58</td><td>168</td><td>26</td></tr>
+                      <tr><th scope="row">2026-03-13</th><td>64</td><td>180</td><td>29</td></tr>
+                      <tr><th scope="row">2026-03-14</th><td>70</td><td>190</td><td>31</td></tr>
+                    </tbody>
+                  </table>
+                  <figcaption>
+                    14 calendar days, 13 of them stored. The missing day is a stated gap, never a
+                    zero, and the row is kept so a screen reader reaches the absence.
+                  </figcaption>
+                </figure>
+              </div>
+            </section>
+
+            <section class="panel" data-panel="flat" aria-labelledby="panel-flat-heading">
+              <h3 id="panel-flat-heading">Panel B: sample-org/yaml-lint</h3>
+              <p class="shape-label">Shape: flat. Review vocabulary only.</p>
+
+              <div class="block">
+                <h4>1. Current numbers, absolute values first</h4>
+                <dl class="values">
+                  <dt>Clones, most recent 7 days</dt>
+                  <dd>31 clones over 7 stored days, 2026-03-08 to 2026-03-14</dd>
+                  <dt>Unique cloners, most recent 7 days</dt>
+                  <dd>24 unique cloners over the same 7 stored days</dd>
+                  <dt>Repository page views, most recent 7 days</dt>
+                  <dd>101 views over the same 7 stored days</dd>
+                  <dt>Clones, whole 14-day window</dt>
+                  <dd>54 clones over 13 stored days of 14 calendar days</dd>
+                  <dt>Stars on the repository</dt>
+                  <dd>28 stars, counted once, not per day</dd>
+                </dl>
+                <p class="note">
+                  Days with no stored observation in this window: 2026-03-06.
+                </p>
+              </div>
+
+              <div class="block">
+                <h4>2. Acquisition chart: clones per stored day</h4>
+                <figure>
+                  <svg viewBox="0 0 560 210" role="img" aria-labelledby="chart-b1-title chart-b1-desc">
+                    <title id="chart-b1-title">Clones per stored day for sample-org/yaml-lint, 2026-03-01 to 2026-03-14</title>
+                    <desc id="chart-b1-desc">The line moves between small values with no direction. The line is drawn as two separate strokes because 2026-03-06 has no stored observation and no line is drawn across that day. The same values are in the table at the end of this panel.</desc>
+                    <line class="axis-line" x1="58" y1="20" x2="58" y2="170" />
+                    <line class="axis-line" x1="58" y1="170" x2="512" y2="170" />
+                    <text class="tick-label" x="50" y="174" text-anchor="end">0</text>
+                    <text class="tick-label" x="50" y="136.5" text-anchor="end">2</text>
+                    <text class="tick-label" x="50" y="99" text-anchor="end">4</text>
+                    <text class="tick-label" x="50" y="61.5" text-anchor="end">6</text>
+                    <text class="tick-label" x="50" y="24" text-anchor="end">8</text>
+                    <text class="day-label" x="58" y="188">2026-03-01</text>
+                    <text class="day-label" x="500" y="188" text-anchor="end">2026-03-14</text>
+                    <line class="gap-rule" x1="228" y1="20" x2="228" y2="170" />
+                    <text class="gap-label" x="234" y="32">no stored observation</text>
+                    <polyline class="series-line" points="58,95 92,113.8 126,76.3 160,95 194,95" />
+                    <polyline class="series-line" points="262,113.8 296,76.3 330,95 364,57.5 398,95 432,113.8 466,76.3 500,95" />
+                  </svg>
+                  <figcaption>
+                    Clones per stored day. Two strokes, because 2026-03-06 has no stored
+                    observation. The axis runs from 0 to 8 clones, one step above the longest stored
+                    day in this panel, 6 clones on 2026-03-10. This is the small-repository case:
+                    every value fits in one digit and the reviewer should say whether the same
+                    layout is legible here.
+                  </figcaption>
+                </figure>
+              </div>
+
+              <div class="block">
+                <h4>3. Interest chart: repository page views per stored day</h4>
+                <figure>
+                  <svg viewBox="0 0 560 210" role="img" aria-labelledby="chart-b2-title chart-b2-desc">
+                    <title id="chart-b2-title">Repository page views per stored day for sample-org/yaml-lint, 2026-03-01 to 2026-03-14</title>
+                    <desc id="chart-b2-desc">The line moves between small values with no direction. The line is drawn as two separate strokes because 2026-03-06 has no stored observation and no line is drawn across that day. The same values are in the table at the end of this panel.</desc>
+                    <line class="axis-line" x1="58" y1="20" x2="58" y2="170" />
+                    <line class="axis-line" x1="58" y1="170" x2="512" y2="170" />
+                    <text class="tick-label" x="50" y="174" text-anchor="end">0</text>
+                    <text class="tick-label" x="50" y="136.5" text-anchor="end">5</text>
+                    <text class="tick-label" x="50" y="99" text-anchor="end">10</text>
+                    <text class="tick-label" x="50" y="61.5" text-anchor="end">15</text>
+                    <text class="tick-label" x="50" y="24" text-anchor="end">20</text>
+                    <text class="day-label" x="58" y="188">2026-03-01</text>
+                    <text class="day-label" x="500" y="188" text-anchor="end">2026-03-14</text>
+                    <line class="gap-rule" x1="228" y1="20" x2="228" y2="170" />
+                    <text class="gap-label" x="234" y="32">no stored observation</text>
+                    <polyline class="series-line" points="58,80 92,65 126,50 160,72.5 194,57.5" />
+                    <polyline class="series-line" points="262,80 296,50 330,65 364,42.5 398,72.5 432,80 466,57.5 500,65" />
+                  </svg>
+                  <figcaption>
+                    Repository page views per stored day. Same break at 2026-03-06. The axis runs
+                    from 0 to 20 views, one step above the longest stored day in this panel, 17
+                    views on 2026-03-10. Scaling each chart to its own longest stored day is what
+                    makes a small repository readable; a shared scale across repositories would
+                    flatten this line onto the axis.
+                  </figcaption>
+                </figure>
+              </div>
+
+              <div class="block">
+                <h4>4. Clones against stars</h4>
+                <p>
+                  Unique cloners over the 14-day window: 41, over 13 stored days. Stars on the
+                  repository: 28, counted once. Of those two numbers, unique cloners is the larger.
+                  This panel is the other direction of the same comparison, so a reviewer can see
+                  both orderings of the two numbers. A clone is a clone; nothing here calls it
+                  adoption.
+                </p>
+              </div>
+
+              <div class="block">
+                <h4>5. Comparison with the previous week</h4>
+                <p>
+                  Not stated. The seven days before the most recent week, 2026-03-01 to 2026-03-07,
+                  hold 6 stored days and one day with no stored observation, 2026-03-06, so no
+                  change is written here.
+                </p>
+              </div>
+
+              <div class="block">
+                <h4>6. The values behind both charts</h4>
+                <figure>
+                  <table>
+                    <caption>
+                      Every calendar day in the window for this panel, including the day with no
+                      stored observation. This table is the text alternative for both charts above.
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Day</th>
+                        <th scope="col">Clones</th>
+                        <th scope="col">Views</th>
+                        <th scope="col">Unique cloners</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><th scope="row">2026-03-01</th><td>4</td><td>12</td><td>3</td></tr>
+                      <tr><th scope="row">2026-03-02</th><td>3</td><td>14</td><td>2</td></tr>
+                      <tr><th scope="row">2026-03-03</th><td>5</td><td>16</td><td>4</td></tr>
+                      <tr><th scope="row">2026-03-04</th><td>4</td><td>13</td><td>3</td></tr>
+                      <tr><th scope="row">2026-03-05</th><td>4</td><td>15</td><td>3</td></tr>
+                      <tr class="gap-row"><th scope="row">2026-03-06</th><td colspan="3">No stored observation on this day. The chart shows a break here and no line is drawn across it.</td></tr>
+                      <tr><th scope="row">2026-03-07</th><td>3</td><td>12</td><td>2</td></tr>
+                      <tr><th scope="row">2026-03-08</th><td>5</td><td>16</td><td>4</td></tr>
+                      <tr><th scope="row">2026-03-09</th><td>4</td><td>14</td><td>3</td></tr>
+                      <tr><th scope="row">2026-03-10</th><td>6</td><td>17</td><td>5</td></tr>
+                      <tr><th scope="row">2026-03-11</th><td>4</td><td>13</td><td>3</td></tr>
+                      <tr><th scope="row">2026-03-12</th><td>3</td><td>12</td><td>2</td></tr>
+                      <tr><th scope="row">2026-03-13</th><td>5</td><td>15</td><td>4</td></tr>
+                      <tr><th scope="row">2026-03-14</th><td>4</td><td>14</td><td>3</td></tr>
+                    </tbody>
+                  </table>
+                  <figcaption>
+                    14 calendar days, 13 of them stored. The highest and lowest stored clone days in
+                    this window are 6 and 3, which is why a percentage beside the absolute number is
+                    worth more here than a chart of the same series.
+                  </figcaption>
+                </figure>
+              </div>
+            </section>
+
+            <section class="panel" data-panel="decaying" aria-labelledby="panel-decaying-heading">
+              <h3 id="panel-decaying-heading">Panel C: sample-org/page-cache</h3>
+              <p class="shape-label">Shape: decaying. Review vocabulary only.</p>
+
+              <div class="block">
+                <h4>1. Current numbers, absolute values first</h4>
+                <dl class="values">
+                  <dt>Clones, most recent 7 days</dt>
+                  <dd>98 clones over 6 stored days of 7, 2026-03-08 to 2026-03-14</dd>
+                  <dt>Unique cloners, most recent 7 days</dt>
+                  <dd>67 unique cloners over the same 6 stored days</dd>
+                  <dt>Repository page views, most recent 7 days</dt>
+                  <dd>405 views over the same 6 stored days</dd>
+                  <dt>Clones, whole 14-day window</dt>
+                  <dd>347 clones over 13 stored days of 14 calendar days</dd>
+                  <dt>Stars on the repository</dt>
+                  <dd>296 stars, counted once, not per day</dd>
+                </dl>
+                <p class="note">
+                  Days with no stored observation in this window: 2026-03-08.
+                </p>
+              </div>
+
+              <div class="block">
+                <h4>2. Acquisition chart: clones per stored day</h4>
+                <figure>
+                  <svg viewBox="0 0 560 210" role="img" aria-labelledby="chart-c1-title chart-c1-desc">
+                    <title id="chart-c1-title">Clones per stored day for sample-org/page-cache, 2026-03-01 to 2026-03-14</title>
+                    <desc id="chart-c1-desc">The line falls across the window. The line is drawn as two separate strokes because 2026-03-08 has no stored observation and no line is drawn across that day. The same values are in the table at the end of this panel.</desc>
+                    <line class="axis-line" x1="58" y1="20" x2="58" y2="170" />
+                    <line class="axis-line" x1="58" y1="170" x2="512" y2="170" />
+                    <text class="tick-label" x="50" y="174" text-anchor="end">0</text>
+                    <text class="tick-label" x="50" y="136.5" text-anchor="end">12</text>
+                    <text class="tick-label" x="50" y="99" text-anchor="end">24</text>
+                    <text class="tick-label" x="50" y="61.5" text-anchor="end">36</text>
+                    <text class="tick-label" x="50" y="24" text-anchor="end">48</text>
+                    <text class="day-label" x="58" y="188">2026-03-01</text>
+                    <text class="day-label" x="500" y="188" text-anchor="end">2026-03-14</text>
+                    <line class="gap-rule" x1="296" y1="20" x2="296" y2="170" />
+                    <text class="gap-label" x="302" y="32">no stored observation</text>
+                    <polyline class="series-line" points="58,32.5 92,41.9 126,51.3 160,60.6 194,66.9 228,76.3 262,82.5" />
+                    <polyline class="series-line" points="330,101.3 364,110.6 398,116.9 432,123.1 466,129.4 500,132.5" />
+                  </svg>
+                  <figcaption>
+                    Clones per stored day. Two strokes, because 2026-03-08 has no stored
+                    observation. The axis runs from 0 to 48 clones, one step above the longest
+                    stored day in this panel, 44 clones on 2026-03-01. The shape word is not written
+                    on the panel: the stored values are 44 on 2026-03-01 and 12 on 2026-03-14, and
+                    the page does not turn those two numbers into a claim about why.
+                  </figcaption>
+                </figure>
+              </div>
+
+              <div class="block">
+                <h4>3. Interest chart: repository page views per stored day</h4>
+                <figure>
+                  <svg viewBox="0 0 560 210" role="img" aria-labelledby="chart-c2-title chart-c2-desc">
+                    <title id="chart-c2-title">Repository page views per stored day for sample-org/page-cache, 2026-03-01 to 2026-03-14</title>
+                    <desc id="chart-c2-desc">The line falls across the window. The line is drawn as two separate strokes because 2026-03-08 has no stored observation and no line is drawn across that day. The same values are in the table at the end of this panel.</desc>
+                    <line class="axis-line" x1="58" y1="20" x2="58" y2="170" />
+                    <line class="axis-line" x1="58" y1="170" x2="512" y2="170" />
+                    <text class="tick-label" x="50" y="174" text-anchor="end">0</text>
+                    <text class="tick-label" x="50" y="136.5" text-anchor="end">40</text>
+                    <text class="tick-label" x="50" y="99" text-anchor="end">80</text>
+                    <text class="tick-label" x="50" y="61.5" text-anchor="end">120</text>
+                    <text class="tick-label" x="50" y="24" text-anchor="end">160</text>
+                    <text class="day-label" x="58" y="188">2026-03-01</text>
+                    <text class="day-label" x="500" y="188" text-anchor="end">2026-03-14</text>
+                    <line class="gap-rule" x1="296" y1="20" x2="296" y2="170" />
+                    <text class="gap-label" x="302" y="32">no stored observation</text>
+                    <polyline class="series-line" points="58,48.1 92,52.8 126,59.4 160,65 194,71.6 228,76.3 262,81.9" />
+                    <polyline class="series-line" points="330,95 364,100.6 398,104.4 432,108.1 466,113.8 500,118.4" />
+                  </svg>
+                  <figcaption>
+                    Repository page views per stored day. Same break at 2026-03-08. The axis runs
+                    from 0 to 160 views, one step above the longest stored day in this panel, 130
+                    views on 2026-03-01.
+                  </figcaption>
+                </figure>
+              </div>
+
+              <div class="block">
+                <h4>4. Clones against stars</h4>
+                <p>
+                  Unique cloners over the 14-day window: 238, over 13 stored days. Stars on the
+                  repository: 296, counted once. Of those two numbers, unique cloners is the
+                  smaller. Nothing on this panel says why the stored values are what they are.
+                </p>
+              </div>
+
+              <div class="block">
+                <h4>5. Comparison with the previous week</h4>
+                <p>
+                  Not stated. The most recent week, 2026-03-08 to 2026-03-14, holds 6 stored days
+                  and one day with no stored observation, 2026-03-08, so the two windows are not
+                  comparable and no change is written here. The seven days before it, 2026-03-01 to
+                  2026-03-07, do hold 7 stored days: 249 clones and 171 unique cloners.
+                </p>
+              </div>
+
+              <div class="block">
+                <h4>6. The values behind both charts</h4>
+                <figure>
+                  <table>
+                    <caption>
+                      Every calendar day in the window for this panel, including the day with no
+                      stored observation. This table is the text alternative for both charts above.
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Day</th>
+                        <th scope="col">Clones</th>
+                        <th scope="col">Views</th>
+                        <th scope="col">Unique cloners</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><th scope="row">2026-03-01</th><td>44</td><td>130</td><td>30</td></tr>
+                      <tr><th scope="row">2026-03-02</th><td>41</td><td>125</td><td>28</td></tr>
+                      <tr><th scope="row">2026-03-03</th><td>38</td><td>118</td><td>26</td></tr>
+                      <tr><th scope="row">2026-03-04</th><td>35</td><td>112</td><td>24</td></tr>
+                      <tr><th scope="row">2026-03-05</th><td>33</td><td>105</td><td>23</td></tr>
+                      <tr><th scope="row">2026-03-06</th><td>30</td><td>100</td><td>21</td></tr>
+                      <tr><th scope="row">2026-03-07</th><td>28</td><td>94</td><td>19</td></tr>
+                      <tr class="gap-row"><th scope="row">2026-03-08</th><td colspan="3">No stored observation on this day. The chart shows a break here and no line is drawn across it.</td></tr>
+                      <tr><th scope="row">2026-03-09</th><td>22</td><td>80</td><td>15</td></tr>
+                      <tr><th scope="row">2026-03-10</th><td>19</td><td>74</td><td>13</td></tr>
+                      <tr><th scope="row">2026-03-11</th><td>17</td><td>70</td><td>12</td></tr>
+                      <tr><th scope="row">2026-03-12</th><td>15</td><td>66</td><td>10</td></tr>
+                      <tr><th scope="row">2026-03-13</th><td>13</td><td>60</td><td>9</td></tr>
+                      <tr><th scope="row">2026-03-14</th><td>12</td><td>55</td><td>8</td></tr>
+                    </tbody>
+                  </table>
+                  <figcaption>
+                    14 calendar days, 13 of them stored. The missing day falls inside the most
+                    recent week, so the most recent weekly figure is stated over 6 stored days and
+                    says so rather than covering the hole.
+                  </figcaption>
+                </figure>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <p>
+          How this page is wired: not at all. It is one file under <code>spikes/</code>. No module
+          under <code>src/</code> imports it, no command serves it, and the repository
+          configuration does not list it. The real chart is written independently in
+          <code>src/views/components/line-chart.js</code> by a later task, and it reads the archive
+          rather than a hand-typed table. The shapes, colours and wording here are proposals to be
+          decided, not a description of shipped behaviour.
+        </p>
+        <p>
+          Accessibility of this page, for the reviewer's own judgement: one language declaration,
+          one title, one <code>main</code> landmark, a skip link as the first focusable element, a
+          heading sequence that skips no level, a table beside every chart, gap days named in text,
+          and no state carried by colour, icon or badge. It has no script, no inline handler, no
+          remote font, no remote image and no motion.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
