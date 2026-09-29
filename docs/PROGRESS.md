@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: FOUNDATION-AND-RUNTIME-1
+**Phase**: CHART-AND-INSIGHT-RENDERING-1
 **Status**: In Progress
-**Validation Gaps**: 1 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-09-29T12:00:37.604Z
+**Validation Gaps**: 3 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-09-29T12:06:52.353Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -12,9 +12,12 @@
 ## Completed Tasks
 - [x] Phase FOUNDATION-AND-RUNTIME-1, Task RS-FND-01: Create the runnable package, type-check config and fail-on-empty test wrapper (@platform-engineer)
   - Files: package.json, tsconfig.json, .gitignore, package-lock.json, scripts/run-tests.mjs, scripts/fixtures/empty-suite/sample.js, scripts/fixtures/passing-suite/passing.test.js, tests/run-tests.test.js
+- [x] Phase FOUNDATION-AND-RUNTIME-1, Task RS-FND-02: Resolve the home directory and the paths derived from it (@platform-engineer)
+  - Files: src/paths.js, tests/paths.test.js
 
 ## Current Task
-- None currently running
+- [ ] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
+  - Status: In progress
 
 ## Remaining
 - [ ] Phase FOUNDATION-AND-RUNTIME-1: Phase 1: Package, paths and dispatch
@@ -50,6 +53,8 @@
 
 ## Validation Gaps
 - Task RS-FND-01: Wrapper behaviour verified on Node 22.22.2 only; the 24.21.0 line named in the PRD is not available on this host
+- Task RS-FND-02: No node_modules was present in this sandbox, so npm ci was run before typecheck
+- Task RS-FND-02: Verified on Node 22.22.2 only; the 24 LTS line named in the PRD is not available on this host
 
 ## Notes
 - Workflow engine run 68703c92-c4cf-4b9a-837e-c16d453b3deb
