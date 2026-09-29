@@ -1,3 +1,26 @@
+# Dependencies — dev only: typescript and @types/node (PRD 6.1, zero runtime deps)
 node_modules/
+
+# TypeScript incremental check cache (tsc --noEmit, RS-TC-01)
+*.tsbuildinfo
+
+# Test and verification output
+coverage/
+*.lcov
+test-results/
+tmp/
+.tmp/
+
+# Forge workflow engine output — generated per run, never task work,
+# excluded from work attribution and auto-commit (verify.ts ENGINE_OWNED_PREFIXES)
 docs/engine-run.log
 docs/artifacts/
+docs/task-executions/
+docs/WORKFLOW-STATE.json
+docs/EXECUTION-AUDIT.jsonl
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*~

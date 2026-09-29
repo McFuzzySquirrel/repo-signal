@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "candidates": [
+    {
+      "name": "forge-task-implementation",
+      "description": "How to execute one RepoSignal forge-task contract end to end: read the task block, honour its exclusions and constraints, produce the named outputs, run the named validation commands, and stop at the human review gate instead of self-serving it.",
+      "consumers": [
+        "platform-engineer",
+        "data-engineer",
+        "github-integration-engineer",
+        "cli-engineer",
+        "collector-engineer",
+        "insight-engineer",
+        "ui-engineer",
+        "server-engineer",
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "All 40 implementation tasks across 11 feature documents share one contract shape (description, expectedOutputs, exclusions, constraints, acceptanceCriteria, validationCommands), and three of them share the same three files by design. Every specialist needs the same reading order and the same 'validate before reporting' rule, and the exclusion column is a hard boundary that a task-by-task agent is most likely to overrun. No existing package under .opencode/skills covers per-task execution discipline; the forge-* skills govern pipeline state and manifest compilation, not writing this project's code."
+    },
+    {
+      "name": "honest-data-rendering",
+      "description": "The no-fabrication rules for every layer that reads or renders the archive: a missing day stays a gap, insufficient data is a first-class result, absolute values precede percentages, and no output carries a score, threshold, verdict or unsupported directional claim.",
+      "consumers": [
+        "data-engineer",
+        "collector-engineer",
+        "github-integration-engineer",
+        "insight-engineer",
+        "ui-engineer",
+        "server-engineer",
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "This is the product's central invariant, carried by RS-DU-02 and RS-HO-01, and it has the widest blast radius in the team: a zero substituted for a gap, a bridged polyline, an interpolated delta or a verdict word is a silent lie that every downstream task would otherwise re-derive separately. It is fragile precisely because each failure looks like working code. It is also the most repeated requirement in the feature set, appearing as an acceptance criterion in at least nine tasks across storage, backfill, collection, insight, chart, page data and views."
+    },
+    {
+      "name": "token-and-egress-safety",
+      "description": "Credential and outbound-request safety for RepoSignal: the 0600 credential file, redaction of token-shaped values from every error surface, the api.github.com allowlist enforced before a socket opens, GET-only requests, and the REPO_SIGNAL_ALLOW_LOCAL_TRANSPORT test override gate.",
+      "consumers": [
+        "platform-engineer",
+        "github-integration-engineer",
+        "cli-engineer",
+        "collector-engineer",
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "RS-SC-01, RS-SC-02, RS-SC-04, RS-SP-03, RS-SP-04 and RS-SP-05 form one coupled boundary: the same token is read by the credential store, resolved through the provider interface, attached by the transport, and must never reach a log, an error, a row, a page or a test snapshot. The local transport override is the single most reused fragile mechanism in the plan, appearing in the collect, discover, collection e2e, server e2e and dashboard e2e tasks; if its gate is loosened, the outbound allowlist guarantee is quietly voided. No existing package covers it - the security-sensitive content of the forge-* skills is pipeline state, not secret handling."
+    },
+    {
+      "name": "github-rest-contract",
+      "description": "The pinned GitHub REST API contract: the 2026-03-10 version constant, required headers, the 14-day traffic window bound, 202-as-retryable for statistics endpoints, stargazer media type and last-page pagination, the typed error taxonomy, and the vendor documentation pages that must be re-read rather than remembered.",
+      "consumers": [
+        "github-integration-engineer",
+        "collector-engineer",
+        "cli-engineer",
+        "qa-engineer",
+        "platform-engineer"
+      ],
+      "action": "create",
+      "reason": "PRD section 6.4 lists the vendor pages the product depends on, and section 16 fixes the recorded default for both the API version and the fine-grained permission. This is the plan's main external drift surface: GitHub can change a payload or a media type, and the PRD already names a live human re-check gate (RS-OPS-LIVE-01) as the mitigation. The contract is needed by the client owner, by the collector that must survive its 202 behaviour, and by the three test suites that mock it, so the mocked assumptions and the real contract are recorded once rather than restated per module. Nothing under .opencode/skills addresses a vendor API contract."
+    },
+    {
+      "name": "archive-storage-discipline",
+      "description": "Writing and migrating the SQLite archive safely: forward-only migrations with content checksums, last-write-wins upsert carrying source and collection timestamp, append-only snapshots, one transaction per repository, no code path that deletes a fact row, and calendarDays for distinguishing a stored zero from a missing day.",
+      "consumers": [
+        "data-engineer",
+        "collector-engineer",
+        "github-integration-engineer",
+        "server-engineer"
+      ],
+      "action": "create",
+      "reason": "The archive is the product, and the same four rules are re-stated in RS-DB-CON-01, RS-COL-CON-01, RS-BKL-CON-01, RS-TC-02 and RS-DU-02, then re-stated again in the acceptance criteria of the collection, snapshot, backfill and page-data tasks. Four specialists write through this layer and would each implement a slightly different interpretation of provenance, granularity and the transaction boundary. It is also the layer PRD 12.2 flags as the first thing to re-check on a Node major upgrade because node:sqlite is a release candidate, so the isolation rule needs a single written home."
+    },
+    {
+      "name": "cli-command-surface",
+      "description": "Adding and testing a RepoSignal subcommand: registering in src/commands/index.js, the 0/1/2 exit-code contract, usage text for --help and unknown commands, one-fact-per-line structured output free of credential material, dry-run and filter flags, and proving reachability by spawning node src/cli.js.",
+      "consumers": [
+        "platform-engineer",
+        "data-engineer",
+        "cli-engineer",
+        "collector-engineer",
+        "ui-engineer"
+      ],
+      "action": "create",
+      "reason": "Five features add commands to one shared registry with one shared exit-code and output contract: config init/check, db migrate/status/verify/backup/restore, discover, collect, and serve. Each task's acceptance criteria assert reachability through the process entry point rather than an import, and that convention is easy to get wrong in a way that passes locally. There is no existing package describing this project's command surface; the general orchestration skills are about running agents, not building a CLI."
+    },
+    {
+      "name": "accessible-server-rendered-views",
+      "description": "Building RepoSignal's server-rendered pages and chart to WCAG 2.1 AA: one escaping helper per context, the shared document shell, one main landmark, a first-position skip link, unbroken heading order, a data table paired with every figure, text-first states, and theme tokens declared once with contrast ratios computed by a test.",
+      "consumers": [
+        "server-engineer",
+        "ui-engineer",
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "RS-AX-01 through RS-AX-07 apply to the router's escaping helpers, the shell, three view modules, the SVG chart and the stylesheet, so the same structural assertions are re-derived in the router, html, chart, view and integration tasks. The existing implement-visual-theme package cannot be reused: it is bound to a React DOM and PixiJS renderer stack and a different design system, and this product has no client-side framework, no charting library and system fonts only - extending it would import foreign assumptions. Nothing under .opencode/skills covers server-rendered HTML accessibility."
+    },
+    {
+      "name": "verification-loop",
+      "description": "The RepoSignal test and type-check loop: node:test through scripts/run-tests.mjs so a zero-test selection fails, tsc --noEmit over checkJs JSDoc types, tests mirroring the source layout, a temporary REPO_SIGNAL_HOME per run, and entry-point tests that spawn node src/cli.js instead of importing a module.",
+      "consumers": [
+        "platform-engineer",
+        "data-engineer",
+        "github-integration-engineer",
+        "cli-engineer",
+        "collector-engineer",
+        "insight-engineer",
+        "ui-engineer",
+        "server-engineer",
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "Every task in the plan names two validation commands drawn from this one loop, and RS-TC-04 makes a command that proves nothing an unacceptable check - the fail-on-empty wrapper exists precisely to enforce that. The loop has project-specific rules a general package would not carry: no test-framework dependency, no build step, checkJs JSDoc rather than TypeScript sources, and the temporary-home convention that keeps suites independent. It is also the loop the CI workflow and the release checklist assert, so its shape is load-bearing in three places."
+    },
+    {
+      "name": "documentation-contract-tests",
+      "description": "Writing RepoSignal's operator and public documents so they stay true: every command named in a runbook must exist in the repository, the README must retain its no-fabrication, redistribution, permission and Node-range statements, the CI workflow and release checklist must name the right gates, and no document may claim a test result or approval that was not observed.",
+      "consumers": [
+        "platform-engineer",
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "Four consecutive operations tasks build the same fragile artefact - a document plus a test that fails when the document drifts - and RS-OPS-CON-01 forbids stating an unobserved result or approval. The failure mode is specific and expensive: a runbook documenting a command that does not exist, or a README that quietly loses the statement that GitHub's traffic data may not be redistributed, and the automated tests pass either way. One consumer owns all four tasks, but the procedure recurs four times and the documents outlive the code they describe."
+    },
+    {
+      "name": "human-review-gate-protocol",
+      "description": "How agents treat the six human review gates (foundation security, legibility spike, dashboard accessibility, live GitHub integration, seven-day soak, open-source posture) without authoring, editing or self-certifying them.",
+      "consumers": [
+        "platform-engineer",
+        "github-integration-engineer",
+        "collector-engineer",
+        "ui-engineer",
+        "qa-engineer"
+      ],
+      "action": "omit",
+      "reason": "The responsibility is real but it is already carried by the artifact it would describe: every gate is a forge-task with kind human-review, a reviewFile path, and an explicit constraint that no agent may author or complete it, and the agents adjacent to each gate already state the rule locally. A shared package here would add a second place to maintain the same prohibition and would make self-certification easier to reach for rather than harder. The correct home is the task contract, which is immutable input."
+    },
+    {
+      "name": "node-sqlite-upgrade-drill",
+      "description": "Re-verifying the storage layer after a Node major upgrade, given that node:sqlite is a release candidate and the engine range is pinned to one LTS line.",
+      "consumers": [
+        "data-engineer",
+        "platform-engineer"
+      ],
+      "action": "omit",
+      "reason": "This is a single future event, not a repeated process: PRD 12.2 names it as a risk and PRD 16 fixes the engine range, and the release checklist already carries the schema version and supported Node range that a re-check would use. A dedicated package would be scaffolding for an occasion that has not occurred; when the upgrade is actually planned, the backup drill, the migration runner's checksum behaviour and the existing test suite already exercise the surface that matters."
+    }
+  ]
+}
