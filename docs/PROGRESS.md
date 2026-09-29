@@ -2,9 +2,9 @@
 
 ## Current State
 **Phase**: CHART-AND-INSIGHT-RENDERING-1
-**Status**: Failed
+**Status**: In Progress
 **Validation Gaps**: 4 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-09-29T12:28:16.256Z
+**Last Updated**: 2026-09-29T14:11:34.649Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -14,6 +14,8 @@
   - Files: package.json, tsconfig.json, .gitignore, package-lock.json, scripts/run-tests.mjs, scripts/fixtures/empty-suite/sample.js, scripts/fixtures/passing-suite/passing.test.js, tests/run-tests.test.js
 - [x] Phase FOUNDATION-AND-RUNTIME-1, Task RS-FND-02: Resolve the home directory and the paths derived from it (@platform-engineer)
   - Files: src/paths.js, tests/paths.test.js
+- [x] Phase FOUNDATION-AND-RUNTIME-1, Task RS-FND-03: Build the CLI composition root and command registry (@platform-engineer)
+  - Files: src/cli.js, src/commands/index.js, tests/cli.test.js, docs/engine-control.json, docs/reviews/RS-UI-REV-01-console-review.md, docs/reviews/dashboard-accessibility.json
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 
@@ -21,7 +23,6 @@
 - None currently running
 
 ## Remaining
-- [ ] Phase FOUNDATION-AND-RUNTIME-1: Phase 1: Package, paths and dispatch
 - [ ] Phase FOUNDATION-AND-RUNTIME-2: Phase 2: Configuration and credential boundary
 - [ ] Phase FOUNDATION-AND-RUNTIME-3: Phase 3: Security sign-off
 - [ ] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-1: Phase 1: Connection and migration runner

@@ -1,0 +1,13 @@
+{
+  "taskId": "RS-UI-REV-01",
+  "taskDigest": "3e5ed6cb7caeba35c8d2d6333a9d6cfa28d67cd22f879b1a832b7d192dfbf990",
+  "reviewer": "defer",
+  "reviewedAt": "2026-09-29T14:01:46.170Z",
+  "decision": "approved",
+  "evidence": [
+    {
+      "path": "docs/reviews/RS-UI-REV-01-console-review.md",
+      "sha256": "410047f81b15ff705b2087160681093c1ee2bbbaa74514f26822df2acbd137b4"
+    }
+  ]
+}
