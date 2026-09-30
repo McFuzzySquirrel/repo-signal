@@ -4,7 +4,7 @@
 **Phase**: GITHUB-API-CLIENT-1
 **Status**: In Progress
 **Validation Gaps**: 7 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-09-30T21:11:14.497Z
+**Last Updated**: 2026-09-30T21:15:33.330Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -26,16 +26,18 @@
   - Files: docs/reviews/foundation-security.json
 - [x] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-1, Task RS-DB-01: Open the database and apply migrations forward only (@data-engineer)
   - Files: src/db/connection.js, src/db/migrate.js, tests/migrate.test.js
+- [x] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-1, Task RS-DB-02: Create the core archive schema (@data-engineer)
+  - Files: src/db/migrations/001-core-schema.js, tests/initial-schema.test.js
 - [x] Phase GITHUB-API-CLIENT-1, Task RS-API-01: Build the credential provider and the allowlisted HTTP transport (@github-integration-engineer)
   - Files: src/github/credential-provider.js, src/github/http.js, tests/github-http.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 
 ## Current Task
-- None currently running
+- [ ] Phase GITHUB-API-CLIENT-1, Task RS-API-02: Implement the rate-limit and retry policy (@github-integration-engineer)
+  - Status: In progress
 
 ## Remaining
-- [ ] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-1: Phase 1: Connection and migration runner
 - [ ] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-2: Phase 2: Repository layer and the database command group
 - [ ] Phase GITHUB-API-CLIENT-1: Phase 1: Transport and request policy
 - [ ] Phase GITHUB-API-CLIENT-2: Phase 2: Endpoint clients
