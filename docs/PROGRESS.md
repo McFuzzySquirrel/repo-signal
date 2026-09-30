@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: FOUNDATION-AND-RUNTIME-3
-**Status**: In Progress
+**Phase**: GITHUB-API-CLIENT-1
+**Status**: Failed
 **Validation Gaps**: 7 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-09-30T20:32:45.585Z
+**Last Updated**: 2026-09-30T21:10:05.879Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -24,6 +24,8 @@
   - Files: src/commands/config.js, src/commands/index.js, tests/config-command.test.js
 - [x] Phase FOUNDATION-AND-RUNTIME-3, Task RS-FND-REV-01: Human review of the foundation security and privacy posture
   - Files: docs/reviews/foundation-security.json
+- [x] Phase GITHUB-API-CLIENT-1, Task RS-API-01: Build the credential provider and the allowlisted HTTP transport (@github-integration-engineer)
+  - Files: src/github/credential-provider.js, src/github/http.js, tests/github-http.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 
