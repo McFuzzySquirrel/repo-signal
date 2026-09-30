@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: FOUNDATION-AND-RUNTIME-2
+**Phase**: FOUNDATION-AND-RUNTIME-3
 **Status**: In Progress
 **Validation Gaps**: 7 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-09-30T20:24:31.728Z
+**Last Updated**: 2026-09-30T20:32:45.585Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -22,6 +22,8 @@
   - Files: src/credentials/store.js, src/credentials/redact.js, tests/credentials.test.js
 - [x] Phase FOUNDATION-AND-RUNTIME-2, Task RS-FND-06: Expose the config init and config check subcommands (@platform-engineer)
   - Files: src/commands/config.js, src/commands/index.js, tests/config-command.test.js
+- [x] Phase FOUNDATION-AND-RUNTIME-3, Task RS-FND-REV-01: Human review of the foundation security and privacy posture
+  - Files: docs/reviews/foundation-security.json
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 
@@ -29,7 +31,6 @@
 - None currently running
 
 ## Remaining
-- [ ] Phase FOUNDATION-AND-RUNTIME-3: Phase 3: Security sign-off
 - [ ] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-1: Phase 1: Connection and migration runner
 - [ ] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-2: Phase 2: Repository layer and the database command group
 - [ ] Phase GITHUB-API-CLIENT-1: Phase 1: Transport and request policy
