@@ -6,8 +6,6 @@
   "maxRetries": "",
   "viz": false,
   "vizPort": "",
-  "keepAlive": false,
-  "attach": "",
   "autoCommit": true,
   "logHarnessActivity": false,
   "executionMode": "auto",

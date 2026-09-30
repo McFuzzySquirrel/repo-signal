@@ -3,9 +3,10 @@
  *
  * `src/cli.js` resolves a command line against this module and is the only
  * caller that dispatches, so adding a command means registering its name here
- * and nothing else. The registry starts empty: later features append their own
- * subcommands, and none of them is imported by this module.
+ * and nothing else. Later features append their own subcommands here.
  */
+
+import { configCheck, configInit } from './config.js';
 
 export const EXIT_SUCCESS = 0;
 export const EXIT_OPERATIONAL_FAILURE = 1;
@@ -166,3 +167,13 @@ export function resolveCommand(tokens) {
   const requested = tokens.slice(0, leadingNameWordCount(tokens)).join(' ');
   return { ok: false, requested, suggestions: commandsUnder(requested) };
 }
+
+registerCommand('config init', {
+  summary: 'Create private configuration and credential templates.',
+  usage: '[--force]',
+  run: configInit,
+});
+registerCommand('config check', {
+  summary: 'Validate local configuration and credentials without printing the token.',
+  run: configCheck,
+});
