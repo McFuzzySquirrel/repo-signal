@@ -4,7 +4,7 @@
 **Phase**: GITHUB-API-CLIENT-1
 **Status**: In Progress
 **Validation Gaps**: 7 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-09-30T21:15:33.330Z
+**Last Updated**: 2026-09-30T21:16:40.241Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -30,16 +30,16 @@
   - Files: src/db/migrations/001-core-schema.js, tests/initial-schema.test.js
 - [x] Phase GITHUB-API-CLIENT-1, Task RS-API-01: Build the credential provider and the allowlisted HTTP transport (@github-integration-engineer)
   - Files: src/github/credential-provider.js, src/github/http.js, tests/github-http.test.js
+- [x] Phase GITHUB-API-CLIENT-1, Task RS-API-02: Implement the rate-limit and retry policy (@github-integration-engineer)
+  - Files: src/github/rate-limit.js, src/github/retry.js, tests/github-retry.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 
 ## Current Task
-- [ ] Phase GITHUB-API-CLIENT-1, Task RS-API-02: Implement the rate-limit and retry policy (@github-integration-engineer)
-  - Status: In progress
+- None currently running
 
 ## Remaining
 - [ ] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-2: Phase 2: Repository layer and the database command group
-- [ ] Phase GITHUB-API-CLIENT-1: Phase 1: Transport and request policy
 - [ ] Phase GITHUB-API-CLIENT-2: Phase 2: Endpoint clients
 - [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-1: Phase 1: Enrolled set resolution
 - [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-2: Phase 2: Discovery command
