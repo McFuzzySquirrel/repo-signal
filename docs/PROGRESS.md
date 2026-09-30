@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: FOUNDATION-AND-RUNTIME-2
 **Status**: In Progress
-**Validation Gaps**: 5 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-09-30T20:03:39.248Z
+**Validation Gaps**: 6 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-09-30T20:05:42.033Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -18,6 +18,8 @@
   - Files: src/cli.js, src/commands/index.js, tests/cli.test.js, docs/engine-control.json, docs/reviews/RS-UI-REV-01-console-review.md, docs/reviews/dashboard-accessibility.json
 - [x] Phase FOUNDATION-AND-RUNTIME-2, Task RS-FND-04: Parse and validate the configuration file under a closed schema (@platform-engineer)
   - Files: src/config/schema.js, src/config/load.js, tests/config.test.js
+- [x] Phase FOUNDATION-AND-RUNTIME-2, Task RS-FND-05: Load the credential file with a 0600 check and redact token-shaped values (@platform-engineer)
+  - Files: src/credentials/store.js, src/credentials/redact.js, tests/credentials.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 
@@ -61,6 +63,7 @@
 - Task RS-FND-02: No node_modules was present in this sandbox, so npm ci was run before typecheck
 - Task RS-FND-02: Verified on Node 22.22.2 only; the 24 LTS line named in the PRD is not available on this host
 - Task RS-FND-04: Validation ran on Node 22.22.2; Node 24 was not exercised.
+- Task RS-FND-05: Validated on Node 22.22.2; Node 24 was not tested.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 
 ## Notes
