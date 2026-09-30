@@ -68,7 +68,7 @@
             "acceptanceCriteria": [
               "npm run typecheck exits zero over src, scripts and tests",
               "npm test -- tests/run-tests.test.js exits non-zero when pointed at a suite with no test files and exits zero for the passing fixture",
-              "package.json declares type module, an engines range starting at node 22.13.0, and no dependencies entry"
+              "package.json declares type module, an engines range starting at node 24.12.0 (the release exposing `node:sqlite`'s `enableDefensive`, which the storage layer requires), and no dependencies entry"
             ],
             "constraints": [
               "No third-party module may be imported at runtime by src, scripts or tests",

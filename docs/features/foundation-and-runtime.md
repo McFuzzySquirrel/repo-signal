@@ -135,7 +135,7 @@ final `ok` or the first failure, so it can be read in a cron log.
     "kind": "implementation",
     "requirements": [],
     "requirementRefs": ["docs/features/foundation-and-runtime.md#RS-FND-FR-06"],
-    "acceptanceCriteria": ["npm run typecheck exits zero over src, scripts and tests", "npm test -- tests/run-tests.test.js exits non-zero when pointed at a suite with no test files and exits zero for the passing fixture", "package.json declares type module, an engines range starting at node 22.13.0, and no dependencies entry"],
+    "acceptanceCriteria": ["npm run typecheck exits zero over src, scripts and tests", "npm test -- tests/run-tests.test.js exits non-zero when pointed at a suite with no test files and exits zero for the passing fixture", "package.json declares type module, an engines range starting at node 24.12.0 (the release exposing `node:sqlite`'s `enableDefensive`, which the storage layer requires), and no dependencies entry"],
     "constraints": ["No third-party module may be imported at runtime by src, scripts or tests", "Do not add a bundler, a transpile step, or a test framework dependency"],
     "constraintRefs": ["docs/features/foundation-and-runtime.md#RS-FND-CON-01", "docs/PRD.md#RS-TC-01", "docs/PRD.md#RS-TC-04"],
     "references": ["docs/PRD.md#6.1 Technology Stack", "docs/PRD.md#6.2 Project Structure"]

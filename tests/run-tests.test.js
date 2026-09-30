@@ -107,7 +107,12 @@ test('the package declares an ESM, dependency-free runtime contract', () => {
   const manifest = JSON.parse(readFileSync(PACKAGE_JSON, 'utf8'));
   assert.equal(manifest.name, 'repo-signal');
   assert.equal(manifest.type, 'module');
-  assert.equal(manifest.engines.node, '>=22.13.0');
+  // Node 24.12.0 is the floor because src/db/connection.js requires
+  // `node:sqlite`'s `enableDefensive`, which earlier lines do not expose. The
+  // 22.13.0 release only marks where `node:sqlite` shed its --experimental-sqlite
+  // flag, so naming it as the floor let a runtime the storage layer cannot use
+  // satisfy the manifest.
+  assert.equal(manifest.engines.node, '>=24.12.0');
   assert.equal(manifest.dependencies, undefined);
   assert.equal(manifest.peerDependencies, undefined);
   assert.equal(manifest.optionalDependencies, undefined);

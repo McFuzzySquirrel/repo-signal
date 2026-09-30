@@ -93,7 +93,7 @@ The opening analysis established the shape of the problem and is preserved uncha
 
 | Choice | Version | Status and reason |
 |--------|---------|-------------------|
-| Node.js | 22.13.0 or later; 24.21.0 (Active LTS "Krypton") recommended | `node:sqlite` lost its `--experimental-sqlite` flag in 22.13.0, so that is the hard floor; 24 is the supported line and the CI target |
+| Node.js | 24.12.0 or later; 24.21.0 (Active LTS "Krypton") recommended | The storage layer opens every connection with `node:sqlite`'s `enableDefensive`, which earlier lines do not expose, so 24.12.0 is the hard floor. 22.13.0 is where `node:sqlite` shed its `--experimental-sqlite` flag, but that release cannot run the archive |
 | Module system | ESM (`"type": "module"`) | Required by `node:sqlite`, supported by every current Node release |
 | Language | JavaScript with JSDoc types, `checkJs` | The idea requires a TypeScript project with no build step; JSDoc plus `tsc --noEmit` gives both |
 | Type checker | TypeScript 7.0.2 (dev dependency) | Current stable; see Open Questions for the 6.0.3 fallback |
@@ -502,7 +502,7 @@ assumption. These stay open on purpose; each names the assumption the product sh
 | 7 | Exact fine-grained permission required for every endpoint used | `Administration` read for the traffic endpoints per the GitHub documentation, `Metadata` read for repository listing. The live integration check confirms both against a real token |
 | 8 | Does the execution environment reach the npm registry? | Yes. The only install step is the two development dependencies; the runtime itself installs nothing. If it is offline, the runtime tests still run and only `npm run typecheck` is unavailable |
 | 9 | Where should the home directory live? | `XDG_DATA_HOME/repo-signal` or `~/.local/share/repo-signal`, never inside a work tree, overridable with `REPO_SIGNAL_HOME` for tests and CI |
-| 10 | Which Node line does the build host actually provide? | Observed on the authoring host: Node 22.22.2. The engine range therefore starts at 22.13.0, the release where `node:sqlite` stopped needing a flag, and CI also runs the 24 LTS line |
+| 10 | Which Node line does the build host actually provide? | The authoring host has 22.22.2 and 24.15.0; the engine runs under 24.15.0. The supported range starts at 24.12.0 because `enableDefensive` is the binding constraint, not the `--experimental-sqlite` flag, and CI also runs the 24 LTS line |
 | 11 | Who runs the daily schedule? | The operating system's scheduler, documented in the operations runbook. The collector embeds no timer, so a sleeping laptop cannot be masked by an in-process scheduler |
 | 12 | What is the stall threshold? | 26 hours, slightly over one daily slot plus one missed slot, so a single missed run is visible without noise |
 | 13 | Accessibility target for a single-user local tool | WCAG 2.1 AA on the dashboard pages, proven by deterministic structural tests plus a human keyboard and screen-reader pass |
