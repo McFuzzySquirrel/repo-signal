@@ -73,12 +73,18 @@ export class OpenCodeAdapter implements HarnessAdapter {
     const args = ["run", ...modelFlag, ...agentFlag, ...this.extraFlags, prompt];
 
     const result = await runCommand(this.bin, args, {
-      // `opencode run` resolves its project from `process.cwd()` (verified on
-      // v2.0.20: the `PWD` environment variable is ignored). Pinning `cwd` is
-      // what keeps a task in its repository - or, in parallel mode, in its own
-      // sandbox worktree - even when the engine process lives in a
-      // subdirectory such as the engine's own package dir.
+      // `opencode run` selects its project from the inherited `PWD`, not from
+      // `process.cwd()` (measured on v2.0.20: with the two pointed at different
+      // directories, `PWD` decides, every time). Pinning `cwd` alone is not
+      // enough, because this process is normally `npm run workflow-engine`
+      // from the engine's own package dir, so the child would inherit a `PWD`
+      // pointing there and run every task against the engine instead of the
+      // repository - or, in parallel mode, against no sandbox at all. Both are
+      // set to the task root so they cannot disagree; `cwd` remains the
+      // mechanism that also fixes the filesystem, and `PWD` is corrected to
+      // match it rather than relied upon to select the project.
       cwd: repoRoot,
+      env: { ...process.env, PWD: repoRoot },
       timeoutMs: request.budget.timeoutMs,
       signal: request.signal,
       maxBufferBytes: 10 * 1024 * 1024,

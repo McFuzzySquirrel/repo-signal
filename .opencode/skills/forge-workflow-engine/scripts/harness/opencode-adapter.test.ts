@@ -190,10 +190,10 @@ test("FORGE_ENGINE_NATIVE_AGENT=0 forces the inline-persona fallback for .openco
 // ─── OpenCode v2 project resolution (ADR-058) ─────────────────────────────────
 //
 // v2 removed `run --dir` and `run --attach`, and `run` takes no path argument:
-// a trailing path is swallowed into the prompt. The project is selected by the
-// child's `process.cwd()`, which the adapter sets to the task root. These tests
-// pin both halves of that contract, since a regression here silently runs a task
-// against the wrong project.
+// a trailing path is swallowed into the prompt. The project is selected from the
+// inherited `PWD`, which the adapter therefore corrects to the task root the
+// spawn `cwd` already sets. These tests pin both halves of that contract, since
+// a regression here silently runs a task against the wrong project.
 
 /** Shim that records argv, cwd, and PWD, so project selection is observable. */
 function makeCwdShim(t: TestContext): { bin: string; recordFile: string } {
@@ -246,7 +246,7 @@ test("argv carries no --dir or --attach, both removed in OpenCode v2", async (t)
   assert.ok(argv.includes("--auto"), "per-task permissions stay auto-approved");
 });
 
-test("the project is pinned by the spawn cwd, not by PWD", async (t) => {
+test("the project is pinned by the spawn cwd, with PWD corrected to match", async (t) => {
   const root = tempDir(t, "forge-opencode-cwd-repo-");
   const agent = makeAgent(join(root, ".opencode", "agents", "discovery-engineer.md"));
   const shim = makeCwdShim(t);
@@ -254,11 +254,14 @@ test("the project is pinned by the spawn cwd, not by PWD", async (t) => {
   await invokeRecording(shim, agent, root);
 
   const { cwd, pwd, argv } = recordedInvocation(shim.recordFile);
-  // v2 resolves the project from process.cwd(); this is the only mechanism.
+  // `cwd` fixes the filesystem the task works in.
   assert.equal(cwd, resolve(root));
-  // Guard against the retired mechanism creeping back: PWD is not consulted,
-  // and the path must not appear in argv (v2 would read it as prompt text).
-  assert.notEqual(pwd, resolve(root), "PWD must not be relied on to select the project");
+  // v2 selects the project from the inherited `PWD`, so it has to agree with
+  // `cwd`. This process is normally `npm run workflow-engine` from the engine's
+  // own package dir; an uncorrected `PWD` sends the task there instead, which
+  // is invisible in a sequential run and strands every sandboxed task.
+  assert.equal(pwd, resolve(root), "PWD must be corrected to the task root, not inherited from the engine");
+  // The path must still not appear in argv (v2 reads it as prompt text).
   assert.ok(!argv.includes(resolve(root)), `argv leaks the repo path: ${argv.join(" ")}`);
 });
 
@@ -276,4 +279,37 @@ test("a sandbox worktree is selected by cwd, keeping parallel tasks isolated", a
   const { cwd, argv } = recordedInvocation(shim.recordFile);
   assert.equal(cwd, resolve(worktree), "each task must run in its own worktree");
   assert.ok(!argv.includes(resolve(worktree)), `argv leaks the worktree path: ${argv.join(" ")}`);
+});
+
+// The regression this pins is the one that stranded a whole task: the engine is
+// launched as `npm run workflow-engine` from its own package directory, so the
+// child inherits a `PWD` pointing there. A sandboxed task then runs against the
+// engine instead of its worktree, cannot find the execution file the adapter
+// wrote into that worktree, and reports the task's expected outputs missing
+// without having written any of them.
+test("a PWD inherited from the engine's own package dir is corrected, not passed through", async (t) => {
+  const engineDir = tempDir(t, "forge-opencode-engine-pkg-");
+  const worktree = join(tempDir(t, "forge-opencode-sandbox-"), "worktrees", "t1");
+  mkdirSync(worktree, { recursive: true });
+  const agent = makeAgent(join(worktree, ".opencode", "agents", "discovery-engineer.md"));
+  const shim = makeCwdShim(t);
+
+  const originalPwd = process.env.PWD;
+  const originalBin = process.env.OPENCODE_BIN;
+  process.env.PWD = engineDir;
+  process.env.OPENCODE_BIN = shim.bin;
+  try {
+    const result = await new OpenCodeAdapter().invoke(prepareTaskRequest({ agent, task: makeTask(), repoRoot: worktree }));
+    assert.equal(result.success, true, result.errorMessage);
+  } finally {
+    if (originalPwd === undefined) delete process.env.PWD;
+    else process.env.PWD = originalPwd;
+    if (originalBin === undefined) delete process.env.OPENCODE_BIN;
+    else process.env.OPENCODE_BIN = originalBin;
+  }
+
+  const { cwd, pwd } = recordedInvocation(shim.recordFile);
+  assert.equal(cwd, resolve(worktree), "the task must still run in its own worktree");
+  assert.equal(pwd, resolve(worktree), `PWD leaked the engine's package dir: ${pwd}`);
+  assert.notEqual(pwd, engineDir, "PWD must never point at the engine's own package dir");
 });
