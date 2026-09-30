@@ -4,7 +4,7 @@
 **Phase**: GITHUB-API-CLIENT-2
 **Status**: In Progress
 **Validation Gaps**: 8 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-09-30T21:19:04.221Z
+**Last Updated**: 2026-09-30T21:21:04.588Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -28,6 +28,8 @@
   - Files: src/db/connection.js, src/db/migrate.js, tests/migrate.test.js
 - [x] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-1, Task RS-DB-02: Create the core archive schema (@data-engineer)
   - Files: src/db/migrations/001-core-schema.js, tests/initial-schema.test.js
+- [x] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-2, Task RS-DB-03: Implement the archive repository and gap-preserving range reads (@data-engineer)
+  - Files: src/db/day-series-repo.js, src/db/snapshot-repo.js, src/db/ops-repo.js, tests/day-series-repo.test.js, tests/snapshot-repo.test.js, tests/ops-repo.test.js
 - [x] Phase GITHUB-API-CLIENT-1, Task RS-API-01: Build the credential provider and the allowlisted HTTP transport (@github-integration-engineer)
   - Files: src/github/credential-provider.js, src/github/http.js, tests/github-http.test.js
 - [x] Phase GITHUB-API-CLIENT-1, Task RS-API-02: Implement the rate-limit and retry policy (@github-integration-engineer)
@@ -38,8 +40,7 @@
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 
 ## Current Task
-- [ ] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-2, Task RS-DB-03: Implement the archive repository and gap-preserving range reads (@data-engineer)
-  - Status: In progress
+- None currently running
 
 ## Remaining
 - [ ] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-2: Phase 2: Repository layer and the database command group
