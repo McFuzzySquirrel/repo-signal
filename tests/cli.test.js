@@ -188,7 +188,15 @@ test('--help and -h exit 0 and print the usage on standard output', () => {
     assert.equal(result.status, 0, `expected exit 0 for ${flag}\n${result.stdout}${result.stderr}`);
     assert.match(result.stdout, /^Usage:$/m);
     assert.match(result.stdout, /^Commands:$/m);
-    assert.match(result.stdout, /^ {2}none is registered in this build$/m);
+    // The real registry is loaded here, so it holds the shipped subcommands and
+    // the empty-registry placeholder must not be printed. That placeholder is
+    // covered by the stub-registry test below, which can empty the registry.
+    assert.doesNotMatch(
+      result.stdout,
+      /none is registered/,
+      'the shipped registry is not empty, so that line would be false',
+    );
+    assert.match(result.stdout, /^ {2}config check\s{2,}Validate local configuration/m);
     assert.equal(result.stderr, '', `${flag} wrote to standard error`);
   }
 });
@@ -273,7 +281,10 @@ test('the usage listing is generated from the registry', () => {
   const result = runCli(['--help'], { preload: STUB_MODULE });
 
   assert.equal(result.status, 0, `expected exit 0\n${result.stdout}${result.stderr}`);
-  assert.match(result.stdout, /^ {2}stub ok \[value \.\.\.\]\s{2}Stub that succeeds/m);
+  // The name column is as wide as the longest registered label plus two spaces.
+  // `config init [--force]` is the longest once the real commands are loaded, so
+  // the separator is matched loosely rather than at a fixed width.
+  assert.match(result.stdout, /^ {2}stub ok \[value \.\.\.\]\s{2,}Stub that succeeds/m);
   assert.match(result.stdout, /^ {2}stub fail\s{2,}Stub that reports an operational failure\.$/m);
   assert.doesNotMatch(
     result.stdout,
