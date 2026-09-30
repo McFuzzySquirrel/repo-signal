@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: GITHUB-API-CLIENT-1
+**Phase**: GITHUB-API-CLIENT-2
 **Status**: In Progress
-**Validation Gaps**: 7 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-09-30T21:16:40.241Z
+**Validation Gaps**: 8 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-09-30T21:19:04.221Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -32,11 +32,14 @@
   - Files: src/github/credential-provider.js, src/github/http.js, tests/github-http.test.js
 - [x] Phase GITHUB-API-CLIENT-1, Task RS-API-02: Implement the rate-limit and retry policy (@github-integration-engineer)
   - Files: src/github/rate-limit.js, src/github/retry.js, tests/github-retry.test.js
+- [x] Phase GITHUB-API-CLIENT-2, Task RS-API-03: Normalize the four traffic endpoints (@github-integration-engineer)
+  - Files: src/github/traffic-client.js, tests/traffic-client.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 
 ## Current Task
-- None currently running
+- [ ] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-2, Task RS-DB-03: Implement the archive repository and gap-preserving range reads (@data-engineer)
+  - Status: In progress
 
 ## Remaining
 - [ ] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-2: Phase 2: Repository layer and the database command group
@@ -73,6 +76,7 @@
 - Task RS-FND-04: Validation ran on Node 22.22.2; Node 24 was not exercised.
 - Task RS-FND-05: Validated on Node 22.22.2; Node 24 was not tested.
 - Task RS-FND-06: Validated on Node 22.22.2; Node 24 was not exercised.
+- Task RS-API-03: Tests use injected responses; real-service behavior was not live-verified.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 
 ## Notes
