@@ -48,17 +48,137 @@ test("preflight passes on a clean repository and on untracked engine metadata", 
   assert.deepEqual(await preflightSandboxMode(root), { ok: true }, "untracked docs/ metadata is seeded, not blocking");
 });
 
+test("preflight tolerates a tracked engine config the tooling just rewrote", async () => {
+  // Regression: the Console persists the concurrency choice by rewriting
+  // docs/engine-config.json in place. That file is tracked in a bootstrapped
+  // repository, so treating "tracked and modified under docs/" as blocking made
+  // it impossible to enable concurrency - you had to commit the very setting
+  // that turns it on before the run would start.
+  const root = makeRepo();
+  const config = join(root, "docs", "engine-config.json");
+  writeFileSync(config, '{"concurrency":"1"}\n', "utf8");
+  git(root, ["add", "-A"]);
+  git(root, ["commit", "-qm", "track engine config"]);
+
+  writeFileSync(config, '{"concurrency":"4"}\n', "utf8");
+  // Tracked and modified: the exact state the Console leaves behind.
+  assert.match(git(root, ["status", "--porcelain", "--", "docs/engine-config.json"]).trim(), /^\s*M docs\/engine-config\.json$/);
+  assert.deepEqual(await preflightSandboxMode(root), { ok: true }, "an engine-rewritten setting must not block a parallel run");
+
+  // And the task must read the operator's current value, not the committed one.
+  const sandbox = await createSandbox(root, "1.1");
+  assert.equal(readFileSync(join(sandbox.path, "docs", "engine-config.json"), "utf8"), '{"concurrency":"4"}\n');
+  await destroySandbox(root, sandbox.path);
+  await clearSandboxRoot(root);
+});
+
+test("preflight tolerates every generated docs path the forge tooling rewrites", async () => {
+  const root = makeRepo();
+  const generated = [
+    "docs/engine-config.json",
+    "docs/authoring-config.json",
+    "docs/authoring-state.json",
+    "docs/EXECUTION-MANIFEST.json",
+    "docs/agent-responsibility-matrix.md",
+    "docs/AUTHORING-EVENTS.jsonl",
+    "docs/SKILL-AUDIT.md",
+  ];
+  for (const relPath of generated) writeFileSync(join(root, relPath), "seeded\n", "utf8");
+  git(root, ["add", "-A"]);
+  git(root, ["commit", "-qm", "track generated docs"]);
+  for (const relPath of generated) writeFileSync(join(root, relPath), "regenerated\n", "utf8");
+
+  assert.deepEqual(await preflightSandboxMode(root), { ok: true }, "generated docs state is seeded, never blocking");
+});
+
+test("preflight still refuses dirty requirements, which a task would read as truth", async () => {
+  for (const relPath of ["docs/PRD.md", "docs/IDEA.md", "docs/features/core.md"]) {
+    const root = makeRepo();
+    mkdirSync(join(root, "docs", "features"), { recursive: true });
+    mkdirSync(join(root, "docs", "reviews"), { recursive: true });
+    writeFileSync(join(root, relPath), "original\n", "utf8");
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-qm", "track requirements"]);
+    writeFileSync(join(root, relPath), "edited by the operator\n", "utf8");
+
+    const result = await preflightSandboxMode(root);
+    assert.equal(result.ok, false, `${relPath} must block a parallel run`);
+    assert.match(result.reason ?? "", /clean working tree/);
+    assert.ok(result.reason?.includes(relPath), `${result.reason} should name ${relPath}`);
+  }
+});
+
+test("preflight does not block on a just-recorded human review approval", async () => {
+  // Regression: the Console's approve-and-resume action writes the review
+  // record and attestation, then immediately starts the run. Listing
+  // docs/reviews/ as a requirement made that form refuse the run it had just
+  // approved, so an operator had to hand-commit the two files it just wrote.
+  const root = makeRepo();
+  mkdirSync(join(root, "docs", "reviews"), { recursive: true });
+  writeFileSync(join(root, "docs", "reviews", "CORE-1.json"), '{"decision":"approved"}\n', "utf8");
+  git(root, ["add", "-A"]);
+  git(root, ["commit", "-qm", "track reviews"]);
+
+  // A fresh approval: the attestation is rewritten in place, and the evidence
+  // note is new. Both are uncommitted, and neither may block the resume.
+  writeFileSync(join(root, "docs", "reviews", "CORE-1.json"), '{"decision":"approved","reviewer":"Me"}\n', "utf8");
+  writeFileSync(join(root, "docs", "reviews", "CORE-1-console-review.md"), "# Human Review: Core\n\nReviewer: Me\n", "utf8");
+
+  assert.deepEqual(await preflightSandboxMode(root), { ok: true }, "approving a review must not deadlock the run it resumes");
+
+  // And the task must read the current attestation, not the committed one.
+  const sandbox = await createSandbox(root, "1.1");
+  assert.equal(readFileSync(join(sandbox.path, "docs", "reviews", "CORE-1.json"), "utf8"), '{"decision":"approved","reviewer":"Me"}\n');
+  await destroySandbox(root, sandbox.path);
+  await clearSandboxRoot(root);
+});
+
+test("preflight names a just-recorded approval differently from other uncommitted work", async () => {
+  // A reviewFile need not live under docs/ - contract.reviewFile is any
+  // normalized repository-relative path - so an approval there is uncommitted
+  // work as far as the clean-tree rule is concerned. That is the case where
+  // "commit or stash" reads as a non-sequitur and the message should explain.
+  const root = makeRepo();
+  mkdirSync(join(root, "reviews"), { recursive: true });
+  writeFileSync(join(root, "reviews", "CORE-1.json"), "{}\n", "utf8");
+  git(root, ["add", "-A"]);
+  git(root, ["commit", "-qm", "track review record"]);
+  writeFileSync(join(root, "reviews", "CORE-1.json"), '{"decision":"approved"}\n', "utf8");
+
+  // Without the manifest's review files the engine cannot recognise it, so the
+  // generic message stands.
+  assert.match((await preflightSandboxMode(root)).reason ?? "", /clean working tree/);
+
+  const withReviewFiles = await preflightSandboxMode(root, { reviewFiles: ["reviews/CORE-1.json"] });
+  assert.equal(withReviewFiles.ok, false);
+  assert.match(withReviewFiles.reason ?? "", /human-review records rather than unfinished work/);
+  assert.match(withReviewFiles.reason ?? "", /reviews\/CORE-1\.json/);
+  assert.doesNotMatch(withReviewFiles.reason ?? "", /requirements would be invisible/,
+    "an approval is not a requirements file, so it must not be described as one");
+});
+
+test("a review record under docs/ is tolerated even when listed as a review file", async () => {
+  // The approval message must not fire for paths the clean-tree rule already
+  // tolerates, or the operator would see a "these look like approvals" warning
+  // for a run that is about to start fine.
+  const root = makeRepo();
+  mkdirSync(join(root, "docs", "reviews"), { recursive: true });
+  writeFileSync(join(root, "docs", "reviews", "CORE-1.json"), '{"decision":"approved"}\n', "utf8");
+  assert.deepEqual(
+    await preflightSandboxMode(root, { reviewFiles: ["docs/reviews/CORE-1.json"] }),
+    { ok: true },
+  );
+});
+
 test("preflight names every uncommitted path that blocks parallel execution", async () => {
   const root = makeRepo();
   mkdirSync(join(root, "src"), { recursive: true });
   writeFileSync(join(root, "src", "wip.ts"), "work in progress\n", "utf8");
-  writeFileSync(join(root, "docs", "PRD.md"), "# Vision, edited\n", "utf8");
 
   const result = await preflightSandboxMode(root);
   assert.equal(result.ok, false);
   assert.match(result.reason ?? "", /clean working tree/);
   assert.match(result.reason ?? "", /src\/wip\.ts/);
-  assert.match(result.reason ?? "", /docs\/PRD\.md/, "a modified tracked docs file blocks rather than silently diverging");
   assert.match(result.reason ?? "", /--concurrency 1/, "the message offers a way forward");
 });
 
