@@ -30,6 +30,7 @@ docs/artifacts/
 docs/task-executions/
 docs/WORKFLOW-STATE.json
 docs/EXECUTION-AUDIT.jsonl
+docs/engine.pid
 
 # OS and editor noise
 .DS_Store
