@@ -4,7 +4,7 @@
 **Phase**: LOCAL-DASHBOARD-SERVER-1
 **Status**: In Progress
 **Validation Gaps**: 10 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T10:50:39.827Z
+**Last Updated**: 2026-10-02T10:51:19.527Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -50,11 +50,11 @@
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
   - Files: src/server/server.js, src/server/security.js, tests/server.test.js
+- [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-02: Route the three pages and escape every dynamic value (@server-engineer)
+  - Files: src/server/router.js, src/server/html.js, tests/router.test.js, tests/html.test.js
 
 ## Current Task
 - [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-2, Task RS-ENR-02: Expose the discover command with pasteable configuration lines (@cli-engineer)
-  - Status: In progress
-- [ ] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-02: Route the three pages and escape every dynamic value (@server-engineer)
   - Status: In progress
 
 ## Remaining
@@ -68,7 +68,6 @@
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-1: Phase 1: Legibility spike and the decision it produces
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-2: Phase 2: Insight calculations
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-3: Phase 3: The chart
-- [ ] Phase LOCAL-DASHBOARD-SERVER-1: Phase 1: Server, routing and escaping
 - [ ] Phase LOCAL-DASHBOARD-SERVER-2: Phase 2: Page data and running-server verification
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-1: Phase 1: Composition root and the pages
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-2: Phase 2: Accessibility contract and end-to-end verification
