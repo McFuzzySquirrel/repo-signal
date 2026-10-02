@@ -1,17 +1,17 @@
-import { randomUUID } from 'node:crypto';
-
 import { backfillDevelopment } from '../backfill/development.js';
 import { readProvenance, stampFirstCollected } from '../backfill/provenance.js';
 import { backfillStars } from '../backfill/stars.js';
 import { redact } from '../credentials/redact.js';
 import {
-  appendRun, completeRun, getRepository, listEnrolledRepositories, upsertRepository, withTransaction,
+  getRepository, listEnrolledRepositories, upsertRepository, withTransaction,
 } from '../db/ops-repo.js';
 import { resolveEnrollment } from '../enrollment/resolve.js';
 import { createRepoClient } from '../github/repo-client.js';
 import { createStarsClient } from '../github/stars-client.js';
 import { createStatsClient } from '../github/stats-client.js';
 import { createTrafficClient } from '../github/traffic-client.js';
+import { createRunJournal } from '../supervision/journal.js';
+import { createRepoStateReporter } from '../supervision/repo-state-reporter.js';
 import {
   confirmRepository, findRepositoryByName, isUnavailable, markUnavailable, recordIdentity,
   splitRepository, unavailableReason,
@@ -232,13 +232,10 @@ function allocateRepositoryId(db, enrolled) {
   return candidate;
 }
 
-/**
- * @param {number} nowMs
- * @returns {string} An identifier that names the instant the run began.
- */
-export function nextRunId(nowMs) {
-  return `collect-${new Date(nowMs).toISOString().replace(/[-:.]/g, '')}-${randomUUID().slice(0, 8)}`;
-}
+// The run identifier names a row in the run journal, so the journal derives it from the
+// instant it records as the start; it stays exported here for callers that already
+// import it from this module.
+export { nextRunId } from '../supervision/journal.js';
 
 /**
  * The work a run would do, decided from the configuration and the archive
@@ -395,6 +392,11 @@ function ensureRepository({ db, repo, collectedAt }) {
  * inside the same transaction, so a failed collection never claims a first collected
  * day, and the stamp is itself conditional, so a later run cannot move it.
  *
+ * Supervision state rides along with the same boundary: the success commits inside the
+ * repository's own transaction, and a failure is recorded as evidence through the
+ * reporter, which owns what a failure is. Neither decides anything about this run; the
+ * decision to carry on to the next repository is the one this function already makes.
+ *
  * Retry and backoff belong to the transport policy, so none is added here; this
  * step embeds no timer and reads no clock, because the collection time belongs to
  * the run that scheduled it.
@@ -416,6 +418,7 @@ async function collectRepository({ db, planned, runId, clients, collectedAt, sec
   let registered = false;
   /** @type {WrittenFacts|null} */
   let written = null;
+  const reporter = createRepoStateReporter({ db });
   try {
     const identity = ensureRepository({ db, repo: planned.repo, collectedAt });
     repositoryId = identity.id;
@@ -441,9 +444,19 @@ async function collectRepository({ db, planned, runId, clients, collectedAt, sec
       const stamp = stampFirstCollected(db, id, {
         day: firstCollectedDay(clones, views, collectedAt), collectedAt,
       });
+      // The success joins this repository's own transaction, so a collection that did
+      // not commit cannot claim a last successful collection and a committed one
+      // cannot lose it. It is the recorded success the stalled rule is later read
+      // against; no state here is inferred from the presence or absence of facts.
+      reporter.recordSuccess({ repositoryId: id, collectedAt });
       return { identity: change, traffic, snapshots, stamp };
     });
   } catch (error) {
+    // The failure is recorded as evidence through the reporter, which owns what a
+    // failure *is*. The reporter never decides that this run continues, and a
+    // supervision write that cannot be made must not become a collection crash, so a
+    // repository with no stored identity yet records nothing rather than inventing one.
+    recordFailureEvidence({ reporter, repositoryId, runId, error, collectedAt, repo: planned.repo, secrets });
     // A repository GitHub no longer serves is marked, not failed: it keeps its row,
     // its enrolment and every fact already stored under its identity, and later runs
     // skip it instead of asking about it again. Nothing was written for it in this
@@ -475,6 +488,32 @@ async function collectRepository({ db, planned, runId, clients, collectedAt, sec
     unavailableReason: null,
     failure: null,
   };
+}
+
+/**
+ * Record one failure as append-only evidence through the reporter, which classifies it
+ * and advances the repository's consecutive-failure count. This step keeps that call
+ * from becoming a collection failure of its own: a repository the archive never stored
+ * has no identity to record against, and a supervision write the archive refuses is
+ * reported nowhere rather than turned into a crash that would abort the run.
+ * @param {object} options
+ * @param {ReturnType<typeof createRepoStateReporter>} options.reporter
+ * @param {number|null} options.repositoryId Stored identity, or null when the archive never got one.
+ * @param {string} options.runId
+ * @param {unknown} options.error The thrown value, as the client or policy reported it.
+ * @param {string} options.collectedAt Canonical UTC ISO instant for this attempt.
+ * @param {string} options.repo `owner/name` this run was collecting.
+ * @param {readonly string[]} options.secrets
+ * @returns {void}
+ */
+function recordFailureEvidence({ reporter, repositoryId, runId, error, collectedAt, repo, secrets }) {
+  if (repositoryId === null) return;
+  try {
+    reporter.recordFailure({ repositoryId, runId, error, collectedAt, repo, secrets });
+  } catch {
+    // The evidence could not be written. The repository is still reported as failed by
+    // the caller, which is the run's own decision; nothing here is claimed as recorded.
+  }
 }
 
 /**
@@ -587,17 +626,23 @@ function totalise(outcomes) {
 }
 
 /**
- * Run the collection: resolve the enrolled set, plan the work, open a run record
- * before the first request, collect each repository inside its own failure
- * boundary, and close the run record with counts, a duration and a status. A
- * repository that fails never aborts the run, a repository GitHub no longer serves
- * is marked unavailable inside its own boundary, and a run where every repository
- * fails still closes a complete run record; the caller turns a degraded run into
- * a non-zero exit code. The run row is appended at the start, so a process killed
- * mid-run is still visible as an unclosed run in the journal.
+ * Run the collection: resolve the enrolled set, plan the work, open the run journal
+ * before the first request, collect each repository inside its own failure boundary,
+ * recording progress as each one finishes, and close the journal with counts, a
+ * duration, a request count and a status. A repository that fails never aborts the
+ * run, a repository GitHub no longer serves is marked unavailable inside its own
+ * boundary, and a run where every repository fails still closes a complete run record;
+ * the caller turns a degraded run into a non-zero exit code. The run row is appended at
+ * the start, so a process killed mid-run is still visible as an unclosed run in the
+ * journal.
+ *
+ * The journal owns the run identifier and every instant this run records, so the
+ * identifier printed in the summary is the identifier on the row. Nothing here decides
+ * whether a run continues: the per-repository boundary in `collectRepository` is the
+ * whole of that decision, and the journal only records what the run did.
  *
  * A dry run plans and reports and writes nothing at all: no run row, no fact row,
- * no heartbeat and no request.
+ * no heartbeat and no request. It returns before the journal is even opened.
  * @param {object} options
  * @param {Database} options.db Open archive; the caller owns closing it.
  * @param {Configuration} options.config
@@ -629,10 +674,10 @@ export async function collectRun({
     throw new TypeError('A collection run needs the shared request policy; a dry run must not build one');
   }
 
-  const startedAtMs = clock();
-  const startedAt = new Date(startedAtMs).toISOString();
-  const identifier = runId ?? nextRunId(startedAtMs);
-  appendRun(db, { id: identifier, startedAt });
+  const journal = createRunJournal({ db, runId: runId ?? null, clock });
+  const opened = journal.start();
+  const identifier = opened.runId;
+  const startedAt = opened.startedAt;
 
   const counted = countedPolicy(policy);
   /** @type {Clients} */
@@ -653,6 +698,14 @@ export async function collectRun({
     outcomes.push(planned.skipped
       ? skippedOutcome(planned)
       : await collectRepository({ db, planned, runId: identifier, clients, collectedAt: startedAt, secrets }));
+    // Progress is recorded as each repository finishes, inside the loop, so a run
+    // that dies on the fourth repository leaves three repositories of progress behind
+    // rather than nothing at all. A tick the clock could not advance is reported as
+    // unrecorded rather than invented, and does not stop the loop; an archive that
+    // refuses the write is a real failure of the run record itself, so it is allowed
+    // to surface instead of being swallowed into a run that silently loses its
+    // supervision trail.
+    journal.progress({ completedRepositories: outcomes.length });
   }
 
   const totals = totalise(outcomes);
@@ -660,15 +713,12 @@ export async function collectRun({
   // reports it as degraded rather than complete; a repository an earlier run already
   // marked is only skipped, because the marking is already recorded and reported.
   const status = totals.failed + totals.unavailable === 0 ? RUN_STATUS_COMPLETED : RUN_STATUS_DEGRADED;
-  const closedAtMs = clock();
-  const durationMs = Math.max(0, closedAtMs - startedAtMs);
-  completeRun(db, identifier, {
-    closedAt: new Date(closedAtMs).toISOString(),
+  const closed = journal.close({
     status,
     successCount: totals.ok,
     failureCount: totals.failed + totals.unavailable,
     requestCount: counted.count(),
-    durationMs,
+    completedRepositories: outcomes.length,
   });
 
   return {
@@ -676,7 +726,7 @@ export async function collectRun({
     runId: identifier,
     plan,
     outcomes,
-    totals: { repositories: outcomes.length, ...totals, requests: counted.count(), durationMs },
+    totals: { repositories: outcomes.length, ...totals, requests: counted.count(), durationMs: closed.durationMs },
     status,
   };
 }

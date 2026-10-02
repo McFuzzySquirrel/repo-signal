@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: COLLECTION-SUPERVISION-1
 **Status**: In Progress
-**Validation Gaps**: 20 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T15:45:15.569Z
+**Validation Gaps**: 22 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T16:23:19.277Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -62,6 +62,8 @@
   - Files: tests/integration/collect-e2e.test.js
 - [x] Phase COLLECTION-SUPERVISION-1, Task RS-SUP-01: Classify collection failures and persist per-repository error state (@collector-engineer)
   - Files: src/supervision/errors.js, src/supervision/repo-state-reporter.js, tests/supervision-errors.test.js
+- [x] Phase COLLECTION-SUPERVISION-1, Task RS-SUP-02: Write the run journal and heartbeat into the collection run (@collector-engineer)
+  - Files: src/supervision/journal.js, src/collect/run.js, tests/supervision-journal.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
@@ -73,7 +75,6 @@
 - None currently running
 
 ## Remaining
-- [ ] Phase COLLECTION-SUPERVISION-1: Phase 1: Failure state and run journal
 - [ ] Phase COLLECTION-SUPERVISION-2: Phase 2: The health read
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-1: Phase 1: Legibility spike and the decision it produces
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-2: Phase 2: Insight calculations
@@ -110,6 +111,8 @@
 - Task RS-COL-05: The sixty-second budget assertion is only meaningful as a regression guard on a loopback stub; it cannot predict real-service timing, where rate-limit waits dominate and are explicitly excluded from the requirement.
 - Task RS-SUP-01: Classification is verified against the local transport's scripted response shapes only; no request reached api.github.com and no real token was used, so real-service status/header shapes remain unverified behind the RS-OPS-LIVE-01 human gate.
 - Task RS-SUP-01: Nothing in docs/reviews/ was created or claimed, and no gap in existing data was hand-repaired.
+- Task RS-SUP-02: No live GitHub request was made and no real token was used; behaviour is verified against the local loopback stub and a scripted in-process policy, so real-service response shapes remain unverified behind the RS-OPS-LIVE-01 human gate.
+- Task RS-SUP-02: Nothing in docs/reviews/ was created or claimed, and no gap in existing data was hand-repaired.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 
 ## Notes
