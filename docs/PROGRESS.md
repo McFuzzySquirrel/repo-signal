@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: OPERATIONS-AND-OPEN-SOURCE-POSTURE-1
 **Status**: In Progress
-**Validation Gaps**: 31 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T20:43:52.707Z
+**Validation Gaps**: 34 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T20:49:56.400Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -78,10 +78,11 @@
   - Files: tests/integration/server-e2e.test.js
 - [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-01: Build the backup drill and the backup and migration runbook (@platform-engineer)
   - Files: docs/operations/backup-and-migrate.md, scripts/backup-drill.mjs, tests/backup-drill.test.js
+- [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-02: Write the unattended operation and troubleshooting runbooks (@platform-engineer)
+  - Files: docs/operations/scheduled-collection.md, docs/operations/troubleshooting.md, tests/troubleshooting-contract.test.js
 
 ## Current Task
-- [ ] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-02: Write the unattended operation and troubleshooting runbooks (@platform-engineer)
-  - Status: In progress
+- None currently running
 
 ## Remaining
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-1: Phase 1: Legibility spike and the decision it produces
@@ -90,7 +91,6 @@
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-1: Phase 1: Composition root and the pages
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-2: Phase 2: Accessibility contract and end-to-end verification
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-3: Phase 3: Human journey and accessibility review
-- [ ] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1: Phase 1: Durability and operation documents
 - [ ] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-2: Phase 2: Public surface and pipeline
 - [ ] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-3: Phase 3: Human gates
 
@@ -130,6 +130,9 @@
 - Task RS-SRV-04: The view content is a stub by task design, so assertions about the page's markup describe what the product's shell, escaping helpers and page read produce when composed, not the product views that RS-UI-01/02 will add; those arrive with their own tests.
 - Task RS-SRV-04: No live GitHub request and no real token were used; the only host this suite can reach is its own loopback server, enforced by a fetch guard that is itself probed.
 - Task RS-OPS-01: No real archive, no real credential and no network were involved: every check ran against scratch homes in the system temporary directory and spawned commands that make no outbound request, so the drill proves the restore path, not the behaviour of a live collection.
+- Task RS-OPS-02: No real GitHub request was made and no real token was used. The 401/403/429 refusal lines quoted in the page are transcribed from the classifier's own message templates in src/supervision/errors.js and src/github/retry.js, not from a live response, so real-service wording remains unverified behind the RS-OPS-LIVE-01 human gate.
+- Task RS-OPS-02: The cron, launchd and systemd entries are written against the documented behaviour of those three schedulers; only the systemd timer's semantics were cross-checked against the repository's own conventions. No schedule was installed or observed firing on any machine.
+- Task RS-OPS-02: Nothing in docs/reviews/ was created or claimed.
 
 ## Notes
 - Workflow engine run 68703c92-c4cf-4b9a-837e-c16d453b3deb
