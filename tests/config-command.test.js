@@ -205,7 +205,10 @@ test('help and unknown config subcommands list only the scoped commands without 
   outcome(help, 0);
   assert.match(help.stdout, /config init \[--force\]/);
   assert.match(help.stdout, /config check/);
-  assert.doesNotMatch(help.stdout, /\b(?:collect|serve|backfill)\b/);
+  assert.match(help.stdout, /discover \[--json\]/);
+  // The listing names the commands this build registers and no others, so a
+  // command that is not registered yet is never advertised.
+  assert.doesNotMatch(help.stdout, /\b(?:serve|backfill)\b/);
   const unknown = f.run(['config', 'unknown']);
   outcome(unknown, 2);
   assert.match(unknown.stderr, /Usage:/);

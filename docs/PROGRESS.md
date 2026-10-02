@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: TRAFFIC-COLLECTION-PIPELINE-1
+**Phase**: TRAFFIC-COLLECTION-PIPELINE-2
 **Status**: In Progress
-**Validation Gaps**: 14 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T14:08:29.463Z
+**Validation Gaps**: 15 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T14:29:46.575Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -54,6 +54,8 @@
   - Files: src/collect/traffic.js, tests/collect-traffic.test.js
 - [x] Phase TRAFFIC-COLLECTION-PIPELINE-1, Task RS-COL-02: Append referrer and popular-path captures as snapshots (@collector-engineer)
   - Files: src/collect/snapshots.js, tests/collect-snapshots.test.js
+- [x] Phase TRAFFIC-COLLECTION-PIPELINE-2, Task RS-COL-03: Expose the collect command with dry run, filter and per-repository isolation (@collector-engineer)
+  - Files: src/collect/run.js, src/commands/collect.js, src/commands/index.js, tests/collect-command.test.js, tests/helpers/stub-github-server.mjs, tests/config-command.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
@@ -98,6 +100,7 @@
 - Task RS-BKL-03: RS-OPS-LIVE-01 remains an open human gate; no live token check was performed and none is claimed.
 - Task RS-BKL-03: Who decides when a first collection counts as successful stays with collector-engineer: stampFirstCollected accepts the day the caller supplies and does not itself verify that a collection succeeded.
 - Task RS-COL-01: No live GitHub request was made and no real token was used; traffic response shapes follow the traffic-client contract and the vendor documentation already recorded for RS-API-03, so real-service behaviour remains unverified and RS-OPS-LIVE-01 stays an open human gate.
+- Task RS-COL-03: No live GitHub request was made and no real token was used. Endpoint response shapes follow the traffic, stargazer and statistics client contracts already recorded in the repository, so real-service behaviour remains unverified and RS-OPS-LIVE-01 stays an open human gate; no human review file was created or claimed.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 
 ## Notes

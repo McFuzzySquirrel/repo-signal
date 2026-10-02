@@ -6,6 +6,7 @@
  * and nothing else. Later features append their own subcommands here.
  */
 
+import { collect } from './collect.js';
 import { configCheck, configInit } from './config.js';
 import { dbBackup, dbMigrate, dbRestore, dbStatus, dbVerify } from './db.js';
 import { discover } from './discover.js';
@@ -174,6 +175,11 @@ registerCommand('discover', {
   summary: 'List reachable repositories and print ready-to-paste configuration lines.',
   usage: '[--json] [--include-organizations]',
   run: discover,
+});
+registerCommand('collect', {
+  summary: 'Collect every enrolled repository now, or plan the run without contacting GitHub.',
+  usage: '[--dry-run] [--repo owner/name]',
+  run: collect,
 });
 registerCommand('config init', {
   summary: 'Create private configuration and credential templates.',
