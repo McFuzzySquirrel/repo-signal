@@ -2,9 +2,9 @@
 
 ## Current State
 **Phase**: GITHUB-API-CLIENT-2
-**Status**: Paused
+**Status**: In Progress
 **Validation Gaps**: 8 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-09-30T21:21:04.638Z
+**Last Updated**: 2026-10-02T10:28:00.989Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -30,6 +30,8 @@
   - Files: src/db/migrations/001-core-schema.js, tests/initial-schema.test.js
 - [x] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-2, Task RS-DB-03: Implement the archive repository and gap-preserving range reads (@data-engineer)
   - Files: src/db/day-series-repo.js, src/db/snapshot-repo.js, src/db/ops-repo.js, tests/day-series-repo.test.js, tests/snapshot-repo.test.js, tests/ops-repo.test.js
+- [x] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-2, Task RS-DB-04: Expose the db command group with backup, restore and verification (@data-engineer)
+  - Files: src/db/backup.js, src/commands/db.js, src/commands/index.js, tests/db-command.test.js
 - [x] Phase GITHUB-API-CLIENT-1, Task RS-API-01: Build the credential provider and the allowlisted HTTP transport (@github-integration-engineer)
   - Files: src/github/credential-provider.js, src/github/http.js, tests/github-http.test.js
 - [x] Phase GITHUB-API-CLIENT-1, Task RS-API-02: Implement the rate-limit and retry policy (@github-integration-engineer)
@@ -40,10 +42,10 @@
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 
 ## Current Task
-- None currently running
+- [ ] Phase GITHUB-API-CLIENT-2, Task RS-API-04: Add the repository, stargazer and statistics clients (@github-integration-engineer)
+  - Status: In progress
 
 ## Remaining
-- [ ] Phase TELEMETRY-STORAGE-AND-MIGRATIONS-2: Phase 2: Repository layer and the database command group
 - [ ] Phase GITHUB-API-CLIENT-2: Phase 2: Endpoint clients
 - [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-1: Phase 1: Enrolled set resolution
 - [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-2: Phase 2: Discovery command

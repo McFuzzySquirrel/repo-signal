@@ -7,6 +7,7 @@
  */
 
 import { configCheck, configInit } from './config.js';
+import { dbBackup, dbMigrate, dbRestore, dbStatus, dbVerify } from './db.js';
 
 export const EXIT_SUCCESS = 0;
 export const EXIT_OPERATIONAL_FAILURE = 1;
@@ -176,4 +177,26 @@ registerCommand('config init', {
 registerCommand('config check', {
   summary: 'Validate local configuration and credentials without printing the token.',
   run: configCheck,
+});
+registerCommand('db migrate', {
+  summary: 'Apply pending archive migrations forward-only.',
+  run: dbMigrate,
+});
+registerCommand('db status', {
+  summary: 'Print the database path and on-disk schema version beside the code version.',
+  run: dbStatus,
+});
+registerCommand('db verify', {
+  summary: 'Run SQLite integrity_check over the archive and exit non-zero on failure.',
+  run: dbVerify,
+});
+registerCommand('db backup', {
+  summary: 'Write a consistent copy of the archive to a chosen path.',
+  usage: '<path>',
+  run: dbBackup,
+});
+registerCommand('db restore', {
+  summary: 'Load a backup over the archive, re-verify it and print per-table counts.',
+  usage: '<path>',
+  run: dbRestore,
 });
