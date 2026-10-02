@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: FIRST-CONNECT-BACKFILL-2
+**Phase**: TRAFFIC-COLLECTION-PIPELINE-1
 **Status**: In Progress
-**Validation Gaps**: 13 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T12:53:53.149Z
+**Validation Gaps**: 14 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T14:03:26.375Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -50,6 +50,8 @@
   - Files: src/backfill/development.js, tests/backfill-development.test.js
 - [x] Phase FIRST-CONNECT-BACKFILL-2, Task RS-BKL-03: Record and expose where collected history begins (@github-integration-engineer)
   - Files: src/backfill/provenance.js, tests/provenance.test.js
+- [x] Phase TRAFFIC-COLLECTION-PIPELINE-1, Task RS-COL-01: Write collected traffic days through the archive upsert (@collector-engineer)
+  - Files: src/collect/traffic.js, tests/collect-traffic.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
@@ -94,6 +96,7 @@
 - Task RS-BKL-03: No external GitHub contract is asserted by this task's tests because provenance reads only local SQLite and makes no network call, so nothing external was assumed or verified here.
 - Task RS-BKL-03: RS-OPS-LIVE-01 remains an open human gate; no live token check was performed and none is claimed.
 - Task RS-BKL-03: Who decides when a first collection counts as successful stays with collector-engineer: stampFirstCollected accepts the day the caller supplies and does not itself verify that a collection succeeded.
+- Task RS-COL-01: No live GitHub request was made and no real token was used; traffic response shapes follow the traffic-client contract and the vendor documentation already recorded for RS-API-03, so real-service behaviour remains unverified and RS-OPS-LIVE-01 stays an open human gate.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 
 ## Notes
