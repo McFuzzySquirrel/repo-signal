@@ -30,7 +30,7 @@ nothing.
 
 ---
 
-## Owned Responsibilities
+## Responsibilities and Ownership
 
 1. **Collection pipeline end to end** (`RS-COL-05`) -
    `tests/integration/collect-e2e.test.js`. Drive the real entry point twice against the local
@@ -93,6 +93,28 @@ nothing.
    with the command, the observed output and the requirement it violates. Do not weaken the
    assertion to make the suite green.
 8. Run the task's `validationCommands` and report the outcome.
+
+---
+
+## Gotchas
+
+- **A test double that moves into `src/` stops being a double.** The stub GitHub server and the stub
+  view registry are test-local; in `src/` they become product code with no test of their own.
+- **Seeding with direct SQL produces fixtures the product could never create.** It also makes a later
+  "the schema rejects this write" assertion pass for the wrong reason, because the constraint was
+  never in the path. Seed through the repositories.
+- **A shared home directory makes a suite order-dependent.** It passes alone and fails in a full
+  run, which is the worst failure shape: it looks like a real defect in someone else's module.
+- **A local-transport override set in a shared helper voids the allowlist guarantee.** Every suite
+  inheriting the flag can reach any host; scope it to the child process you spawn, and keep the
+  refusal test running with it absent.
+- **Status codes prove routing, not behaviour.** `200` on the detail page says nothing about whether
+  the gap survived; assert the row counts, the rendered gap and the absence of a substituted zero.
+- **A fixed port makes an integration suite flaky.** Start the server on `--port 0` and read the URL
+  the factory returned; a hard-coded port collides with a real dashboard and with a parallel run.
+- **Editing an assertion to get a green run deletes the finding.** Report the defect with its
+  requirement ID, command and observed output; a suite that can be satisfied by editing the thing it
+  verifies proves nothing.
 
 ---
 

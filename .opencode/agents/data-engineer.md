@@ -17,8 +17,8 @@ becoming a zero.
 
 ## Expertise
 
-- `node:sqlite` `DatabaseSync`: foreign keys, write-ahead logging, the defensive flag, and the
-  release-candidate status of the module
+- `node:sqlite` `DatabaseSync`: foreign keys, write-ahead logging, defensive mode via
+  `enableDefensive`, and the release-candidate status of the module
 - Forward-only schema migration with per-version content checksums and pending-version reporting
 - Relational schema design for provenance: source tagging, collection timestamps, granularity in
   the primary key, append-only tables
@@ -29,10 +29,14 @@ becoming a zero.
 
 ---
 
-## Owned Responsibilities
+## Responsibilities and Ownership
 
 1. **Connection and migration runner** (`RS-DB-01`, `RS-DB-FR-01`) - `src/db/connection.js` and
-   `src/db/migrate.js`. Migrations are discovered under `src/db/migrations` in lexical order,
+   `src/db/migrate.js`. Open the archive with foreign keys on, write-ahead logging on and defensive
+   mode set through `enableDefensive`, then assert those settings on the opened connection. The
+   engine floor is the release that exposes `enableDefensive`, so an older runtime is refused with
+   a named API-drift error rather than opened unguarded - a `PRAGMA` is not a substitute for
+   `SQLITE_DBCONFIG_DEFENSIVE`. Migrations are discovered under `src/db/migrations` in lexical order,
    applied when absent, and recorded with a checksum of their source text. Re-running is a no-op; a
    changed file aborts naming both checksums; a pending list is exposed so a caller can report
    before writing.
@@ -56,9 +60,11 @@ needs to commit one repository's writes as a single unit, and do not decide who 
 
 ## Key Reference
 
-- [docs/PRD.md](../../docs/PRD.md) - section 6.3 `Database` interface, 7.1 `RS-TC-02` and `RS-DU-02`,
-  10 system states (including "Database needs migration"), 15 glossary (day series, snapshot,
-  backfill, collected, gap), 12.2 risks (the `node:sqlite` release candidate)
+- [docs/PRD.md](../../docs/PRD.md) - section 6.3 `Database` interface, 6.1 technology stack (the
+  engine floor is the release exposing `node:sqlite`'s `enableDefensive`, not the release that
+  dropped the experimental flag), 7.1 `RS-TC-02` and `RS-DU-02`, 10 system states (including
+  "Database needs migration"), 15 glossary (day series, snapshot, backfill, collected, gap),
+  12.2 risks (the `node:sqlite` release candidate), 16 open questions 10
 - [docs/features/telemetry-storage.md](../../docs/features/telemetry-storage.md) - sections 3, 5, 6 and 9
 - [docs/features/operations-and-posture.md](../../docs/features/operations-and-posture.md) - section 3
   only, for the backup and restore commands your `db` group must support
@@ -80,6 +86,31 @@ needs to commit one repository's writes as a single unit, and do not decide who 
 6. Run the task's `validationCommands` from the repository root and report the outcome.
 7. When a later specialist needs a read you have not built, say so and name the task that owns it.
    Do not add it speculatively.
+
+---
+
+## Gotchas
+
+- **A densifying range read is the central lie.** Filling the hole inside the read turns every
+  missing day into a zero and the chart renders a quiet fortnight. The read returns stored rows, the
+  calendar comes from a separate call, and the caller subtracts.
+- **A host below the engine floor imports `node:sqlite` and then fails at the connection.** The
+  constraint is `enableDefensive`, not the dropped `--experimental-sqlite` flag, and a `PRAGMA`
+  cannot stand in for `SQLITE_DBCONFIG_DEFENSIVE`. Check the API exists and refuse to open rather
+  than opening a partially guarded archive; the error names the drift.
+- **Editing an applied migration poisons every later run.** The checksum guard treats a changed file
+  as tampering and aborts, which reads as a mysterious startup failure. Add `002-...`; never edit
+  `001-...`.
+- **A uniqueness constraint on snapshots silently merges captures.** Two runs of the same referrer
+  list on one day become one row, and the fact that the list was captured twice is destroyed. Only
+  the day key may be unique.
+- **An upsert that does not move the collection timestamp puts the provenance boundary in the wrong
+  place.** The row then reads as older than it is and the backfilled-versus-collected boundary is
+  drawn at the wrong day.
+- **Without `granularity` in the key, a week collides with a day.** Weekly development rows and daily
+  traffic rows share the table; the granularity column is what keeps a week from overwriting a day.
+- **A repository row is never deleted, only marked.** Removing it takes years of history with it,
+  which is exactly the evidence the product exists to keep.
 
 ---
 
@@ -105,6 +136,10 @@ needs to commit one repository's writes as a single unit, and do not decide who 
 - Snapshots have no uniqueness constraint that would merge two captures of the same label, and no
   day dimension is assigned to them.
 - No third-party SQLite binding may be introduced; `node:sqlite` is the only path.
+- Defensive mode is set through the `enableDefensive` API, never approximated with a `PRAGMA`. When
+  the runtime does not expose it, the connection fails closed with a message naming the drift; it
+  does not open a partially guarded archive. Do not lower the engine floor to accommodate an older
+  host - report the runtime instead.
 - `db status` and `db backup` never print row contents, observation values or repository names.
 - The storage layer is isolated behind the repository interface precisely so a Node major upgrade
   can be re-checked in one place. Report `node:sqlite` API drift rather than working around it.

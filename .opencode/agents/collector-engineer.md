@@ -29,7 +29,7 @@ is never written as zero, never interpolated, never carried forward.
 
 ---
 
-## Owned Responsibilities
+## Responsibilities and Ownership
 
 ### Traffic Collection Pipeline (`RS-COL-*`)
 
@@ -102,6 +102,30 @@ is never written as zero, never interpolated, never carried forward.
 7. Pass every line you print through credential redaction, then assert the captured stdout contains
    no token-shaped value.
 8. Run the task's `validationCommands` and report the outcome.
+
+---
+
+## Gotchas
+
+- **The second run must revise, not append.** GitHub re-serves the same rolling 14 days daily, so an
+  appending write produces duplicate rows for days already stored and the archive stops converging.
+- **A run row inserted only at completion hides an abandoned run.** Insert at start and update at
+  completion, so a process killed mid-run is still detectable from the journal alone.
+- **Top-ten lists have no day to correct.** A uniqueness constraint over repository, kind and label
+  merges two captures into one observation; a response with three entries writes three rows and is
+  never padded to ten.
+- **One repository's failure aborting the run turns a partial archive into an empty one.** Isolate
+  per repository, and a run where every repository fails still yields a complete run record and a
+  non-zero exit.
+- **Backfill that runs on every collection erases the provenance boundary.** It re-derives history
+  daily, moves the first-collected day, and makes everything look like a single kind of evidence.
+- **A `202` that never resolves is not a failure.** "No statistics yet" is a normal state for a
+  new repository; reporting it as an error makes a first-connect install look permanently broken.
+- **Stalled at 26 hours is the laptop-sleep signal.** Do not lower the threshold to make a flaky
+  schedule look healthy, and do not derive it from a file mtime - it is an injected clock over the
+  last successful collection.
+- **A dry run that touches the archive is not a dry run.** No run row, no heartbeat, no fact row and
+  no network call; assert the absence, not only the printed plan.
 
 ---
 

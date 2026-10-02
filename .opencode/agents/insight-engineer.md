@@ -29,7 +29,7 @@ the absolute value, the percentage beside it, and a stated reason when there is 
 
 ---
 
-## Owned Responsibilities
+## Responsibilities and Ownership
 
 1. **Deltas** (`RS-VIZ-01`, `RS-VIZ-FR-01`) - `src/insight/deltas.js`. For a metric and a range,
    return the sum of the last seven days, the sum of the seven before them, the absolute change,
@@ -80,6 +80,27 @@ it on markup and strings.
 6. Assert the absence explicitly: a test that the divergence module's output contains no score,
    grade, threshold or trend word. Absence is worth a named test here.
 7. Run the task's `validationCommands` and report the outcome.
+
+---
+
+## Gotchas
+
+- **Summing the window as if every calendar day were stored is the densifying lie one layer
+  earlier.** A hole in the archive produces a stated reason, not a smaller sum; the calendar days
+  and the stored rows are different inputs.
+- **A percentage over a zero base is `Infinity` or `NaN`.** Return the absolute change and omit the
+  ratio entirely; a fabricated ratio beside a real number is worse than no ratio.
+- **Comparing the last stored day to the previous stored day across a gap hides the gap.** The
+  change list reports the two stored values and says nothing about the day in between; a missing day
+  is never an entry reading "dropped to zero".
+- **Three clones moving three hundred percent is noise.** The honest response is the absolute value,
+  the percentage beside it, and a stated minimum - not a smaller, more dramatic number and not a
+  hidden repository.
+- **A minimum-volume floor phrased as a verdict is a score in a disguise.** "Not enough collected
+  days to compare" is the result; "low adoption" and "declining interest" are both forbidden, and
+  the absence of those words is worth a named test.
+- **A function that reads the clock becomes untestable.** Take today as a parameter; identical input
+  must produce identical output or the suite becomes flaky in a way that looks like data drift.
 
 ---
 

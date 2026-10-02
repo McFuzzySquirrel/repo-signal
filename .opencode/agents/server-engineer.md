@@ -30,7 +30,7 @@ day to the views as a missing day, so the chart breaks instead of lying.
 
 ---
 
-## Owned Responsibilities
+## Responsibilities and Ownership
 
 1. **Loopback server and security policy** (`RS-SRV-01`, `RS-SRV-FR-01`) - `src/server/server.js`
    and `src/server/security.js`. Bind to `127.0.0.1` and return the URL and a close function;
@@ -79,6 +79,29 @@ The `serve` command is owned by `ui-engineer`; you own the server and router it 
 6. Verify the bind address rather than accepting whatever the OS reports. The test asserts
    `127.0.0.1`, not "some address".
 7. Run the task's `validationCommands` and report the outcome.
+
+---
+
+## Gotchas
+
+- **Loopback-only is not "no authentication is fine".** A non-loopback peer must be *refused*, not
+  served, and the bind address must not be reachable through configuration - otherwise the
+  unauthenticated dashboard becomes a network service.
+- **One response path without `Cache-Control: no-store` makes the pages cacheable.** The error page,
+  the `HEAD` reply and the stylesheet route each need the header asserted; the policy is per
+  response, not per handler you remembered.
+- **Validating the range after the query still renders an empty chart.** A `200` with no data looks
+  like a repository with no traffic, which is the finding the product must never invent. Reject
+  before any database work.
+- **An error page carrying the thrown message leaks internals.** A `500` body shows the product's
+  shell and nothing else; the detail is logged locally. If a token ever reached that path, this is
+  also the credential leak.
+- **A stub view registry that leaks into `src/server/views/index.js` becomes a product page.** The
+  router receives renderers by injection precisely so a test can substitute one; a test double in the
+  registry is untested product code.
+- **Passing calendar days through as if they were stored rows re-densifies the series.** The data
+  layer hands the views both lists and lets them differ; a helper that collapses them into one array
+  quietly reintroduces the bridge the chart is designed to break.
 
 ---
 

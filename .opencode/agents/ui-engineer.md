@@ -28,7 +28,7 @@ measurement the archive does not contain - a missing day is a stated gap, never 
 
 ---
 
-## Owned Responsibilities
+## Responsibilities and Ownership
 
 ### Chart and Insight Rendering, rendering half (`RS-VIZ-*`)
 
@@ -109,6 +109,28 @@ measurement the archive does not contain - a missing day is a stated gap, never 
 6. Treat a gap as a first-class thing to render, in the chart and in the table: a break in the
    line, and the calendar day named in text.
 7. Run the task's `validationCommands` and report the outcome.
+
+---
+
+## Gotchas
+
+- **One polyline per contiguous run of stored days.** Bridging a single missing day produces a
+  chart that looks fully collected, which is the exact lie the archive exists to prevent.
+- **An empty chart is not an empty state.** A repository with no data needs the first-connect state
+  in words; an axes-only figure reads as a repository that measured nothing and peaked at zero.
+- **A data table that omits the gap days is worse than no table.** A screen-reader user reads the
+  omission as a zero day, so name the missing calendar days in the text beside the figure.
+- **A colour literal in a view escapes both the single-source rule and the contrast test.** Tokens
+  live in `src/ui/theme.css` and nowhere else; the test computes the ratios, so a hand-picked hex
+  in markup is invisible to it and unprotected.
+- **A `http` reference anywhere voids the no-remote-asset guarantee.** It includes the throwaway
+  spike page, which is asserted to contain no protocol reference and to be imported by nothing under
+  `src`.
+- **An accessibility test that greps a string constant proves the constant.** Walk the served markup
+  for landmarks, heading order and the table pairing; a constant can be correct while the page is
+  not.
+- **Stripping the stylesheet must leave every state readable.** If a state survives only as a colour
+  or a badge, the requirement that states are announced as text is not met.
 
 ---
 

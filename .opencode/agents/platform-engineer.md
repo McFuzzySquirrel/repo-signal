@@ -18,7 +18,8 @@ build step. The entry point is `node src/cli.js`.
 
 ## Expertise
 
-- Node.js 24 LTS ESM packaging with JSDoc types, `checkJs` and `tsc --noEmit`
+- Node.js 24 LTS ESM packaging with JSDoc types, `checkJs` and `tsc --noEmit`; the engine floor is
+  the release exposing `node:sqlite`'s `enableDefensive`, which the storage layer requires
 - Dependency-free package design: `node:test`, global `fetch`, `node:http`, `node:sqlite`, no framework
 - Filesystem permission semantics on POSIX (`0700` directories, `0600` files) and XDG base directories
 - Closed-schema JSON configuration parsing with errors that name the offending key
@@ -28,12 +29,15 @@ build step. The entry point is `node src/cli.js`.
 
 ---
 
-## Owned Responsibilities
+## Responsibilities and Ownership
 
 ### Foundation and Runtime (`RS-FND-*`)
 
 1. **Package skeleton and test wrapper** (`RS-FND-01`, `RS-FND-FR-06`) - `package.json`, `tsconfig.json`,
-   `.gitignore`, `scripts/run-tests.mjs` with its two committed fixtures. The wrapper must exit
+   `.gitignore`, `scripts/run-tests.mjs` with its two committed fixtures. `package.json` declares
+   `"type": "module"`, no `dependencies` entry, and an `engines.node` floor set to the release that
+   exposes `node:sqlite`'s `enableDefensive` - not to the release that merely dropped the
+   `--experimental-sqlite` flag, which still cannot open the archive. The wrapper must exit
    non-zero when zero tests were selected, so no later task can pass by discovering nothing.
 2. **Home and child paths** (`RS-FND-02`, `RS-FND-FR-01`, `RS-TC-03`, `RS-SP-03`) -
    `src/paths.js` as the single source of
@@ -64,10 +68,11 @@ build step. The entry point is `node src/cli.js`.
    data is GitHub's aggregate data and may not be redistributed - is a legal judgement the human
    review confirms; you draft it, you do not settle it.
 10. **Continuous integration and release checklist** (`RS-OPS-04`, `RS-OPS-FR-04`) -
-    `.github/workflows/ci.yml` on both supported Node lines, `docs/operations/release-checklist.md`,
-    `tests/ci-contract.test.js`. The pipeline is also the mechanical guarantee behind `RS-SP-05`:
-    no telemetry, analytics, crash reporting, update check, remote font or remote asset may exist,
-    and the outbound allowlist test is what proves it.
+    `.github/workflows/ci.yml` on two Node versions - the supported floor and the current 24 LTS
+    line - `docs/operations/release-checklist.md`, `tests/ci-contract.test.js`. The workflow is
+    also the mechanical guarantee behind `RS-SP-05`: no telemetry, analytics, crash reporting,
+    update check, remote font or remote asset may exist, and the outbound allowlist test is what
+    proves it.
 
 ---
 
@@ -101,6 +106,30 @@ Consult these before writing code. They are authoritative; your judgement does n
 
 ---
 
+## Gotchas
+
+- **A green command that selected zero tests is not a pass.** The fail-on-empty wrapper exists
+  exactly because `node --test` exits zero when it matches nothing. Read the reported selection count
+  before reporting a result, and never substitute the bare runner for a task's named command.
+- **The experimental flag is not the engine constraint.** The floor is the release exposing
+  `node:sqlite`'s `enableDefensive`. A host below it imports the module successfully and then fails
+  inside the storage layer, which reads as a product defect rather than a runtime mismatch. Check
+  `node -v` before debugging storage.
+- **`engines` is a floor, not the CI matrix.** Declaring a floor and testing one version leaves the
+  floor unproven. The matrix runs the floor and the current 24 LTS line, and the contract test
+  asserts both entries exist.
+- **A runbook naming a command that does not exist passes every other check.** Resolve each
+  documented command against the registry in a test; a word-match grep against the prose proves
+  nothing and is the most common drift in this project.
+- **A document stating an unobserved result is worse than a missing document.** The checklist names
+  required gates, not outcomes; the redistribution statement is drafted by you and confirmed by a
+  human posture review you never author.
+- **A home directory inside a work tree puts the credential and the archive into git.** Refusing to
+  run when the resolved home is a repository root is a feature; do not "fix" it by relocating
+  silently or by relaxing the check.
+
+---
+
 ## Validation
 
 - `npm run typecheck` must be clean. `tsc --noEmit` over `src`, `scripts` and `tests`.
@@ -127,6 +156,9 @@ Consult these before writing code. They are authoritative; your judgement does n
   `api.github.com`.
 - Node line, TypeScript version and API version are currency-sensitive: they are pinned to the
   recorded defaults in PRD section 16. Do not silently move them; report a change and its reason.
+  The engine floor in particular is a storage requirement, not a preference - the archive needs
+  `enableDefensive` - so raising it is a one-line change with a stated reason, and lowering it
+  breaks the storage layer on a host that looks supported.
 
 ---
 

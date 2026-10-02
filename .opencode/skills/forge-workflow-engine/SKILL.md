@@ -528,8 +528,10 @@ Each task is retried up to `--max-retries` times (default: 2) before being marke
 
 ## Integration with forge-launcher (terminal-driven build path)
 
-The launcher is the canonical terminal entry point. Its auto-draft stages run
-`forge-build-agent-team` headlessly and then offer to start the engine detached;
+The launcher is the canonical terminal entry point. Its derivation stages run
+`forge-build-agent-team` headlessly and then offer to start the engine detached.
+Requirements are never authored headlessly: a run with no `docs/PRD.md` stops and
+prints the interactive authoring command (ADR-060).
 `forge-launcher engine-run` compiles the manifest and runs/resumes the engine as
 a foreground or detached process:
 
@@ -551,7 +553,7 @@ This gives the same project two mutually exclusive execution modes for a given r
 - **Per-task cold start is the main harness overhead.** Every fresh `opencode run` re-boots config, skills, and all MCP servers unless a warm server is already serving the project. The engine no longer manages this itself (ADR-058); each run connects to OpenCode's background service, so this cost is avoided whenever that service is up. Set `OPENCODE_EXTRA_FLAGS=--standalone` to give a run a private server.
 - **The warm server is OpenCode's, not the engine's.** Runs share OpenCode's background service, which already has config, skills, and MCP servers booted. The engine cannot health-check or restart it; if it is down, `opencode run` starts it.
 - **Agent file paths must be absolute or resolvable from the repo root.** Discovery reads the agent `.md` file and sets `agent.path`. Native adapters pass `--agent <name>`; other roots use the persona in the execution file for repository tasks, or inline for text-only tasks.
-- **Parallelism is opt-in, harness-gated, and isolated.** The engine executes the ready-task frontier concurrently up to `--concurrency <n>` (default `1` = sequential). Only harness adapters that declare `supportsConcurrency` are parallelized; **same-owner tasks are always serialized** (at most one task per agent per wave). Above concurrency `1` each task runs in its own `git worktree` under `.forge-sandboxes/`, so `outputFiles`, the no-op gate, and `validationCommands` stay exact. Two requirements come with it: **the working tree must be clean** (commit or stash first; the engine refuses and lists the offending paths). Each task's worktree is selected through the spawn `cwd`, since OpenCode v2 resolves the project from `process.cwd()` (ADR-058). Cross-owner tasks that change the same file are detected at integration time and the second one fails. See ADR-056 and ADR-021.
+- **Parallelism is opt-in, harness-gated, and isolated.** The engine executes the ready-task frontier concurrently up to `--concurrency <n>` (default `1` = sequential). Only harness adapters that declare `supportsConcurrency` are parallelized; **same-owner tasks are always serialized** (at most one task per agent per wave). Above concurrency `1` each task runs in its own `git worktree` under `.forge-sandboxes/`, so `outputFiles`, the no-op gate, and `validationCommands` stay exact. Two requirements come with it: **the working tree must be clean** (commit or stash first; the engine refuses and lists the offending paths). Each task's worktree is selected through the spawn `cwd`, with the child's `PWD` corrected to the same path, since OpenCode v2 resolves the project from `process.env.PWD ?? process.cwd()` and a stale inherited `PWD` outranks `cwd` (ADR-058, ADR-059). Cross-owner tasks that change the same file are detected at integration time and the second one fails. See ADR-056 and ADR-021.
 
 ---
 

@@ -30,7 +30,7 @@ a rolling 14-day window, which is why the rest of the product exists at all.
 
 ---
 
-## Owned Responsibilities
+## Responsibilities and Ownership
 
 ### GitHub API Client (`RS-API-*`)
 
@@ -96,6 +96,31 @@ a rolling 14-day window, which is why the rest of the product exists at all.
    timestamp. Backfill never touches clones, views, referrers or popular paths.
 6. Run the task's `validationCommands` and report the outcome, including which contract you verified
    from documentation and which you only assumed.
+
+---
+
+## Gotchas
+
+- **A statistics `202` stored as data becomes a week of zeros.** The retryable outcome and the empty
+  response are different results; store only the `200` payload, and report a `202` that never
+  resolves as "no statistics yet" rather than as a failure.
+- **A `403` on a traffic endpoint is a permission state, not a rate limit.** It persists until the
+  install accepts the permission upgrade; retrying it or re-reading the credential wastes the run
+  and hides the one action the maintainer can take.
+- **A fixed page count silently truncates a popular repository.** Stargazer pagination ends on
+  `Link: rel="next"`, not on a page count; a three-page fixture says nothing about a thirty-page
+  repository and produces a short-but-plausible star curve.
+- **Stargazers fetched without the star media type have no `starred_at`.** The `Accept` media type is
+  what makes the history reconstructable at all, so the test asserts the header value rather than
+  merely that pagination worked.
+- **A day breakdown of fifteen entries is a misunderstood contract, not more data.** Reject it with
+  the observed length named; and do not pad a short breakdown to fourteen either - store what was
+  returned and let the calendar decide what is missing.
+- **The allowlist is proved by the refusal with the override absent.** An assertion made while
+  `REPO_SIGNAL_ALLOW_LOCAL_TRANSPORT` is set proves nothing about `RS-SP-04`; assert the refusal
+  *and* that the injected fetch was never called.
+- **Logging an error object leaks the token through `headers`.** Log the redacted message text, and
+  apply redaction where the message is created rather than at the print site.
 
 ---
 

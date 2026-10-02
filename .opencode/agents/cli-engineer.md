@@ -27,7 +27,7 @@ discovery never widens it.
 
 ---
 
-## Owned Responsibilities
+## Responsibilities and Ownership
 
 1. **Enrolled set resolution** (`RS-ENR-01`, `RS-ENR-FR-01`) - `src/enrollment/resolve.js`. Take
    the declared repository list, remove every entry matching the deny list compared
@@ -70,6 +70,28 @@ discovery never widens it.
 6. Assert that discovery leaves the configuration file byte-identical. This is a security-relevant
    claim, not a nicety.
 7. Run the task's `validationCommands` and report the outcome.
+
+---
+
+## Gotchas
+
+- **Deny precedence is not symmetric intuition.** Deny wins in both declaration orders, including
+  when the deny entry is listed first; an implementation that only handles one order passes its own
+  happy path and leaks an unenrolled repository.
+- **A `discover` command that writes the configuration file is an enrollment decision.** It is a
+  read-only convenience by contract, and "it only wrote what was already there" is not a defence -
+  assert the file is byte-identical after the command runs.
+- **Normalizing a printed repository name breaks the pasted lines.** Names are printed verbatim; a
+  lower-cased or re-cased line either fails the loader or, worse, matches a different repository.
+  Prove it by loading what was printed, without editing it first.
+- **Importing the resolver proves nothing about the command.** Registry lookup, argument parsing,
+  usage text and the exit code are only exercised by spawning `node src/cli.js`.
+- **Printing a full scope list invites trust in a permission the token lacks.** The actionable fact
+  per repository is whether `Administration` read is held; a scope dump is noise that also widens
+  what the page reveals.
+- **The enrolled set is a decision, not a discovery result.** Anything the token can reach and the
+  maintainer did not declare stays uncollected, so `discover` may widen the candidate list but never
+  the collection set.
 
 ---
 

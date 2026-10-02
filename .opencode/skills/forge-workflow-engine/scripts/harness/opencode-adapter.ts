@@ -33,8 +33,12 @@ import { executionPrompt } from "../task-execution.ts";
  * The project directory is pinned by the child's spawn `cwd` (see `invoke`).
  * OpenCode v2 removed `run --dir` and added no replacement: `run` takes only
  * `message...` arguments, so a trailing path would be swallowed into the prompt
- * while the project stayed wherever the process was launched. v2 resolves the
- * project from `process.cwd()`, so `cwd` is the only mechanism - see ADR-058.
+ * while the project stayed wherever the process was launched.
+ *
+ * `cwd` is necessary but not sufficient on its own: v2 resolves the project
+ * from `process.env.PWD ?? process.cwd()`, so an inherited stale `PWD`
+ * outranks the correct `cwd`. `runCommand` pins both, so they cannot disagree -
+ * see ADR-059, which corrects the `PWD` claim in ADR-058.
  *
  * There is no engine-managed warm server. OpenCode v2 dropped `run --attach`,
  * so instead each `opencode run` connects to OpenCode's own background
@@ -73,18 +77,14 @@ export class OpenCodeAdapter implements HarnessAdapter {
     const args = ["run", ...modelFlag, ...agentFlag, ...this.extraFlags, prompt];
 
     const result = await runCommand(this.bin, args, {
-      // `opencode run` selects its project from the inherited `PWD`, not from
-      // `process.cwd()` (measured on v2.0.20: with the two pointed at different
-      // directories, `PWD` decides, every time). Pinning `cwd` alone is not
-      // enough, because this process is normally `npm run workflow-engine`
-      // from the engine's own package dir, so the child would inherit a `PWD`
-      // pointing there and run every task against the engine instead of the
-      // repository - or, in parallel mode, against no sandbox at all. Both are
-      // set to the task root so they cannot disagree; `cwd` remains the
-      // mechanism that also fixes the filesystem, and `PWD` is corrected to
-      // match it rather than relied upon to select the project.
+      // `opencode run` resolves its project from `process.env.PWD ??
+      // process.cwd()` (read out of the v2.0.20 bundle), so `PWD` is what
+      // actually decides and an inherited one outranks `cwd`. `runCommand`
+      // sets `PWD` to this `cwd` for the child, so pinning `cwd` keeps a task
+      // in its repository - or, in parallel mode, in its own sandbox worktree
+      // - even when the engine process lives in a subdirectory such as the
+      // engine's own package dir. Do not drop `cwd` thinking PWD covers it.
       cwd: repoRoot,
-      env: { ...process.env, PWD: repoRoot },
       timeoutMs: request.budget.timeoutMs,
       signal: request.signal,
       maxBufferBytes: 10 * 1024 * 1024,
