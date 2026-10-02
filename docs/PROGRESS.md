@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: OPERATIONS-AND-OPEN-SOURCE-POSTURE-1
 **Status**: In Progress
-**Validation Gaps**: 28 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T20:21:12.616Z
+**Validation Gaps**: 29 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T20:27:54.463Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -74,10 +74,11 @@
   - Files: src/server/router.js, src/server/html.js, tests/router.test.js, tests/html.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-2, Task RS-SRV-03: Build the page data layer over the archive (@server-engineer)
   - Files: src/server/repo-data.js, tests/repo-data.test.js
+- [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-01: Build the backup drill and the backup and migration runbook (@platform-engineer)
+  - Files: docs/operations/backup-and-migrate.md, scripts/backup-drill.mjs, tests/backup-drill.test.js
 
 ## Current Task
-- [ ] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-01: Build the backup drill and the backup and migration runbook (@platform-engineer)
-  - Status: In progress
+- None currently running
 
 ## Remaining
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-1: Phase 1: Legibility spike and the decision it produces
@@ -124,6 +125,7 @@
 - Task RS-SRV-03: No live GitHub request was made and no real token was used; globalThis.fetch is refused for the whole test file and the module is asserted to contain no fetch call or HTTP import.
 - Task RS-SRV-03: No rendering and no CLI wiring was in scope and none was written, so the claim that the running server cannot disagree with this read is asserted at the module boundary (page data equals the owned reads' output) rather than through a spawned command.
 - Task RS-SRV-03: Nothing in docs/reviews/ was created or claimed, and no review gate was self-served.
+- Task RS-OPS-01: No real archive, no real credential and no network were involved: every check ran against scratch homes in the system temporary directory and spawned commands that make no outbound request, so the drill proves the restore path, not the behaviour of a live collection.
 
 ## Notes
 - Workflow engine run 68703c92-c4cf-4b9a-837e-c16d453b3deb
