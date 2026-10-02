@@ -1,0 +1,29 @@
+{
+  "cli-engineer": {
+    "primary": "opencode/space-bunny-free"
+  },
+  "collector-engineer": {
+    "primary": "opencode/space-bunny-free"
+  },
+  "data-engineer": {
+    "primary": "opencode/space-bunny-free"
+  },
+  "github-integration-engineer": {
+    "primary": "opencode/space-bunny-free"
+  },
+  "insight-engineer": {
+    "primary": "opencode/space-bunny-free"
+  },
+  "platform-engineer": {
+    "primary": "opencode/space-bunny-free"
+  },
+  "qa-engineer": {
+    "primary": "opencode/space-bunny-free"
+  },
+  "server-engineer": {
+    "primary": "opencode/space-bunny-free"
+  },
+  "ui-engineer": {
+    "primary": "opencode/space-bunny-free"
+  }
+}

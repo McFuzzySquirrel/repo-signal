@@ -2,9 +2,9 @@
 
 ## Current State
 **Phase**: FIRST-CONNECT-BACKFILL-2
-**Status**: Failed
-**Validation Gaps**: 10 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T11:12:30.480Z
+**Status**: In Progress
+**Validation Gaps**: 13 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T12:53:53.149Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -48,6 +48,8 @@
   - Files: src/backfill/stars.js, tests/backfill-stars.test.js
 - [x] Phase FIRST-CONNECT-BACKFILL-1, Task RS-BKL-02: Backfill a year of weekly development activity (@github-integration-engineer)
   - Files: src/backfill/development.js, tests/backfill-development.test.js
+- [x] Phase FIRST-CONNECT-BACKFILL-2, Task RS-BKL-03: Record and expose where collected history begins (@github-integration-engineer)
+  - Files: src/backfill/provenance.js, tests/provenance.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
@@ -89,6 +91,9 @@
 - Task RS-API-03: Tests use injected responses; real-service behavior was not live-verified.
 - Task RS-API-04: Tests use injected responses; no network calls were made.
 - Task RS-BKL-02: Tests use an injected statistics client stub; real-service behavior (including week-start alignment) was not live-verified; RS-OPS-LIVE-01 remains a human gate.
+- Task RS-BKL-03: No external GitHub contract is asserted by this task's tests because provenance reads only local SQLite and makes no network call, so nothing external was assumed or verified here.
+- Task RS-BKL-03: RS-OPS-LIVE-01 remains an open human gate; no live token check was performed and none is claimed.
+- Task RS-BKL-03: Who decides when a first collection counts as successful stays with collector-engineer: stampFirstCollected accepts the day the caller supplies and does not itself verify that a collection succeeded.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 
 ## Notes
