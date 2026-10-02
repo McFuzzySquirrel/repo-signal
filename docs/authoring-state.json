@@ -68,9 +68,40 @@
       "completedAt": "2026-10-02T13:04:59.119Z"
     },
     "skills": {
-      "status": "pending",
+      "status": "complete",
       "inputFingerprint": "8aefa416aca937c3711e3444cec3f2c4c2f5ca2a97ca682c522b7fbb49f708b0",
-      "outputs": []
+      "outputs": [],
+      "startedAt": "2026-10-02T13:40:57.618Z",
+      "invocation": {
+        "runner": "opencode",
+        "requestedModel": "opencode/space-bunny-free",
+        "source": "project",
+        "effectiveModel": "opencode/space-bunny-free",
+        "inventoryVerifiedAt": "2026-09-29T10:45:56.379Z",
+        "runnerSource": "project",
+        "argv": [
+          "run",
+          "--auto",
+          "--model",
+          "opencode/space-bunny-free",
+          "/forge-build-project-skills Consume docs/SKILL-CANDIDATES.json. Use .opencode/skills/ and .opencode/agents/. Create or extend only planned skills, reuse unchanged packages, honor omit decisions, and run structural and per-axis review gates. Do not regenerate the team, modify its ownership or handoff, compile a manifest, or start the build. Headless: proceed with authorized defaults."
+        ],
+        "skill": "forge-build-project-skills"
+      },
+      "outputFingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "completedAt": "2026-10-02T13:48:13.362Z",
+      "reusedSkills": [
+        "forge-task-implementation",
+        "honest-data-rendering",
+        "token-and-egress-safety",
+        "github-rest-contract",
+        "archive-storage-discipline",
+        "cli-command-surface",
+        "accessible-server-rendered-views",
+        "verification-loop",
+        "documentation-contract-tests"
+      ],
+      "noSkillsRequired": false
     }
   }
 }
