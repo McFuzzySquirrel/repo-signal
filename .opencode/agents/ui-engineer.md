@@ -201,7 +201,11 @@ the accessibility gate; report defects as reproducible steps rather than impress
   insufficient-data results are data you display; do not recompute or re-word its reasoning, and
   apply the same ban on verdict and trend language to rendered strings.
 - **github-integration-engineer** owns the provenance read your chart annotates from. The first
-  collected day comes from that record, never from the earliest stored row.
+  collected day comes from that record, never from the earliest stored row. `tests/provenance.test.js`
+  is shared with them: `RS-BKL-03` writes the read and the write-through cases in it, and `RS-VIZ-05`
+  adds your boundary-marker, legend and first-connect-caption assertions. Add your cases to that
+  file without rewriting theirs, and report a read change that invalidates a rendering assertion
+  rather than editing the expectation.
 - **collector-engineer** owns the health read and its state words. Your health page shows the same
   states the CLI shows, and cannot disagree with it.
 - **qa-engineer** exercises your pages against the running server; report a production defect

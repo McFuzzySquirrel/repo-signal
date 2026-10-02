@@ -3,7 +3,7 @@
   "candidates": [
     {
       "name": "forge-task-implementation",
-      "description": "How to execute one RepoSignal forge-task contract end to end: read the task block, honour its exclusions and constraints, produce the named outputs, run the named validation commands, and stop at the human review gate instead of self-serving it.",
+      "description": "How to execute one RepoSignal forge-task contract end to end: read the task block, resolve its requirement and constraint refs, produce the named outputs, run the named validation commands, and stop at the human review gate instead of self-serving it.",
       "consumers": [
         "platform-engineer",
         "data-engineer",
@@ -16,7 +16,7 @@
         "qa-engineer"
       ],
       "action": "reuse",
-      "reason": "The package at .opencode/skills/forge-task-implementation already covers this process and still matches the source: all 40 implementation tasks across the 11 feature documents share one contract shape, three tasks modify the same three files by design, and the exclusion column is the hard boundary a task-by-task agent overruns first. It keeps the reading order, the validate-before-reporting rule and the refusal to author a human gate, and it claims nothing the task blocks do not require. No gap was found in it while re-reading the task blocks against the agents, so reuse it unchanged rather than regenerating it."
+      "reason": "All 46 implementation tasks across the 11 feature documents share one contract shape, three tasks modify the same three files by design (src/commands/index.js is appended to by five owners; src/collect/run.js by three; src/server/views/index.js and src/views/components/line-chart.js by several), and the exclusion column is the hard boundary a task-by-task agent overruns first. Nine of the 13 completed tasks recorded an explicit validation gap in docs/PROGRESS.md rather than claiming an unobserved result, which is the behaviour this package mandates, so it is working as written. Re-read against the source this run and no gap was found; reuse it unchanged."
     },
     {
       "name": "honest-data-rendering",
@@ -31,7 +31,7 @@
         "qa-engineer"
       ],
       "action": "reuse",
-      "reason": "This is the product's central invariant under RS-DU-02 and RS-HO-01, it has the widest blast radius in the team, and each failure of it looks like working code - a zero substituted for a gap, a bridged polyline, an interpolated delta, a verdict word. It is also the most repeated requirement in the feature set, re-asserted in acceptance criteria across storage, backfill, collection, insight, chart, page data and views. The existing package states each rule once with the assertion that proves it, and its consumer list matches the seven agents whose surfaces can violate it, so reuse it as written."
+      "reason": "This is the product's central invariant under RS-DU-02 and RS-HO-01, it has the widest blast radius in the team, and each failure of it looks like working code - a zero substituted for a gap, a bridged polyline, an interpolated delta, a verdict word. It is also the most repeated requirement in the feature set, re-asserted in acceptance criteria across storage, backfill, collection, insight, chart, page data and views, and it is the reason the repo-data and provenance tests take the deliberate-hole fixture shape. The package states each rule once with the assertion that proves it, and its consumer list matches the seven agents whose surfaces can violate it, so reuse it as written."
     },
     {
       "name": "token-and-egress-safety",
@@ -44,7 +44,7 @@
         "qa-engineer"
       ],
       "action": "reuse",
-      "reason": "RS-SC-01, RS-SC-02, RS-SC-04, RS-SP-03, RS-SP-04 and RS-SP-05 form one coupled boundary: the same token is read by the credential store, resolved through the provider interface, attached by the transport, and must never reach a log, an error, a row, a page or a test snapshot. The local transport override is the single most reused fragile mechanism in the plan, appearing in the collect, discover, collection e2e, server e2e and dashboard e2e suites, and its gate is what keeps the outbound allowlist guarantee mechanical rather than asserted. The package documents the five suites that set it, the redaction surfaces and the proof that the refusal happens with the flag absent; it is accurate and complete against the source, so reuse it."
+      "reason": "RS-SC-01, RS-SC-02, RS-SC-04, RS-SP-03, RS-SP-04 and RS-SP-05 form one coupled boundary: the same token is read by the credential store, resolved through the provider interface, attached by the transport, and must never reach a log, an error, a row, a page or a test snapshot. The local transport override is the single most reused fragile mechanism in the plan - it already gates the four completed suites that need a stub - and its gate is what keeps the outbound allowlist guarantee mechanical rather than asserted. The package documents the suites that set it, the redaction surfaces and the proof that the refusal happens with the flag absent; it is accurate against the source, so reuse it."
     },
     {
       "name": "github-rest-contract",
@@ -57,7 +57,7 @@
         "platform-engineer"
       ],
       "action": "reuse",
-      "reason": "PRD section 6.4 lists the vendor pages the product depends on and section 16 fixes the recorded defaults for both the API version and the fine-grained permission, which makes this the plan's main external drift surface - GitHub can change a payload, a media type or a status code, and the PRD already names a live human re-check gate as the mitigation. The client owner, the collector that must survive a 202, the discover command and the three suites that mock the service all need the same assumptions recorded once rather than restated per module. The package's page-by-page reference table and typed error taxonomy match the feature documents without drift, so reuse it and leave the version constant where it is."
+      "reason": "PRD section 6.4 lists the vendor pages the product depends on and section 16 fixes the recorded defaults for both the API version and the fine-grained permission, which makes this the plan's main external drift surface - GitHub can change a payload, a media type or a status code, and the PRD already names a live human re-check gate as the mitigation. The run so far shows why it matters: RS-API-03, RS-API-04 and RS-BKL-02 each recorded that the real service was not exercised. That is the correct outcome, and the package is the place where the unverified detail and the vendor page it belongs to are named. The page-by-page reference table and typed error taxonomy match the feature documents without drift, so reuse it and leave the version constant where it is."
     },
     {
       "name": "archive-storage-discipline",
@@ -68,8 +68,8 @@
         "github-integration-engineer",
         "server-engineer"
       ],
-      "action": "extend",
-      "reason": "The package is correct on everything except the runtime floor, and the PRD revision of 2026-09-30 invalidated that one statement: it now says the engine floor is the release where node:sqlite dropped the --experimental-sqlite flag, while PRD 6.1 and 16 fix the floor at the release exposing enableDefensive and telemetry-storage RS-DB-01 records the same prerequisite. Extend it additively with the enableDefensive requirement, the rule that a PRAGMA is not a substitute for SQLITE_DBCONFIG_DEFENSIVE, the fail-closed behaviour when the runtime lacks the API, and a gotcha for the misleading import-succeeds-then-connection-fails symptom. Keep every existing step, the per-table write rules and the consumer list unchanged; the correction is guidance on top of the package, not a replacement for it."
+      "action": "reuse",
+      "reason": "This was the previous run's extend target and the extension is now in place, so the action moves to reuse. The package now names the enableDefensive guard in its frontmatter, Step 1 states the 24.12.0 floor as the enableDefensive release and demotes 22.13.0 to a different milestone that cannot run the archive, and it carries the PRAGMA-is-not-a-substitute rule, the fail-closed behaviour when the runtime lacks the API, and the import-succeeds-then-connection-fails gotcha. docs/SKILL-AUDIT.md records the change and a 3 on every quality axis with a sensitivity control proving the gate can go red. Four tasks now depend on it and nothing in the current source invalidates any of it, so reuse it unchanged."
     },
     {
       "name": "cli-command-surface",
@@ -82,7 +82,7 @@
         "ui-engineer"
       ],
       "action": "reuse",
-      "reason": "Five features add commands to one shared registry with one shared exit-code and output contract - config init and check, db migrate/status/verify/backup/restore, discover, collect and serve - and each task's acceptance criteria assert reachability through the process entry point rather than an import, a convention that is easy to get wrong in a way that passes locally. The package's command inventory, exit-code mapping and spawn-not-import rule match all five feature documents, and the registry contract stays with platform-engineer while the bodies stay with each owner. Nothing in the PRD revision touches this surface, so reuse it unchanged."
+      "reason": "Five features add commands to one shared registry with one shared exit-code and output contract - config init and check, db migrate/status/verify/backup/restore, discover, collect and serve - and each task's acceptance criteria assert reachability through the process entry point rather than an import, a convention that is easy to get wrong in a way that passes locally. The package's command inventory, exit-code mapping and spawn-not-import rule match all five feature documents, and the registry contract stays with platform-engineer while the bodies stay with each owner, which is the handoff the agents state. The package was read against the three command tasks already built (RS-FND-03/06, RS-DB-04, RS-ENR-02) and found consistent, so reuse it unchanged."
     },
     {
       "name": "accessible-server-rendered-views",
@@ -93,7 +93,7 @@
         "qa-engineer"
       ],
       "action": "reuse",
-      "reason": "RS-AX-01 through RS-AX-07 apply to the router's escaping helpers, the shell, the three view modules, the SVG chart and the stylesheet, so the same structural assertions would otherwise be re-derived in the router, html, chart, view and integration tasks. The existing implement-visual-theme package cannot be reused for this and must not be extended: it is bound to a React DOM and PixiJS renderer stack and a different design system, whereas this product has no client-side framework, no charting library and system fonts only, so extending it would import foreign assumptions. The project package already states the per-context helpers, the structural assertions and the computed contrast rule against this product's own file layout, so reuse it."
+      "reason": "RS-AX-01 through RS-AX-07 apply to the router's escaping helpers, the shell, the three view modules, the SVG chart and the stylesheet, so the same structural assertions would otherwise be re-derived in the router, html, chart, view and integration tasks. RS-SRV-01 and RS-SRV-02 are complete and their tests already assert the bind address, the header set, the three-context escaping and the shell's four required parts - exactly the structural surface this package names. The existing implement-visual-theme package cannot be reused here and must not be extended: it is bound to a React DOM and PixiJS renderer stack and a different design system, whereas this product has no client-side framework, no charting library and system fonts only, so extending it would import foreign assumptions. The project package states the per-context helpers, the structural assertions and the computed contrast rule against this product's own file layout, so reuse it."
     },
     {
       "name": "verification-loop",
@@ -109,8 +109,8 @@
         "server-engineer",
         "qa-engineer"
       ],
-      "action": "extend",
-      "reason": "Every task names two validation commands drawn from this loop, and RS-TC-04 makes a command that proves nothing an unacceptable check, so the loop's shape is load-bearing in the tasks, the CI workflow and the release checklist. Its structure is right, but the same PRD revision that moved the engine floor invalidates two statements: the SKILL.md gotcha and one row of the failure-recovery table both say a host below Node 22.13 fails on a missing experimental flag, when the binding constraint is now enableDefensive and the observed symptom is a connection-time API-drift error rather than an import error. Extend it additively with the corrected floor, the corrected symptom and its fix, and a new table row for the drift error; keep the wrapper rule, the type-check step, the mirroring convention, the temporary-home rule and the spawn-not-import rule unchanged."
+      "action": "reuse",
+      "reason": "This was the previous run's other extend target and the extension is now in place, so the action moves to reuse. Every task names two validation commands drawn from this loop and RS-TC-04 makes a command that proves nothing an unacceptable check, so the loop's shape is load-bearing in the tasks, the CI workflow and the release checklist. The Node-floor gotcha now names 24.12.0 and describes the import-succeeds-then-connection-fails symptom, and references/failure-recovery.md carries the corrected floor row plus a new connection-time API-drift row; the wrapper rule, type-check step, mirroring convention, temporary-home rule and spawn-not-import rule are untouched. The thirteen gaps recorded in docs/PROGRESS.md are the loop working - unobserved runtime lines and live-service behaviour reported as unverified rather than as passes - so reuse it unchanged."
     },
     {
       "name": "documentation-contract-tests",
@@ -120,7 +120,7 @@
         "qa-engineer"
       ],
       "action": "reuse",
-      "reason": "Four consecutive operations tasks build the same fragile artefact - a document plus a test that fails when the document drifts - and RS-OPS-CON-01 forbids stating an unobserved result or approval. The failure mode is specific and expensive: a runbook documenting a command that does not exist, or a README that quietly loses the statement that GitHub's traffic data may not be redistributed, and the automated checks pass either way unless a test asserts the sentence. One consumer owns all four tasks, but the procedure recurs four times and the documents outlive the code they describe. Its Node-range and two-version assertions are written as the supported floor rather than a fixed number, so the PRD revision does not invalidate them; reuse it unchanged."
+      "reason": "Four consecutive operations tasks build the same fragile artefact - a document plus a test that fails when the document drifts - and RS-OPS-CON-01 forbids stating an unobserved result or approval. The failure mode is specific and expensive: a runbook documenting a command that does not exist, or a README that quietly loses the statement that GitHub's traffic data may not be redistributed, and the automated checks pass either way unless a test asserts the sentence. One consumer owns all four tasks, but the procedure recurs four times and the documents outlive the code they describe. Its Node-range and two-version assertions are written as the supported floor rather than a fixed number, so the PRD's move to a 24.12.0 enableDefensive floor is already covered rather than invalidated; reuse it unchanged."
     },
     {
       "name": "human-review-gate-protocol",
@@ -136,7 +136,7 @@
         "qa-engineer"
       ],
       "action": "omit",
-      "reason": "The responsibility is real but it is already carried by the artifact that would describe it: every gate is a forge-task with no model owner, a reviewFile path, and an explicit constraint that no agent may author or complete it, and each adjacent agent states the prohibition locally in its own Human Gates section naming its own gates. Eight of the nine specialists name at least one gate that way - platform-engineer RS-FND-REV-01 and RS-OPS-REV-01, github-integration-engineer and cli-engineer RS-OPS-LIVE-01, collector-engineer RS-OPS-SOAK-01, insight-engineer RS-VIZ-REV-01, ui-engineer RS-VIZ-REV-01 and RS-UI-REV-01, server-engineer RS-OPS-LIVE-01 and RS-UI-REV-01, qa-engineer RS-OPS-LIVE-01, RS-OPS-SOAK-01 and RS-UI-REV-01 - leaving only data-engineer, whose feature carries no review task. A shared package would add a second place to maintain the same prohibition and would make self-certification easier to reach for rather than harder. The correct home is the task contract, which is immutable input."
+      "reason": "The responsibility is real but it is already carried by the artefact that would describe it: all six gates are forge-tasks of kind human-review with no ownerAgent, a reviewFile path, and an explicit constraint that no agent may author or complete them - verified this run by extracting every forge-task block and confirming zero review tasks carry an owner. Each adjacent agent states the prohibition locally in its own Human Gates section naming its own gates, and eight of the nine specialists name at least one that way: platform-engineer RS-FND-REV-01 and RS-OPS-REV-01, github-integration-engineer and cli-engineer RS-OPS-LIVE-01, collector-engineer RS-OPS-SOAK-01, insight-engineer RS-VIZ-REV-01, ui-engineer RS-VIZ-REV-01 and RS-UI-REV-01, server-engineer RS-OPS-LIVE-01 and RS-UI-REV-01, qa-engineer RS-OPS-LIVE-01, RS-OPS-SOAK-01 and RS-UI-REV-01 - leaving only data-engineer, whose feature carries no review task. A shared package would add a second place to maintain the same prohibition and would make self-certification easier to reach for rather than harder. The correct home is the task contract, which is immutable input."
     },
     {
       "name": "node-sqlite-upgrade-drill",
@@ -146,7 +146,7 @@
         "platform-engineer"
       ],
       "action": "omit",
-      "reason": "This is a single future event, not a repeated process: PRD 12.2 names it as a risk and PRD 16 fixes the engine range, and the release checklist already carries the schema version and the supported Node range a re-check would use. The 2026-09-30 floor revision also shows the mechanism that matters - the storage layer detects the missing API and fails closed rather than degrading - which is guidance for the existing archive-storage-discipline package rather than a new occasion. When the upgrade is actually planned, the backup drill, the migration runner's checksum behaviour and the existing suite already exercise the surface that matters, so a dedicated package would be scaffolding for an occasion that has not occurred."
+      "reason": "This is a single future event, not a repeated process: PRD 12.2 names it as a risk and PRD 16 fixes the engine range, and the release checklist already carries the schema version and the supported Node range a re-check would use. The floor correction that the previous run routed into guidance rather than into a new package is itself the evidence: the storage layer detects the missing API and fails closed instead of degrading, which belongs in archive-storage-discipline and now lives there. When the upgrade is actually planned, the backup drill, the migration runner's checksum behaviour and the existing suite already exercise the surface that matters, so a dedicated package would be scaffolding for an occasion that has not occurred."
     }
   ]
 }

@@ -1,7 +1,7 @@
 ---
 name: github-integration-engineer
 description: "Owns the only code in RepoSignal that talks to GitHub: the credential provider and host-allowlisted HTTP transport, the retry and rate-limit policy including the 202 statistics retry, the traffic, repository, stargazer and statistics clients, and the first-connect backfill with its provenance record."
-mode: all
+mode: subagent
 model: opencode/space-bunny-free
 ---
 
@@ -66,6 +66,12 @@ a rolling 14-day window, which is why the rest of the product exists at all.
 7. **Provenance record** (`RS-BKL-03`, `RS-BKL-FR-03`) - `src/backfill/provenance.js`: whether
    backfill completed and which kinds ran, the first day collected data exists, whether that day is
    today, and a `not-connected` state. The first collected day is stamped exactly once.
+
+   **Caller boundary.** `provenance.js` exposes the stamp and the read; it never judges whether a
+   collection succeeded, and it accepts the day the caller supplies. `collector-engineer` owns that
+   judgement, because the run knows whether the repository's writes committed. If a task's contract
+   does not say who calls the stamp, report the ambiguity rather than deciding it inside the
+   provenance module - an unguessed boundary here silently moves the first-collected day.
 
 ---
 
@@ -188,8 +194,14 @@ contract, state explicitly in your report which external detail you assumed rath
   call on every error path, plus the `X-GitHub-Api-Version` constant's single home if it moves.
 - **data-engineer** owns the schema and the repositories you write through. You choose `source` and
   granularity; you do not choose the constraint that enforces them.
+- **ui-engineer** owns `src/views/components/line-chart.js`, which annotates the boundary your
+  provenance read supplies. `tests/provenance.test.js` is shared: `RS-BKL-03` writes the read and the
+  write-through cases in it, `RS-VIZ-05` adds the chart-boundary, legend and first-connect caption
+  assertions. Keep your blocks named for the read and leave the rendering assertions to them; if a
+  change of yours breaks one of theirs, report it rather than rewriting it.
 - **collector-engineer** owns orchestration, the per-repository failure boundary and the decision
-  to continue, stop the repository, or stop the run. You produce the typed failures it consumes.
+  to continue, stop the repository, or stop the run. You produce the typed failures it consumes,
+  and it calls your first-collected-day stamp once it knows a collection committed.
 - **cli-engineer** consumes your repository client in `discover`; it must stay a read-only
   convenience that never writes configuration.
 - **qa-engineer** verifies your transport, retry and mapping behaviour end to end against the local
