@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: OPERATIONS-AND-OPEN-SOURCE-POSTURE-2
 **Status**: In Progress
-**Validation Gaps**: 37 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T21:10:38.142Z
+**Validation Gaps**: 40 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T21:23:40.036Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -82,6 +82,8 @@
   - Files: docs/operations/scheduled-collection.md, docs/operations/troubleshooting.md, tests/troubleshooting-contract.test.js
 - [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-2, Task RS-OPS-03: Publish the README, the licence and the privacy note (@platform-engineer)
   - Files: README.md, LICENSE, docs/operations/privacy.md, tests/release-contract.test.js
+- [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-2, Task RS-OPS-04: Add continuous integration and the release checklist (@platform-engineer)
+  - Files: .github/workflows/ci.yml, docs/operations/release-checklist.md, tests/ci-contract.test.js
 
 ## Current Task
 - None currently running
@@ -93,7 +95,6 @@
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-1: Phase 1: Composition root and the pages
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-2: Phase 2: Accessibility contract and end-to-end verification
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-3: Phase 3: Human journey and accessibility review
-- [ ] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-2: Phase 2: Public surface and pipeline
 - [ ] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-3: Phase 3: Human gates
 
 ## Blockers
@@ -138,6 +139,9 @@
 - Task RS-OPS-03: No live GitHub request and no real token were involved in this task; `serve` was exercised only as a name, and no dashboard command exists to run. The privacy note's request-count figures are the collector's own documented constants, not a measured run.
 - Task RS-OPS-03: The licence, the data statement and the privacy note are unconfirmed by the human posture review, so publishing them is a human decision this task cannot make.
 - Task RS-OPS-03: No host other than api.github.com was contacted; the transport allowlist and the `GET`-only claim are verified by reading src/github/http.js and by the existing tests/github-http.test.js, not by observing a live run.
+- Task RS-OPS-04: No GitHub Actions run, no GitHub token and no live API call were involved. The pipeline's own execution on ubuntu-latest is unobserved; every behavioural claim about it is asserted against the file's text and against the same four commands run locally.
+- Task RS-OPS-04: RS-SP-05's mechanical guarantee remains tests/github-http.test.js, which this task did not modify; the CI contract test asserts that test still exists and still names api.github.com, and that the workflow adds no host of its own.
+- Task RS-OPS-04: The checklist deliberately states no test result and no approval; the matrix, drill and type check are observed locally on one host, not on GitHub's runners.
 
 ## Notes
 - Workflow engine run 68703c92-c4cf-4b9a-837e-c16d453b3deb

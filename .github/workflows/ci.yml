@@ -1,0 +1,93 @@
+# The verification pipeline for RepoSignal.
+#
+# This workflow verifies and nothing else. It reads the repository, installs the two
+# development dependencies from the committed lock file, runs the type check, runs the
+# whole test suite through the wrapper that fails when it selects zero tests, and then
+# runs the backup drill so the archive restore path is exercised on every run.
+#
+# What it deliberately does not do: it needs no GitHub token and no repository secret,
+# it contacts no host as part of the build, and it deploys, publishes or releases
+# nothing. A tag is a person's decision, and the gates before it are listed in
+# docs/operations/release-checklist.md. `permissions: contents: read` is the whole
+# credential surface of a run: the checkout reads, and nothing writes.
+#
+# tests/ci-contract.test.js asserts each of those claims against this file, so the
+# assertions cannot drift away from what the workflow actually runs.
+
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+
+# A run reads the repository and does nothing else. No write scope, no package
+# scope, no deployment permission, and no secret of any kind is referenced below.
+permissions:
+  contents: read
+
+# The shell is pinned so a step behaves the same on every runner image rather than
+# inheriting whatever `sh` the image happens to provide.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  verify:
+    name: verify on node ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    # Both lines report even when one fails: the floor and the current 24 LTS line
+    # are separate facts, and cancelling one hides which of them broke.
+    strategy:
+      fail-fast: false
+      matrix:
+        # 24.12.0 is the supported floor declared in package.json: the archive is
+        # opened through node:sqlite's enableDefensive, which earlier lines do not
+        # expose. 24.21.0 is the current 24 Active LTS line the project is developed
+        # against. Both are pinned so a moving "lts/*" cannot silently change what
+        # was verified.
+        node-version:
+          - '24.12.0'
+          - '24.21.0'
+
+    # Every command writes only inside this home or inside a temporary directory the
+    # command creates for itself, so a run can never stage a credential or an archive
+    # into the checkout. `runner.temp` sits outside the workspace.
+    env:
+      REPO_SIGNAL_HOME: ${{ runner.temp }}/repo-signal-home
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      # A clean install: `npm ci` deletes whatever node_modules held and rebuilds it
+      # from package-lock.json exactly, so a run cannot pass on a package that is not
+      # committed. There is no `dependencies` entry in package.json, so this installs
+      # the type checker and the Node type definitions and nothing else.
+      - name: Clean install from the lock file
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      # The repository's own test command, through the wrapper in
+      # scripts/run-tests.mjs. The wrapper exits non-zero when it selected zero tests,
+      # so a suite that discovers nothing fails the build rather than passing quietly.
+      - name: Full test suite
+        run: npm test
+
+      # After the suite, so the archive restore path is proven on every run: the drill
+      # writes a known dataset into a scratch home, backs it up, restores the copy into
+      # a second scratch home and compares the per-table row counts, exiting non-zero
+      # on any difference. It contacts no host and touches no real archive.
+      - name: Backup and restore drill
+        run: node scripts/backup-drill.mjs
+
+    timeout-minutes: 20
