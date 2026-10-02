@@ -3,7 +3,8 @@
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Test command exits 0 but names no tests | Selection found nothing, and the wrapper is absent or the path was not passed after `--` | Pass the path after `--`; if the wrapper is missing, report the command as proving nothing |
-| `Cannot find module 'node:sqlite'` or an experimental-flag error | Host is below Node 22.13.0 | Check `node -v`; the engine floor is 22.13.0 and 24 is the supported line |
+| `Cannot find module 'node:sqlite'` or an experimental-flag error | Host is below the release that removed the experimental flag, so far below the supported floor | Check `node -v`; the engine floor is 24.12.0, the release that exposes `node:sqlite`'s `enableDefensive`, and 24 is the supported line |
+| Unknown option or missing driver method while opening `DatabaseSync`, on a host that imports `node:sqlite` cleanly | Runtime is below 24.12.0, so `enableDefensive` does not exist; the import succeeds and only the connection fails | Check `node -v` against the 24.12.0 floor before reading it as a product defect; the storage layer fails closed there on purpose rather than opening without the flag |
 | `SQLITE_CANTOPEN` or a database in an unexpected state | A test inherited a real or shared home | Set `REPO_SIGNAL_HOME` to a fresh temporary directory per test |
 | `database is locked` only in a full run | Two suites share one home or one database file | Give each test its own home; do not reuse a module-level path |
 | `pending migration` or a version mismatch in a full run | A previous suite migrated a home this suite is reading | Isolate the home; never point a test at the developer's home |

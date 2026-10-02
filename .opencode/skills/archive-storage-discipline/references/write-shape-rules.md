@@ -1,5 +1,20 @@
 # Write shape rules per table
 
+## Connection settings
+
+| Setting | Set with | Proven by | Never |
+|---------|----------|-----------|-------|
+| `foreign_keys` | The `enableForeignKeyConstraints` driver option, or a `PRAGMA` | Reading `PRAGMA foreign_keys` back from the opened connection | Asserting only the options object that was passed in |
+| `journal_mode` | The driver's journal-mode option | Reading `PRAGMA journal_mode` back and asserting it is `wal` | Assuming the default is write-ahead logging |
+| `enableDefensive` | The `enableDefensive` driver option only | Reading the connection's defensive state back after opening | A `PRAGMA`, an `exec()` call, or a comment; these leave `SQLITE_DBCONFIG_DEFENSIVE` unset |
+
+The engine floor is Node 24.12.0, the release that exposes `enableDefensive`. Node 22.13.0 is the
+release that dropped the `--experimental-sqlite` flag; there the module imports, the option does not
+exist, and the archive cannot be opened defensively. When the option is missing, opening raises a
+named error naming the floor and opens no connection, rather than degrading to an undefended one.
+
+## Per-table rules
+
 | Table | Key | Granularity | Conflict rule | Timestamp | Never |
 |-------|-----|-------------|---------------|-----------|-------|
 | repositories | stable identity | n/a | Lifecycle and enrolment columns are updated in place | last seen | Deleting the row; a vanished repository is marked unavailable with a reason |

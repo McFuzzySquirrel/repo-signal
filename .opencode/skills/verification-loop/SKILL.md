@@ -73,8 +73,11 @@ command as failing. An unrun command is reported as unrun, never as implied succ
   the reported count.
 - **`npm test --` swallows flags meant for the runner.** Pass paths after `--`; without it the
   wrapper may treat a path as an unknown option and select nothing.
-- **A host below Node 22.13 cannot import `node:sqlite` without a flag.** Every storage test then
-  fails with an import error that looks like a product bug. Check `node -v` before debugging storage.
+- **A host below Node 24.12 imports `node:sqlite` and fails when the connection opens.** The import
+  succeeds because the release that dropped the experimental flag is older than the release that
+  exposes `enableDefensive`, so every storage test then fails at `new DatabaseSync(...)` with an
+  unknown-option or missing-method error that looks like a product bug. Check `node -v` against the
+  24.12.0 floor before debugging storage.
 - **`checkJs` errors are usually about the JSDoc, not the logic.** A missing `@type` import for
   `DatabaseSync` or a `Promise` returned where the annotation says otherwise is a type error; fix
   the annotation rather than casting the value away.

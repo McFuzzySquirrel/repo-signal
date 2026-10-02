@@ -1,6 +1,6 @@
 ---
 name: archive-storage-discipline
-description: "Writing and migrating the RepoSignal SQLite archive safely: the node:sqlite connection settings, forward-only migrations recorded with content checksums, last-write-wins day-series upsert carrying source and collection timestamp, append-only snapshot captures, one transaction per repository, no code path that deletes a fact row, and calendarDays for telling a stored zero from a missing day. Use when adding or changing anything under src/db/, when a write path could delete or densify a row, or when a read could invent a day."
+description: "Writing and migrating the RepoSignal SQLite archive safely: the node:sqlite connection settings including the enableDefensive guard that sets the engine floor, forward-only migrations recorded with content checksums, last-write-wins day-series upsert carrying source and collection timestamp, append-only snapshot captures, one transaction per repository, no code path that deletes a fact row, and calendarDays for telling a stored zero from a missing day. Use when adding or changing anything under src/db/, when a write path could delete or densify a row, or when a read could invent a day."
 ---
 
 # Skill: Archive Storage Discipline
@@ -9,15 +9,32 @@ The archive is the product. `RS-TC-02`, `RS-DB-CON-01`, `RS-COL-CON-01`, `RS-BKL
 `RS-DU-02` all restate the same handful of rules, and four specialists write through this layer.
 
 Load the per-table write rules in [write-shape-rules.md](./references/write-shape-rules.md) when
-adding a table or column, adding a read path, or deciding what a write is allowed to change.
+adding a table or column, adding a read path, deciding what a write is allowed to change, or opening
+or changing the connection settings.
 
 ## Process
 
 ### Step 1: Open the database with the documented settings
 
-Open through `node:sqlite` with foreign keys enabled, write-ahead logging on and the defensive
-flag set, and assert each of those three on the opened connection in a test. The engine floor is
-Node 22.13.0, the release where `node:sqlite` stopped needing an experimental flag.
+Open through `node:sqlite` with foreign keys enabled, write-ahead logging on and the defensive flag
+set, and assert each of those three on the opened connection in a test. The defensive flag is
+`enableDefensive`, and it is what sets the engine floor.
+
+The floor is Node 24.12.0, the release that exposes `enableDefensive`. Node 22.13.0 is a different
+milestone - the release where `node:sqlite` shed the `--experimental-sqlite` flag - and it is not a
+supported line: there the module imports, the defensive flag does not exist, and the archive cannot
+be opened. A host that can import `node:sqlite` is therefore not proof that it can open the archive.
+
+Two rules follow from that floor, and both are load-bearing rather than stylistic:
+
+- **A `PRAGMA` is not a substitute.** Running `foreign_keys` or any defensive-looking `PRAGMA`
+  through `exec()` does not set `SQLITE_DBCONFIG_DEFENSIVE`; only the driver's own option does. The
+  test proves the setting by reading it back from the opened connection, not by reading back the
+  options object that was passed in.
+- **A runtime without the API fails closed.** When `enableDefensive` is unavailable, opening
+  raises a named error naming 24.12.0 as the floor and stating that the archive was not opened. It
+  must not fall back to opening a connection without the flag, because every other rule in this
+  package assumes the flag is on.
 
 ### Step 2: Migrate forward only, with checksums
 
@@ -66,6 +83,14 @@ not get one.
 
 ## Gotchas
 
+- **`node:sqlite` imports on the wrong line and only fails when the connection opens.** A host above
+  the release that dropped the experimental flag but below the release exposing `enableDefensive`
+  loads the module without complaint, so the error appears at `new DatabaseSync(...)` as an unknown
+  option or a missing driver method. It reads as a product defect and it is not one; check `node -v`
+  against the 24.12.0 floor before debugging the connection code.
+- **A defensively-looking `PRAGMA` is not the defensive flag.** It leaves
+  `SQLITE_DBCONFIG_DEFENSIVE` unset, a test that asserts the requested options rather than the
+  connection's state still passes, and the archive then runs undefended while looking protected.
 - **A densifying range read is the central lie.** Filling missing days inside the read turns every
   hole into a zero and the chart renders a quiet fortnight. The read returns rows; the calendar comes
   from a separate call; the caller subtracts.
@@ -98,6 +123,10 @@ an application-level check can be bypassed by a later edit:
 
 - [ ] A test asserts `foreign_keys`, `journal_mode` and the defensive setting on the opened
       connection.
+- [ ] The defensive assertion reads the setting back from the connection, and a `PRAGMA` issued
+      instead of the driver option would fail that assertion.
+- [ ] Opening on a runtime without `enableDefensive` raises a named error naming the 24.12.0 floor
+      and leaves no connection open.
 - [ ] A fresh temporary database migrates, reports no pending version afterwards, and a re-apply
       performs no write and keeps the recorded checksum.
 - [ ] Changing a migration file after it was recorded aborts with both the expected and the actual
