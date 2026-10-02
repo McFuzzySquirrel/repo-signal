@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: COLLECTION-SUPERVISION-1
+**Phase**: COLLECTION-SUPERVISION-2
 **Status**: In Progress
-**Validation Gaps**: 22 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T16:23:19.277Z
+**Validation Gaps**: 25 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T20:07:27.493Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -64,6 +64,8 @@
   - Files: src/supervision/errors.js, src/supervision/repo-state-reporter.js, tests/supervision-errors.test.js
 - [x] Phase COLLECTION-SUPERVISION-1, Task RS-SUP-02: Write the run journal and heartbeat into the collection run (@collector-engineer)
   - Files: src/supervision/journal.js, src/collect/run.js, tests/supervision-journal.test.js
+- [x] Phase COLLECTION-SUPERVISION-2, Task RS-SUP-03: Expose one health read for the dashboard and the CLI (@collector-engineer)
+  - Files: src/supervision/health.js, tests/supervision-health.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
@@ -75,7 +77,6 @@
 - None currently running
 
 ## Remaining
-- [ ] Phase COLLECTION-SUPERVISION-2: Phase 2: The health read
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-1: Phase 1: Legibility spike and the decision it produces
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-2: Phase 2: Insight calculations
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-3: Phase 3: The chart
@@ -113,6 +114,9 @@
 - Task RS-SUP-01: Nothing in docs/reviews/ was created or claimed, and no gap in existing data was hand-repaired.
 - Task RS-SUP-02: No live GitHub request was made and no real token was used; behaviour is verified against the local loopback stub and a scripted in-process policy, so real-service response shapes remain unverified behind the RS-OPS-LIVE-01 human gate.
 - Task RS-SUP-02: Nothing in docs/reviews/ was created or claimed, and no gap in existing data was hand-repaired.
+- Task RS-SUP-03: No live GitHub request was made and no real token was used; every state was produced against a scripted in-process policy and the local loopback transport conventions, so real-service status and header shapes remain unverified behind the RS-OPS-LIVE-01 human gate.
+- Task RS-SUP-03: No rendering and no CLI wiring was in scope and none was written; the dashboard and the CLI consuming this read are later tasks, so the claim that the two surfaces cannot disagree is asserted at the module boundary (one repository read equals the whole read's entry) rather than through a spawned command.
+- Task RS-SUP-03: Nothing in docs/reviews/ was created or claimed, and no gap in existing data was hand-repaired.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 
 ## Notes

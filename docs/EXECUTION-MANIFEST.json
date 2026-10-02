@@ -1926,7 +1926,7 @@
             "work.rs-sup-02",
             "work.rs-sup-01"
           ],
-          "timeoutMs": 1800000
+          "timeoutMs": 2700000
         }
       ]
     },
