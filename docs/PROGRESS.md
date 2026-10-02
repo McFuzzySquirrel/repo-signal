@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: OPERATIONS-AND-OPEN-SOURCE-POSTURE-1
+**Phase**: OPERATIONS-AND-OPEN-SOURCE-POSTURE-2
 **Status**: In Progress
-**Validation Gaps**: 34 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T20:49:56.400Z
+**Validation Gaps**: 37 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T21:10:38.142Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -80,6 +80,8 @@
   - Files: docs/operations/backup-and-migrate.md, scripts/backup-drill.mjs, tests/backup-drill.test.js
 - [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-02: Write the unattended operation and troubleshooting runbooks (@platform-engineer)
   - Files: docs/operations/scheduled-collection.md, docs/operations/troubleshooting.md, tests/troubleshooting-contract.test.js
+- [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-2, Task RS-OPS-03: Publish the README, the licence and the privacy note (@platform-engineer)
+  - Files: README.md, LICENSE, docs/operations/privacy.md, tests/release-contract.test.js
 
 ## Current Task
 - None currently running
@@ -133,6 +135,9 @@
 - Task RS-OPS-02: No real GitHub request was made and no real token was used. The 401/403/429 refusal lines quoted in the page are transcribed from the classifier's own message templates in src/supervision/errors.js and src/github/retry.js, not from a live response, so real-service wording remains unverified behind the RS-OPS-LIVE-01 human gate.
 - Task RS-OPS-02: The cron, launchd and systemd entries are written against the documented behaviour of those three schedulers; only the systemd timer's semantics were cross-checked against the repository's own conventions. No schedule was installed or observed firing on any machine.
 - Task RS-OPS-02: Nothing in docs/reviews/ was created or claimed.
+- Task RS-OPS-03: No live GitHub request and no real token were involved in this task; `serve` was exercised only as a name, and no dashboard command exists to run. The privacy note's request-count figures are the collector's own documented constants, not a measured run.
+- Task RS-OPS-03: The licence, the data statement and the privacy note are unconfirmed by the human posture review, so publishing them is a human decision this task cannot make.
+- Task RS-OPS-03: No host other than api.github.com was contacted; the transport allowlist and the `GET`-only claim are verified by reading src/github/http.js and by the existing tests/github-http.test.js, not by observing a live run.
 
 ## Notes
 - Workflow engine run 68703c92-c4cf-4b9a-837e-c16d453b3deb
