@@ -4,7 +4,7 @@
 **Phase**: TRAFFIC-COLLECTION-PIPELINE-1
 **Status**: In Progress
 **Validation Gaps**: 14 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T14:03:26.375Z
+**Last Updated**: 2026-10-02T14:08:29.463Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -52,6 +52,8 @@
   - Files: src/backfill/provenance.js, tests/provenance.test.js
 - [x] Phase TRAFFIC-COLLECTION-PIPELINE-1, Task RS-COL-01: Write collected traffic days through the archive upsert (@collector-engineer)
   - Files: src/collect/traffic.js, tests/collect-traffic.test.js
+- [x] Phase TRAFFIC-COLLECTION-PIPELINE-1, Task RS-COL-02: Append referrer and popular-path captures as snapshots (@collector-engineer)
+  - Files: src/collect/snapshots.js, tests/collect-snapshots.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
@@ -63,7 +65,6 @@
 - None currently running
 
 ## Remaining
-- [ ] Phase TRAFFIC-COLLECTION-PIPELINE-1: Phase 1: Traffic and snapshot capture
 - [ ] Phase TRAFFIC-COLLECTION-PIPELINE-2: Phase 2: The collect command and lifecycle handling
 - [ ] Phase TRAFFIC-COLLECTION-PIPELINE-3: Phase 3: End-to-end verification without a live token
 - [ ] Phase COLLECTION-SUPERVISION-1: Phase 1: Failure state and run journal
