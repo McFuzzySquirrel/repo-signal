@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: LOCAL-DASHBOARD-SERVER-1
-**Status**: In Progress
+**Phase**: FIRST-CONNECT-BACKFILL-2
+**Status**: Failed
 **Validation Gaps**: 10 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T10:55:39.814Z
+**Last Updated**: 2026-10-02T11:12:30.480Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -59,7 +59,6 @@
 - None currently running
 
 ## Remaining
-- [ ] Phase FIRST-CONNECT-BACKFILL-2: Phase 2: Provenance
 - [ ] Phase TRAFFIC-COLLECTION-PIPELINE-1: Phase 1: Traffic and snapshot capture
 - [ ] Phase TRAFFIC-COLLECTION-PIPELINE-2: Phase 2: The collect command and lifecycle handling
 - [ ] Phase TRAFFIC-COLLECTION-PIPELINE-3: Phase 3: End-to-end verification without a live token
