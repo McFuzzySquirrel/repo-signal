@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: TRAFFIC-COLLECTION-PIPELINE-2
+**Phase**: TRAFFIC-COLLECTION-PIPELINE-3
 **Status**: In Progress
-**Validation Gaps**: 16 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T15:01:19.416Z
+**Validation Gaps**: 18 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T15:22:15.506Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -58,6 +58,8 @@
   - Files: src/collect/run.js, src/commands/collect.js, src/commands/index.js, tests/collect-command.test.js, tests/helpers/stub-github-server.mjs, tests/config-command.test.js
 - [x] Phase TRAFFIC-COLLECTION-PIPELINE-2, Task RS-COL-04: Mark renamed, transferred and vanished repositories instead of failing (@collector-engineer)
   - Files: src/collect/lifecycle.js, tests/collect-lifecycle.test.js, src/collect/run.js, src/commands/collect.js, tests/collect-command.test.js, tests/helpers/collect-home.js
+- [x] Phase TRAFFIC-COLLECTION-PIPELINE-3, Task RS-COL-05: Verify the collection pipeline end to end against a local GitHub stub (@qa-engineer)
+  - Files: tests/integration/collect-e2e.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
@@ -69,7 +71,6 @@
 - None currently running
 
 ## Remaining
-- [ ] Phase TRAFFIC-COLLECTION-PIPELINE-3: Phase 3: End-to-end verification without a live token
 - [ ] Phase COLLECTION-SUPERVISION-1: Phase 1: Failure state and run journal
 - [ ] Phase COLLECTION-SUPERVISION-2: Phase 2: The health read
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-1: Phase 1: Legibility spike and the decision it produces
@@ -103,6 +104,8 @@
 - Task RS-COL-01: No live GitHub request was made and no real token was used; traffic response shapes follow the traffic-client contract and the vendor documentation already recorded for RS-API-03, so real-service behaviour remains unverified and RS-OPS-LIVE-01 stays an open human gate.
 - Task RS-COL-03: No live GitHub request was made and no real token was used. Endpoint response shapes follow the traffic, stargazer and statistics client contracts already recorded in the repository, so real-service behaviour remains unverified and RS-OPS-LIVE-01 stays an open human gate; no human review file was created or claimed.
 - Task RS-COL-04: No live GitHub request was made and no real token was used, so rename, transfer and 404 handling is verified only against the local stub's response shapes; RS-OPS-LIVE-01 stays an open human gate and no human review file was created or claimed.
+- Task RS-COL-05: Endpoint behaviour is verified against the local stub's scripted response shapes only: a real rename redirect, a real statistics 202 or a real rate limit was never exercised, and the retry backoff under test is the shared policy's own 500-1000 ms jitter, which is why the 202 test takes about a second.
+- Task RS-COL-05: The sixty-second budget assertion is only meaningful as a regression guard on a loopback stub; it cannot predict real-service timing, where rate-limit waits dominate and are explicitly excluded from the requirement.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 
 ## Notes
