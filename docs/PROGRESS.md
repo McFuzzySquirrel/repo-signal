@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: LOCAL-DASHBOARD-SERVER-1
 **Status**: In Progress
-**Validation Gaps**: 9 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T10:45:51.038Z
+**Validation Gaps**: 10 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T10:50:39.827Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -44,17 +44,21 @@
   - Files: src/enrollment/resolve.js, tests/enrollment.test.js
 - [x] Phase FIRST-CONNECT-BACKFILL-1, Task RS-BKL-01: Reconstruct the full star history as cumulative day rows (@github-integration-engineer)
   - Files: src/backfill/stars.js, tests/backfill-stars.test.js
+- [x] Phase FIRST-CONNECT-BACKFILL-1, Task RS-BKL-02: Backfill a year of weekly development activity (@github-integration-engineer)
+  - Files: src/backfill/development.js, tests/backfill-development.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
   - Files: src/server/server.js, src/server/security.js, tests/server.test.js
 
 ## Current Task
-- None currently running
+- [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-2, Task RS-ENR-02: Expose the discover command with pasteable configuration lines (@cli-engineer)
+  - Status: In progress
+- [ ] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-02: Route the three pages and escape every dynamic value (@server-engineer)
+  - Status: In progress
 
 ## Remaining
 - [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-2: Phase 2: Discovery command
-- [ ] Phase FIRST-CONNECT-BACKFILL-1: Phase 1: Reconstructable history
 - [ ] Phase FIRST-CONNECT-BACKFILL-2: Phase 2: Provenance
 - [ ] Phase TRAFFIC-COLLECTION-PIPELINE-1: Phase 1: Traffic and snapshot capture
 - [ ] Phase TRAFFIC-COLLECTION-PIPELINE-2: Phase 2: The collect command and lifecycle handling
@@ -86,6 +90,7 @@
 - Task RS-FND-06: Validated on Node 22.22.2; Node 24 was not exercised.
 - Task RS-API-03: Tests use injected responses; real-service behavior was not live-verified.
 - Task RS-API-04: Tests use injected responses; no network calls were made.
+- Task RS-BKL-02: Tests use an injected statistics client stub; real-service behavior (including week-start alignment) was not live-verified; RS-OPS-LIVE-01 remains a human gate.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 
 ## Notes
