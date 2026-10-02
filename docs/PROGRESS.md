@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: GITHUB-API-CLIENT-2
+**Phase**: LOCAL-DASHBOARD-SERVER-1
 **Status**: In Progress
 **Validation Gaps**: 9 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T10:39:45.116Z
+**Last Updated**: 2026-10-02T10:41:56.888Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -40,14 +40,18 @@
   - Files: src/github/traffic-client.js, tests/traffic-client.test.js
 - [x] Phase GITHUB-API-CLIENT-2, Task RS-API-04: Add the repository, stargazer and statistics clients (@github-integration-engineer)
   - Files: src/github/repo-client.js, src/github/stars-client.js, src/github/stats-client.js, tests/repo-client.test.js, tests/stars-client.test.js, tests/stats-client.test.js
+- [x] Phase REPO-ENROLLMENT-AND-DISCOVERY-1, Task RS-ENR-01: Resolve the enrolled repository set with deny-list precedence (@cli-engineer)
+  - Files: src/enrollment/resolve.js, tests/enrollment.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 
 ## Current Task
-- None currently running
+- [ ] Phase FIRST-CONNECT-BACKFILL-1, Task RS-BKL-01: Reconstruct the full star history as cumulative day rows (@github-integration-engineer)
+  - Status: In progress
+- [ ] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
+  - Status: In progress
 
 ## Remaining
-- [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-1: Phase 1: Enrolled set resolution
 - [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-2: Phase 2: Discovery command
 - [ ] Phase FIRST-CONNECT-BACKFILL-1: Phase 1: Reconstructable history
 - [ ] Phase FIRST-CONNECT-BACKFILL-2: Phase 2: Provenance
