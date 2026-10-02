@@ -4,7 +4,7 @@
 **Phase**: LOCAL-DASHBOARD-SERVER-1
 **Status**: In Progress
 **Validation Gaps**: 10 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T10:51:19.527Z
+**Last Updated**: 2026-10-02T10:55:39.814Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -42,6 +42,8 @@
   - Files: src/github/repo-client.js, src/github/stars-client.js, src/github/stats-client.js, tests/repo-client.test.js, tests/stars-client.test.js, tests/stats-client.test.js
 - [x] Phase REPO-ENROLLMENT-AND-DISCOVERY-1, Task RS-ENR-01: Resolve the enrolled repository set with deny-list precedence (@cli-engineer)
   - Files: src/enrollment/resolve.js, tests/enrollment.test.js
+- [x] Phase REPO-ENROLLMENT-AND-DISCOVERY-2, Task RS-ENR-02: Expose the discover command with pasteable configuration lines (@cli-engineer)
+  - Files: src/commands/discover.js, src/commands/index.js, tests/discover-command.test.js
 - [x] Phase FIRST-CONNECT-BACKFILL-1, Task RS-BKL-01: Reconstruct the full star history as cumulative day rows (@github-integration-engineer)
   - Files: src/backfill/stars.js, tests/backfill-stars.test.js
 - [x] Phase FIRST-CONNECT-BACKFILL-1, Task RS-BKL-02: Backfill a year of weekly development activity (@github-integration-engineer)
@@ -54,11 +56,9 @@
   - Files: src/server/router.js, src/server/html.js, tests/router.test.js, tests/html.test.js
 
 ## Current Task
-- [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-2, Task RS-ENR-02: Expose the discover command with pasteable configuration lines (@cli-engineer)
-  - Status: In progress
+- None currently running
 
 ## Remaining
-- [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-2: Phase 2: Discovery command
 - [ ] Phase FIRST-CONNECT-BACKFILL-2: Phase 2: Provenance
 - [ ] Phase TRAFFIC-COLLECTION-PIPELINE-1: Phase 1: Traffic and snapshot capture
 - [ ] Phase TRAFFIC-COLLECTION-PIPELINE-2: Phase 2: The collect command and lifecycle handling

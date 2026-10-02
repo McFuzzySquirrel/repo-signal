@@ -8,6 +8,7 @@
 
 import { configCheck, configInit } from './config.js';
 import { dbBackup, dbMigrate, dbRestore, dbStatus, dbVerify } from './db.js';
+import { discover } from './discover.js';
 
 export const EXIT_SUCCESS = 0;
 export const EXIT_OPERATIONAL_FAILURE = 1;
@@ -169,6 +170,11 @@ export function resolveCommand(tokens) {
   return { ok: false, requested, suggestions: commandsUnder(requested) };
 }
 
+registerCommand('discover', {
+  summary: 'List reachable repositories and print ready-to-paste configuration lines.',
+  usage: '[--json] [--include-organizations]',
+  run: discover,
+});
 registerCommand('config init', {
   summary: 'Create private configuration and credential templates.',
   usage: '[--force]',
