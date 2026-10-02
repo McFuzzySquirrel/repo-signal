@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: GITHUB-API-CLIENT-2
 **Status**: In Progress
-**Validation Gaps**: 8 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T10:28:00.989Z
+**Validation Gaps**: 9 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T10:39:45.116Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -38,15 +38,15 @@
   - Files: src/github/rate-limit.js, src/github/retry.js, tests/github-retry.test.js
 - [x] Phase GITHUB-API-CLIENT-2, Task RS-API-03: Normalize the four traffic endpoints (@github-integration-engineer)
   - Files: src/github/traffic-client.js, tests/traffic-client.test.js
+- [x] Phase GITHUB-API-CLIENT-2, Task RS-API-04: Add the repository, stargazer and statistics clients (@github-integration-engineer)
+  - Files: src/github/repo-client.js, src/github/stars-client.js, src/github/stats-client.js, tests/repo-client.test.js, tests/stars-client.test.js, tests/stats-client.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 
 ## Current Task
-- [ ] Phase GITHUB-API-CLIENT-2, Task RS-API-04: Add the repository, stargazer and statistics clients (@github-integration-engineer)
-  - Status: In progress
+- None currently running
 
 ## Remaining
-- [ ] Phase GITHUB-API-CLIENT-2: Phase 2: Endpoint clients
 - [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-1: Phase 1: Enrolled set resolution
 - [ ] Phase REPO-ENROLLMENT-AND-DISCOVERY-2: Phase 2: Discovery command
 - [ ] Phase FIRST-CONNECT-BACKFILL-1: Phase 1: Reconstructable history
@@ -80,6 +80,7 @@
 - Task RS-FND-05: Validated on Node 22.22.2; Node 24 was not tested.
 - Task RS-FND-06: Validated on Node 22.22.2; Node 24 was not exercised.
 - Task RS-API-03: Tests use injected responses; real-service behavior was not live-verified.
+- Task RS-API-04: Tests use injected responses; no network calls were made.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 
 ## Notes
