@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: COLLECTION-SUPERVISION-2
+**Phase**: OPERATIONS-AND-OPEN-SOURCE-POSTURE-1
 **Status**: In Progress
-**Validation Gaps**: 25 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T20:07:27.493Z
+**Validation Gaps**: 28 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T20:21:12.616Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -72,9 +72,12 @@
   - Files: src/server/server.js, src/server/security.js, tests/server.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-02: Route the three pages and escape every dynamic value (@server-engineer)
   - Files: src/server/router.js, src/server/html.js, tests/router.test.js, tests/html.test.js
+- [x] Phase LOCAL-DASHBOARD-SERVER-2, Task RS-SRV-03: Build the page data layer over the archive (@server-engineer)
+  - Files: src/server/repo-data.js, tests/repo-data.test.js
 
 ## Current Task
-- None currently running
+- [ ] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-01: Build the backup drill and the backup and migration runbook (@platform-engineer)
+  - Status: In progress
 
 ## Remaining
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-1: Phase 1: Legibility spike and the decision it produces
@@ -118,6 +121,9 @@
 - Task RS-SUP-03: No rendering and no CLI wiring was in scope and none was written; the dashboard and the CLI consuming this read are later tasks, so the claim that the two surfaces cannot disagree is asserted at the module boundary (one repository read equals the whole read's entry) rather than through a spawned command.
 - Task RS-SUP-03: Nothing in docs/reviews/ was created or claimed, and no gap in existing data was hand-repaired.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
+- Task RS-SRV-03: No live GitHub request was made and no real token was used; globalThis.fetch is refused for the whole test file and the module is asserted to contain no fetch call or HTTP import.
+- Task RS-SRV-03: No rendering and no CLI wiring was in scope and none was written, so the claim that the running server cannot disagree with this read is asserted at the module boundary (page data equals the owned reads' output) rather than through a spawned command.
+- Task RS-SRV-03: Nothing in docs/reviews/ was created or claimed, and no review gate was self-served.
 
 ## Notes
 - Workflow engine run 68703c92-c4cf-4b9a-837e-c16d453b3deb
