@@ -1,22 +1,14 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-import process from 'node:process';
-import { DatabaseSync } from 'node:sqlite';
+import { existsSync } from 'node:fs';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
-import { redact } from '../src/credentials/redact.js';
-import { createStubGitHub } from './helpers/stub-github-server.mjs';
+import {
+  assertNoCredentialMaterial, createCollectHome, outputLines as lines, plainRows as plain, rowCount as rows,
+} from './helpers/collect-home.js';
 
 // Every assertion here drives the real entry point, `node src/cli.js collect`,
 // against the local GitHub stub over a temporary home. No test reaches
 // api.github.com and no test uses a real token; the credential is an obviously
 // fake token-shaped string, so its absence from the output means something.
-const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const CLI = path.join(ROOT, 'src/cli.js');
-const TOKEN = 'ghp_' + 'OBVIOUSLY_FAKE_COLLECT_TOKEN';
-const TOKEN_SHAPE = /(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+/;
 const WINDOW_DAYS = 14;
 
 /**
@@ -56,6 +48,50 @@ const COMMIT_ACTIVITY = WEEK_STARTS.map((week, index) => ({
   week, total: 4 + index, days: [1, 2, 0, 1, 0, 0, 0],
 }));
 const PARTICIPATION = { all: [10, 12], owner: [3, 4] };
+
+/**
+ * The repository record the collection step resolves before it writes anything.
+ * GitHub serves the identity it currently holds for a repository, so a rename or
+ * a transfer shows up here as a different owner or name.
+ * @param {string} owner
+ * @param {string} name
+ * @param {Record<string, unknown>} [extra]
+ * @returns {Record<string, unknown>}
+ */
+function repositoryRecord(owner, name, extra = {}) {
+  return {
+    id: 1000 + name.length,
+    name,
+    full_name: `${owner}/${name}`,
+    owner: { login: owner, type: 'User' },
+    stargazers_count: 3,
+    forks_count: 1,
+    watchers_count: 3,
+    ...extra,
+  };
+}
+
+/**
+ * Script the lifecycle resolution every repository is confirmed through before a
+ * single fact is written. A repository GitHub no longer serves is listed in
+ * `vanished` and answers 404; a repository it renamed or transferred answers with
+ * the identity it now holds under the entry for the name it is requested by.
+ * @param {import('./helpers/stub-github-server.mjs').StubGitHub} stub
+ * @param {{ moved?: Record<string, {owner: string, name: string}>, vanished?: string[] }} [options]
+ */
+function scriptResolution(stub, options = {}) {
+  const moved = options.moved ?? {};
+  const vanished = new Set((options.vanished ?? []).map((repo) => repo.toLowerCase()));
+  stub.route('GET /repos/:owner/:name', (request) => {
+    const requested = request.path.slice('/repos/'.length);
+    if (vanished.has(requested.toLowerCase())) {
+      return { status: 404, json: { message: 'Not Found' } };
+    }
+    const [owner, name] = requested.split('/');
+    const target = moved[requested] ?? moved[requested.toLowerCase()] ?? null;
+    return { json: repositoryRecord(target?.owner ?? owner, target?.name ?? name) };
+  });
+}
 
 /**
  * Script the traffic endpoints for every repository, optionally failing one of
@@ -105,109 +141,6 @@ function scriptBackfill(stub) {
 }
 
 /**
- * A temporary home with a configuration, a 0600 credential file and a running
- * stub, plus a `run` that spawns the real entry point against it.
- * @param {import('node:test').TestContext} t
- * @param {{ enrolled?: string[]|null }} [options] `null` writes no configuration file at all.
- */
-async function fixture(t, options = {}) {
-  const enrolled = options.enrolled === undefined ? ['owner/alpha', 'owner/beta'] : options.enrolled;
-  const directory = mkdtempSync('/tmp/opencode/repo-signal-collect-command-');
-  t.after(() => rmSync(directory, { recursive: true, force: true }));
-  const home = path.join(directory, 'home');
-  mkdirSync(home, { recursive: true, mode: 0o700 });
-  if (enrolled !== null) {
-    writeFileSync(path.join(home, 'config.json'), JSON.stringify({ enrolled }, null, 2), { mode: 0o600 });
-  }
-  writeFileSync(path.join(home, 'credentials.json'), JSON.stringify({ token: TOKEN }), { mode: 0o600 });
-
-  const stub = createStubGitHub({ token: TOKEN });
-  t.after(() => stub.stop());
-  const baseUrl = await stub.start();
-
-  /**
-   * @param {string[]} args
-   * @returns {Promise<{ status: number|null, stdout: string, stderr: string }>}
-   */
-  const run = async (args) => {
-    const child = spawn(process.execPath, [CLI, ...args], {
-      cwd: directory,
-      env: {
-        ...process.env,
-        REPO_SIGNAL_HOME: home,
-        REPO_SIGNAL_ALLOW_LOCAL_TRANSPORT: '1',
-        REPO_SIGNAL_GITHUB_BASE_URL: baseUrl,
-        NODE_OPTIONS: '',
-      },
-    });
-    let stdout = '';
-    let stderr = '';
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (chunk) => { stdout += chunk; });
-    child.stderr.on('data', (chunk) => { stderr += chunk; });
-    const status = await new Promise((resolve) => child.on('close', resolve));
-    return { status, stdout, stderr };
-  };
-
-  /**
-   * Read the archive the spawned command left behind.
-   * @template T
-   * @param {(db: DatabaseSync) => T} body
-   * @returns {T}
-   */
-  const archive = (body) => {
-    const db = new DatabaseSync(path.join(home, 'archive.sqlite3'));
-    try {
-      return body(db);
-    } finally {
-      db.close();
-    }
-  };
-
-  return { directory, home, databasePath: path.join(home, 'archive.sqlite3'), stub, run, archive };
-}
-
-/**
- * @param {DatabaseSync} db
- * @param {string} table
- * @param {string} [where]
- * @returns {number}
- */
-function rows(db, table, where = '') {
-  return Number(db.prepare(`SELECT count(*) AS n FROM ${table} ${where}`).get()?.n);
-}
-
-/**
- * @param {string} output
- * @returns {string[]}
- */
-function lines(output) {
-  return output.split('\n').filter((line) => line !== '');
-}
-
-/**
- * node:sqlite hands back null-prototype rows, so copy them into plain objects
- * before comparing them with `deepEqual`.
- * @param {object[]} list
- * @returns {Record<string, unknown>[]}
- */
-function plain(list) {
-  return list.map((entry) => ({ ...entry }));
-}
-
-/**
- * @param {{ stdout: string, stderr: string }} result
- * @param {string} label
- */
-function assertNoCredentialMaterial(result, label) {
-  for (const line of [...lines(result.stdout), ...lines(result.stderr)]) {
-    assert.doesNotMatch(line, TOKEN_SHAPE, `${label}: no printed line carries a token-shaped value`);
-    assert.equal(redact(line), line, `${label}: every printed line passes the redaction helper unchanged`);
-  }
-}
-
-/**
  * @param {string} stdout
  * @returns {string} the run identifier the summary line printed.
  */
@@ -220,7 +153,8 @@ function printedRunId(stdout) {
 const delay = () => new Promise((resolve) => setTimeout(resolve, 5));
 
 test('a dry run prints one planned line per repository and makes no call and no write', async (t) => {
-  const f = await fixture(t);
+  const f = await createCollectHome(t);
+  scriptResolution(f.stub);
   scriptTraffic(f.stub);
   scriptBackfill(f.stub);
 
@@ -230,8 +164,8 @@ test('a dry run prints one planned line per repository and makes no call and no 
   assertNoCredentialMaterial(result, 'dry run');
   // One planned line per enrolled repository and a summary. Nothing else.
   assert.deepEqual(lines(result.stdout), [
-    'owner/alpha planned backfill=first-connect requests>=7',
-    'owner/beta planned backfill=first-connect requests>=7',
+    'owner/alpha planned backfill=first-connect requests>=8',
+    'owner/beta planned backfill=first-connect requests>=8',
     'summary mode=dry-run run=none planned=2 backfill=2 requests=0 duration_ms=0 status=planned',
   ]);
   assert.equal(f.stub.requests().length, 0, 'a dry run must not contact GitHub at all');
@@ -245,7 +179,8 @@ test('a dry run prints one planned line per repository and makes no call and no 
 });
 
 test('a dry run reports the backfill step it would skip for an already backfilled repository', async (t) => {
-  const f = await fixture(t, { enrolled: ['owner/alpha'] });
+  const f = await createCollectHome(t, { enrolled: ['owner/alpha'] });
+  scriptResolution(f.stub);
   scriptTraffic(f.stub);
   scriptBackfill(f.stub);
   assert.equal((await f.run(['collect'])).status, 0);
@@ -255,14 +190,15 @@ test('a dry run reports the backfill step it would skip for an already backfille
 
   assert.equal(planned.status, 0, planned.stderr);
   assert.deepEqual(lines(planned.stdout), [
-    'owner/alpha planned backfill=skipped requests=4',
+    'owner/alpha planned backfill=skipped requests=5',
     'summary mode=dry-run run=none planned=1 backfill=0 requests=0 duration_ms=0 status=planned',
   ]);
   assertNoCredentialMaterial(planned, 'dry run after backfill');
 });
 
 test('--repo collects only that repository, exits 0 and prints the run it wrote', async (t) => {
-  const f = await fixture(t);
+  const f = await createCollectHome(t);
+  scriptResolution(f.stub);
   scriptTraffic(f.stub);
   scriptBackfill(f.stub);
 
@@ -274,8 +210,8 @@ test('--repo collects only that repository, exits 0 and prints the run it wrote'
   assert.equal(printed.length, 2, 'one repository line and one summary line');
   assert.match(printed[0], /^owner\/alpha ok 14 days written 56 revised 0 unchanged 0 snapshots 3 backfill first-connect$/);
   const runId = printedRunId(result.stdout);
-  assert.match(printed[1], new RegExp(`^summary run=${runId} repositories=1 ok=1 failed=0 days=14 rows=56 ` +
-    'written=56 revised=0 unchanged=0 snapshots=3 backfilled=1 requests=7 duration_ms=\\d+ status=completed$'));
+  assert.match(printed[1], new RegExp(`^summary run=${runId} repositories=1 ok=1 failed=0 unavailable=0 skipped=0 ` +
+    'days=14 rows=56 written=56 revised=0 unchanged=0 snapshots=3 backfilled=1 requests=8 duration_ms=\\d+ status=completed$'));
 
   f.archive((db) => {
     // The printed identifier is the run row: started, closed, counted, no other run.
@@ -288,7 +224,7 @@ test('--repo collects only that repository, exits 0 and prints the run it wrote'
     assert.equal(run.status, 'completed');
     assert.equal(run.successCount, 1);
     assert.equal(run.failureCount, 0);
-    assert.equal(run.requestCount, 7, 'three backfill reads and four traffic reads');
+    assert.equal(run.requestCount, 8, 'one resolution, three backfill reads and four traffic reads');
     assert.equal(typeof run.durationMs, 'number');
     assert.equal(rows(db, 'runs'), 1, 'exactly one run row exists');
 
@@ -303,14 +239,15 @@ test('--repo collects only that repository, exits 0 and prints the run it wrote'
     assert.equal(rows(db, 'snapshots', `WHERE run_id='${runId}'`), SNAPSHOT_ROWS);
   });
   // Only the filtered repository was asked about, and every request carried the credential.
-  assert.ok(f.stub.paths().every((observed) => observed.startsWith('/repos/owner/alpha/')),
+  assert.ok(f.stub.paths().every((observed) => observed.startsWith('/repos/owner/alpha')),
     `only alpha may be requested, got ${f.stub.paths().join(', ')}`);
   assert.ok(f.stub.requests().every((request) => request.tokenMatched && request.authorized),
     'every request presented the configured credential');
 });
 
 test('one failing repository does not stop the others, and the run record is still complete', async (t) => {
-  const f = await fixture(t);
+  const f = await createCollectHome(t);
+  scriptResolution(f.stub);
   scriptTraffic(f.stub, { failing: 'owner/beta' });
   scriptBackfill(f.stub);
 
@@ -324,8 +261,8 @@ test('one failing repository does not stop the others, and the run record is sti
   assert.match(printed[1], /^owner\/beta failed permission-missing backfill first-connect GitHub HTTP 403: /);
   assert.match(printed[1], /Administration repository permission \(read\)/);
   const runId = printedRunId(result.stdout);
-  assert.match(printed[2], new RegExp(`^summary run=${runId} repositories=2 ok=1 failed=1 days=14 rows=56 ` +
-    'written=56 revised=0 unchanged=0 snapshots=3 backfilled=2 requests=11 duration_ms=\\d+ status=degraded$'));
+  assert.match(printed[2], new RegExp(`^summary run=${runId} repositories=2 ok=1 failed=1 unavailable=0 skipped=0 ` +
+    'days=14 rows=56 written=56 revised=0 unchanged=0 snapshots=3 backfilled=2 requests=13 duration_ms=\\d+ status=degraded$'));
 
   f.archive((db) => {
     const run = /** @type {Record<string, unknown>} */ (db.prepare(
@@ -335,7 +272,7 @@ test('one failing repository does not stop the others, and the run record is sti
     assert.equal(run.status, 'degraded');
     assert.equal(run.successCount, 1);
     assert.equal(run.failureCount, 1);
-    assert.equal(run.requestCount, 11);
+    assert.equal(run.requestCount, 13);
     assert.equal(rows(db, 'runs'), 1);
 
     const alpha = /** @type {{id: number}} */ (db.prepare(`SELECT id FROM repositories WHERE name='alpha'`).get());
@@ -351,7 +288,8 @@ test('one failing repository does not stop the others, and the run record is sti
 });
 
 test('a repository with no backfill record is backfilled and collected in one run', async (t) => {
-  const f = await fixture(t, { enrolled: ['owner/alpha'] });
+  const f = await createCollectHome(t, { enrolled: ['owner/alpha'] });
+  scriptResolution(f.stub);
   scriptTraffic(f.stub);
   scriptBackfill(f.stub);
 
@@ -389,7 +327,8 @@ test('a repository with no backfill record is backfilled and collected in one ru
 });
 
 test('a second run skips the backfill, revises the same days in place and appends a second capture', async (t) => {
-  const f = await fixture(t, { enrolled: ['owner/alpha'] });
+  const f = await createCollectHome(t, { enrolled: ['owner/alpha'] });
+  scriptResolution(f.stub);
   scriptTraffic(f.stub, { offset: 0 });
   scriptBackfill(f.stub);
   const first = await f.run(['collect']);
@@ -411,9 +350,11 @@ test('a second run skips the backfill, revises the same days in place and append
 
   assert.equal(second.status, 0, second.stderr);
   assert.match(lines(second.stdout)[0], /^owner\/alpha ok 14 days written 0 revised 56 unchanged 0 snapshots 3 backfill skipped$/);
-  assert.match(lines(second.stdout)[1], /repositories=1 ok=1 failed=0 .*backfilled=0 requests=4 .*status=completed$/);
-  // The second run reads only the traffic endpoints: backfill is a connect step.
+  assert.match(lines(second.stdout)[1], /repositories=1 ok=1 failed=0 unavailable=0 skipped=0 .*backfilled=0 requests=5 .*status=completed$/);
+  // The second run resolves the repository and reads only the traffic endpoints:
+  // backfill is a connect step.
   assert.deepEqual(f.stub.paths(), [
+    '/repos/owner/alpha',
     '/repos/owner/alpha/traffic/clones',
     '/repos/owner/alpha/traffic/views',
     '/repos/owner/alpha/traffic/popular/referrers',
@@ -453,7 +394,8 @@ test('a second run skips the backfill, revises the same days in place and append
 });
 
 test('an empty enrolled set writes a complete run record over no repositories and exits 0', async (t) => {
-  const f = await fixture(t, { enrolled: [] });
+  const f = await createCollectHome(t, { enrolled: [] });
+  scriptResolution(f.stub);
   scriptTraffic(f.stub);
   scriptBackfill(f.stub);
 
@@ -463,8 +405,8 @@ test('an empty enrolled set writes a complete run record over no repositories an
   const printed = lines(result.stdout);
   assert.equal(printed.length, 1, 'only the summary is printed');
   const runId = printedRunId(result.stdout);
-  assert.match(printed[0], new RegExp(`^summary run=${runId} repositories=0 ok=0 failed=0 days=0 rows=0 written=0 ` +
-    'revised=0 unchanged=0 snapshots=0 backfilled=0 requests=0 duration_ms=\\d+ status=completed$'));
+  assert.match(printed[0], new RegExp(`^summary run=${runId} repositories=0 ok=0 failed=0 unavailable=0 skipped=0 ` +
+    'days=0 rows=0 written=0 revised=0 unchanged=0 snapshots=0 backfilled=0 requests=0 duration_ms=\\d+ status=completed$'));
   assert.equal(f.stub.requests().length, 0, 'nothing is enrolled, so nothing is requested');
   f.archive((db) => {
     assert.equal(rows(db, 'repositories'), 0);
@@ -474,7 +416,8 @@ test('an empty enrolled set writes a complete run record over no repositories an
 });
 
 test('a mistyped flag, a repeated flag and a malformed or unenrolled filter exit 2 without collecting', async (t) => {
-  const f = await fixture(t);
+  const f = await createCollectHome(t);
+  scriptResolution(f.stub);
   scriptTraffic(f.stub);
   scriptBackfill(f.stub);
 
@@ -500,7 +443,7 @@ test('a mistyped flag, a repeated flag and a malformed or unenrolled filter exit
 });
 
 test('an unconfigured home explains config init, stops and reaches no host', async (t) => {
-  const f = await fixture(t, { enrolled: null });
+  const f = await createCollectHome(t, { enrolled: null });
   scriptTraffic(f.stub);
 
   const result = await f.run(['collect']);

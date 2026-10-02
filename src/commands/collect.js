@@ -69,31 +69,61 @@ function parseCollectArgs(args) {
  * One planned line per repository: what it would collect and whether the
  * first-connect backfill would run before it. The request count is a floor when
  * GitHub would return more stargazer pages than the single one the plan assumed.
+ * A repository the archive already marked unavailable is planned as skipped, with
+ * the reason it was marked and no request at all.
  * @param {PlannedRepository} planned
  * @returns {string}
  */
 function plannedLine(planned) {
+  if (planned.skipped) {
+    return `${planned.repo} skipped lifecycle=unavailable requests=0 ${planned.unavailableReason ?? ''}`.trimEnd();
+  }
   const backfill = planned.backfill ? BACKFILL_FIRST_CONNECT : BACKFILL_SKIPPED;
   const requests = planned.exactRequests ? `requests=${planned.requests}` : `requests>=${planned.requests}`;
   return `${planned.repo} planned backfill=${backfill} ${requests}`;
 }
 
 /**
+ * The lifecycle change this run recorded, named so a renamed or transferred
+ * repository reads as what happened to it rather than as a silent address change.
+ * @param {RepositoryOutcome} outcome
+ * @returns {string}
+ */
+function identityNote(outcome) {
+  const change = outcome.identity;
+  if (change === null || !change.aliasRecorded) return '';
+  const words = [
+    ...(change.renamed ? ['renamed'] : []),
+    ...(change.transferred ? ['transferred'] : []),
+  ].join(' and ');
+  return ` ${words} ${change.previousOwner}/${change.previousName} -> ${change.repo}`;
+}
+
+/**
  * One line per collected repository: the days collected, what was written and
- * what was revised, the appended snapshot rows and the backfill step. Nothing
- * here is a verdict about the repository; it is what the archive now holds.
+ * what was revised, the appended snapshot rows, the backfill step and any rename or
+ * transfer. Nothing here is a verdict about the repository; it is what the archive
+ * now holds. A repository GitHub no longer serves is reported as unavailable with
+ * the reason it gave, and one an earlier run marked is reported as skipped.
  * @param {RepositoryOutcome} outcome
  * @returns {string}
  */
 function collectedLine(outcome) {
   const backfill = outcome.backfill === null ? BACKFILL_SKIPPED : BACKFILL_FIRST_CONNECT;
+  if (outcome.state === 'unavailable') {
+    return `${outcome.repo} unavailable ${outcome.unavailableReason ?? ''}`.trimEnd();
+  }
+  if (outcome.state === 'skipped') {
+    return `${outcome.repo} skipped lifecycle=unavailable ${outcome.unavailableReason ?? ''}`.trimEnd();
+  }
   if (outcome.state === 'failed' || outcome.traffic === null) {
     const kind = outcome.failure?.kind ?? 'unexpected';
     return `${outcome.repo} failed ${kind} backfill ${backfill} ${outcome.failure?.message ?? ''}`.trimEnd();
   }
   const traffic = outcome.traffic;
   return `${outcome.repo} ok ${traffic.days} days written ${traffic.written} revised ${traffic.revised} ` +
-    `unchanged ${traffic.unchanged} snapshots ${outcome.snapshots?.rows ?? 0} backfill ${backfill}`;
+    `unchanged ${traffic.unchanged} snapshots ${outcome.snapshots?.rows ?? 0} backfill ${backfill}` +
+    identityNote(outcome);
 }
 
 /**
@@ -110,9 +140,10 @@ function summaryLine(summary) {
       'duration_ms=0 status=planned';
   }
   return `summary run=${summary.runId} repositories=${totals.repositories} ok=${totals.ok} failed=${totals.failed} ` +
-    `days=${totals.days} rows=${totals.rows} written=${totals.written} revised=${totals.revised} ` +
-    `unchanged=${totals.unchanged} snapshots=${totals.snapshots} backfilled=${totals.backfilled} ` +
-    `requests=${totals.requests} duration_ms=${totals.durationMs} status=${summary.status}`;
+    `unavailable=${totals.unavailable} skipped=${totals.skipped} days=${totals.days} rows=${totals.rows} ` +
+    `written=${totals.written} revised=${totals.revised} unchanged=${totals.unchanged} ` +
+    `snapshots=${totals.snapshots} backfilled=${totals.backfilled} requests=${totals.requests} ` +
+    `duration_ms=${totals.durationMs} status=${summary.status}`;
 }
 
 /**
@@ -120,8 +151,9 @@ function summaryLine(summary) {
  * independently, write a run record and report a summary. It supports an
  * immediate manual run, a single-repository filter, and a dry run that plans
  * without contacting GitHub. Every printed line passes the redaction helper; a
- * repository that fails is reported and the rest of the run continues, so the
- * command exits `1` while the run record is still complete.
+ * repository that fails is reported and the rest of the run continues, and one
+ * GitHub no longer serves is reported as unavailable with the reason it gave, so
+ * the command exits `1` while the run record is still complete.
  * @param {import('./index.js').CommandContext} context
  * @returns {Promise<number>}
  */

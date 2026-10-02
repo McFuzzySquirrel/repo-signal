@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: TRAFFIC-COLLECTION-PIPELINE-2
 **Status**: In Progress
-**Validation Gaps**: 15 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-02T14:29:46.575Z
+**Validation Gaps**: 16 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-02T15:01:19.416Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -56,6 +56,8 @@
   - Files: src/collect/snapshots.js, tests/collect-snapshots.test.js
 - [x] Phase TRAFFIC-COLLECTION-PIPELINE-2, Task RS-COL-03: Expose the collect command with dry run, filter and per-repository isolation (@collector-engineer)
   - Files: src/collect/run.js, src/commands/collect.js, src/commands/index.js, tests/collect-command.test.js, tests/helpers/stub-github-server.mjs, tests/config-command.test.js
+- [x] Phase TRAFFIC-COLLECTION-PIPELINE-2, Task RS-COL-04: Mark renamed, transferred and vanished repositories instead of failing (@collector-engineer)
+  - Files: src/collect/lifecycle.js, tests/collect-lifecycle.test.js, src/collect/run.js, src/commands/collect.js, tests/collect-command.test.js, tests/helpers/collect-home.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
@@ -67,7 +69,6 @@
 - None currently running
 
 ## Remaining
-- [ ] Phase TRAFFIC-COLLECTION-PIPELINE-2: Phase 2: The collect command and lifecycle handling
 - [ ] Phase TRAFFIC-COLLECTION-PIPELINE-3: Phase 3: End-to-end verification without a live token
 - [ ] Phase COLLECTION-SUPERVISION-1: Phase 1: Failure state and run journal
 - [ ] Phase COLLECTION-SUPERVISION-2: Phase 2: The health read
@@ -101,6 +102,7 @@
 - Task RS-BKL-03: Who decides when a first collection counts as successful stays with collector-engineer: stampFirstCollected accepts the day the caller supplies and does not itself verify that a collection succeeded.
 - Task RS-COL-01: No live GitHub request was made and no real token was used; traffic response shapes follow the traffic-client contract and the vendor documentation already recorded for RS-API-03, so real-service behaviour remains unverified and RS-OPS-LIVE-01 stays an open human gate.
 - Task RS-COL-03: No live GitHub request was made and no real token was used. Endpoint response shapes follow the traffic, stargazer and statistics client contracts already recorded in the repository, so real-service behaviour remains unverified and RS-OPS-LIVE-01 stays an open human gate; no human review file was created or claimed.
+- Task RS-COL-04: No live GitHub request was made and no real token was used, so rename, transfer and 404 handling is verified only against the local stub's response shapes; RS-OPS-LIVE-01 stays an open human gate and no human review file was created or claimed.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 
 ## Notes

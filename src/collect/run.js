@@ -8,9 +8,14 @@ import {
   appendRun, completeRun, getRepository, listEnrolledRepositories, upsertRepository, withTransaction,
 } from '../db/ops-repo.js';
 import { resolveEnrollment } from '../enrollment/resolve.js';
+import { createRepoClient } from '../github/repo-client.js';
 import { createStarsClient } from '../github/stars-client.js';
 import { createStatsClient } from '../github/stats-client.js';
 import { createTrafficClient } from '../github/traffic-client.js';
+import {
+  confirmRepository, findRepositoryByName, isUnavailable, markUnavailable, recordIdentity,
+  splitRepository, unavailableReason,
+} from './lifecycle.js';
 import { writeSnapshotCaptures } from './snapshots.js';
 import { TRAFFIC_GRANULARITY, writeTrafficDays } from './traffic.js';
 
@@ -19,10 +24,12 @@ import { TRAFFIC_GRANULARITY, writeTrafficDays } from './traffic.js';
 /** @typedef {import('../db/ops-repo.js').Repository} Repository */
 /** @typedef {import('./traffic.js').TrafficSummary} TrafficSummary */
 /** @typedef {import('./snapshots.js').SnapshotSummary} SnapshotSummary */
+/** @typedef {import('./lifecycle.js').IdentityChange} IdentityChange */
 /** @typedef {import('../github/traffic-client.js').TrafficRecord} TrafficRecord */
 /** @typedef {ReturnType<typeof createTrafficClient>} TrafficClient */
 /** @typedef {ReturnType<typeof createStarsClient>} StarsClient */
 /** @typedef {ReturnType<typeof createStatsClient>} StatsClient */
+/** @typedef {ReturnType<typeof createRepoClient>} RepoClient */
 /** @typedef {ReturnType<typeof import('../github/retry.js').createRetryPolicy>} RetryPolicy */
 
 /**
@@ -47,6 +54,12 @@ export const RUN_STATUS_PLANNED = /** @type {const} */ ('planned');
 /** The traffic step reads four endpoints per repository: clones, views, referrers, popular paths. */
 export const TRAFFIC_REQUESTS_PER_REPOSITORY = 4;
 /**
+ * Every repository is resolved once before any fact is written, so the collection
+ * uses the name GitHub currently serves and a repository that vanished is marked
+ * rather than reported as a traffic failure.
+ */
+export const RESOLUTION_REQUESTS_PER_REPOSITORY = 1;
+/**
  * First-connect backfill reads one stargazer page per page GitHub returns plus
  * the two statistics endpoints, so a plan that includes it reports a floor over
  * the page count rather than a guessed number of requests.
@@ -67,6 +80,9 @@ export const FAILURE_KINDS = Object.freeze([
  * @property {boolean} backfill Whether the first-connect backfill would run.
  * @property {number} requests Requests the plan makes.
  * @property {boolean} exactRequests False when the count is a floor over unknown pages.
+ * @property {boolean} skipped The archive already marked this repository unavailable,
+ *   so this run requests nothing for it.
+ * @property {string|null} unavailableReason Why the archive marked it, when it did.
  */
 
 /**
@@ -77,14 +93,18 @@ export const FAILURE_KINDS = Object.freeze([
 
 /**
  * @typedef {object} RepositoryOutcome
- * @property {string} repo
+ * @property {string} repo Enrolled pair this outcome belongs to.
  * @property {number|null} repositoryId
  * @property {boolean} registered True when this run created the repository row.
- * @property {'ok'|'failed'} state
+ * @property {'ok'|'failed'|'unavailable'|'skipped'} state `unavailable` is a repository this
+ *   run marked because GitHub no longer serves it; `skipped` is one a previous run already
+ *   marked, which this run neither requested nor wrote.
  * @property {BackfillOutcome|null} backfill First-connect backfill performed here, or null.
  * @property {TrafficSummary|null} traffic
  * @property {SnapshotSummary|null} snapshots
  * @property {{day: string, stamped: boolean}|null} stamp Provenance boundary in force after the write.
+ * @property {IdentityChange|null} identity Lifecycle change this run recorded, or null.
+ * @property {string|null} unavailableReason Why the repository is marked unavailable.
  * @property {{kind: string, message: string}|null} failure
  */
 
@@ -93,6 +113,8 @@ export const FAILURE_KINDS = Object.freeze([
  * @property {number} repositories
  * @property {number} ok
  * @property {number} failed
+ * @property {number} unavailable Repositories this run marked unavailable.
+ * @property {number} skipped Repositories a previous run had already marked unavailable.
  * @property {number} days Distinct collected days across the run.
  * @property {number} rows Day rows applied, counted per metric key.
  * @property {number} written
@@ -167,16 +189,16 @@ export function resolveCollectScope({ config, filter = null }) {
 
 /**
  * Find the stored identity for one enrolled pair. Identity is the archive row,
- * matched on the owner/name pair the configuration declared, so a second run
- * never creates a second row for a repository the archive already holds.
+ * matched on the canonical owner/name pair and on every alias it has ever been
+ * collected under, so the configuration still naming a repository the way it was
+ * written before a rename finds the history it belongs to instead of allocating a
+ * second identity for the same repository.
  * @param {Database} db
  * @param {string} repo
  * @returns {Repository|null}
  */
 function storedRepository(db, repo) {
-  const wanted = repo.toLowerCase();
-  return listEnrolledRepositories(db)
-    .find((row) => `${row.owner}/${row.name}`.toLowerCase() === wanted) ?? null;
+  return findRepositoryByName(db, repo);
 }
 
 /**
@@ -211,15 +233,6 @@ function allocateRepositoryId(db, enrolled) {
 }
 
 /**
- * @param {string} repo
- * @returns {[string, string]} owner and name, both validated by the configuration loader.
- */
-function splitRepo(repo) {
-  const slash = repo.indexOf('/');
-  return [repo.slice(0, slash), repo.slice(slash + 1)];
-}
-
-/**
  * @param {number} nowMs
  * @returns {string} An identifier that names the instant the run began.
  */
@@ -232,6 +245,10 @@ export function nextRunId(nowMs) {
  * alone. Planning opens no socket, so a dry run can report the plan without
  * contacting GitHub, and the plan names the first-connect backfill step it would
  * perform and the requests it would make.
+ *
+ * A repository the archive already marked unavailable is planned as skipped: it
+ * keeps its row and its history, and no run requests it again until the maintainer
+ * re-enrols or unmarks it.
  * @param {object} options
  * @param {Database} options.db
  * @param {Configuration} options.config
@@ -239,16 +256,29 @@ export function nextRunId(nowMs) {
  * @returns {PlannedRepository[]}
  */
 export function planCollect({ db, config, filter = null }) {
-  const enrolled = listEnrolledRepositories(db);
   return resolveCollectScope({ config, filter }).map((repo) => {
-    const stored = enrolled.find((row) => `${row.owner}/${row.name}`.toLowerCase() === repo.toLowerCase()) ?? null;
+    const stored = storedRepository(db, repo);
+    if (stored !== null && isUnavailable(stored)) {
+      return {
+        repo,
+        repositoryId: stored.id,
+        backfill: false,
+        requests: 0,
+        exactRequests: true,
+        skipped: true,
+        unavailableReason: stored.unavailableReason,
+      };
+    }
     const backfill = stored === null || !readProvenance(db, stored.id).backfillCompleted;
     return {
       repo,
       repositoryId: stored?.id ?? null,
       backfill,
-      requests: TRAFFIC_REQUESTS_PER_REPOSITORY + (backfill ? BACKFILL_REQUESTS_FLOOR : 0),
+      requests: RESOLUTION_REQUESTS_PER_REPOSITORY + TRAFFIC_REQUESTS_PER_REPOSITORY
+        + (backfill ? BACKFILL_REQUESTS_FLOOR : 0),
       exactRequests: !backfill,
+      skipped: false,
+      unavailableReason: null,
     };
   });
 }
@@ -296,6 +326,7 @@ function firstCollectedDay(clones, views, collectedAt) {
  * @property {TrafficClient} traffic
  * @property {StarsClient} stars
  * @property {StatsClient} stats
+ * @property {RepoClient} repo
  */
 
 /**
@@ -335,32 +366,38 @@ async function runFirstConnectBackfill({ db, repositoryId, repo, clients, collec
  */
 function ensureRepository({ db, repo, collectedAt }) {
   const stored = storedRepository(db, repo);
-  const [owner, name] = splitRepo(repo);
+  const [owner, name] = splitRepository(repo);
   const id = stored?.id ?? allocateRepositoryId(db, listEnrolledRepositories(db));
   upsertRepository(db, { id, owner, name, lastSeenAt: collectedAt, enrolled: 1 });
   return { id, registered: stored === null };
 }
 
 /**
- * @typedef {{traffic: TrafficSummary, snapshots: SnapshotSummary, stamp: {day: string, stamped: boolean}}} WrittenFacts
+ * @typedef {{traffic: TrafficSummary, snapshots: SnapshotSummary, identity: IdentityChange,
+ *   stamp: {day: string, stamped: boolean}}} WrittenFacts
  */
 
 /**
  * Collect one repository inside its own failure boundary. This function never
  * throws, so one repository's failure cannot stop the next one.
  *
- * The four reads happen before the write opens, because an archive transaction
- * is synchronous and must never hold a socket open; the day rows, the snapshot
- * captures and the provenance boundary then commit as one transaction, so an
- * interruption between repositories, or a rejection between two writes inside
- * one repository, leaves no half-written repository behind. The boundary is
- * stamped inside the same transaction, so a failed collection never claims a
- * first collected day, and the stamp is itself conditional, so a later run
- * cannot move it.
+ * The repository is resolved once, before anything is written, so the rest of the
+ * run reads the name GitHub currently serves: a rename or a transfer is recorded
+ * with its alias and collected under the new name instead of being answered with a
+ * redirect this transport refuses, and a repository GitHub no longer serves is
+ * marked unavailable rather than reported as a traffic failure.
+ *
+ * The reads all happen before the write opens, because an archive transaction is
+ * synchronous and must never hold a socket open; the identity, the day rows, the
+ * snapshot captures and the provenance boundary then commit as one transaction, so
+ * an interruption between repositories, or a rejection between two writes inside one
+ * repository, leaves no half-written repository behind. The boundary is stamped
+ * inside the same transaction, so a failed collection never claims a first collected
+ * day, and the stamp is itself conditional, so a later run cannot move it.
  *
  * Retry and backoff belong to the transport policy, so none is added here; this
- * step embeds no timer and reads no clock, because the collection time belongs
- * to the run that scheduled it.
+ * step embeds no timer and reads no clock, because the collection time belongs to
+ * the run that scheduled it.
  * @param {object} options
  * @param {Database} options.db
  * @param {PlannedRepository} options.planned
@@ -386,35 +423,44 @@ async function collectRepository({ db, planned, runId, clients, collectedAt, sec
     // A local alias keeps the narrowed identity inside the transaction closure.
     const id = identity.id;
 
+    const remote = await confirmRepository({ repo: planned.repo, repoClient: clients.repo });
+
     if (!readProvenance(db, id).backfillCompleted) {
-      backfill = await runFirstConnectBackfill({ db, repositoryId: id, repo: planned.repo, clients, collectedAt });
+      backfill = await runFirstConnectBackfill({ db, repositoryId: id, repo: remote.repo, clients, collectedAt });
     }
 
-    const clones = await clients.traffic.clones(planned.repo, TRAFFIC_GRANULARITY);
-    const views = await clients.traffic.views(planned.repo, TRAFFIC_GRANULARITY);
-    const referrers = await clients.traffic.referrers(planned.repo);
-    const popularPaths = await clients.traffic.popularPaths(planned.repo);
+    const clones = await clients.traffic.clones(remote.repo, TRAFFIC_GRANULARITY);
+    const views = await clients.traffic.views(remote.repo, TRAFFIC_GRANULARITY);
+    const referrers = await clients.traffic.referrers(remote.repo);
+    const popularPaths = await clients.traffic.popularPaths(remote.repo);
 
     written = withTransaction(db, () => {
+      const change = recordIdentity({ db, repositoryId: id, remote, collectedAt });
       const traffic = writeTrafficDays({ db, repositoryId: id, clones, views, collectedAt });
       const snapshots = writeSnapshotCaptures({ db, repositoryId: id, runId, referrers, popularPaths, collectedAt });
       const stamp = stampFirstCollected(db, id, {
         day: firstCollectedDay(clones, views, collectedAt), collectedAt,
       });
-      return { traffic, snapshots, stamp };
+      return { identity: change, traffic, snapshots, stamp };
     });
   } catch (error) {
-    return {
-      repo: planned.repo,
-      repositoryId,
-      registered,
-      state: 'failed',
-      backfill,
-      traffic: null,
-      snapshots: null,
-      stamp: null,
-      failure: { kind: failureKind(error), message: safeMessage(error, secrets) },
-    };
+    // A repository GitHub no longer serves is marked, not failed: it keeps its row,
+    // its enrolment and every fact already stored under its identity, and later runs
+    // skip it instead of asking about it again. Nothing was written for it in this
+    // run, because the marking is reached only while no fact write had opened.
+    const reason = repositoryId === null ? null : unavailableReason(error, planned.repo);
+    if (reason !== null) {
+      try {
+        withTransaction(db, () => markUnavailable({ db, repositoryId: /** @type {number} */ (repositoryId),
+          reason, collectedAt }));
+      } catch {
+        // A marking that cannot be written is a failure of this repository, and it
+        // is reported as one rather than claimed as a marking that did not happen.
+        return failedOutcome({ planned, repositoryId, registered, backfill, error, secrets });
+      }
+      return unavailableOutcome({ planned, repositoryId, registered, backfill, error, reason });
+    }
+    return failedOutcome({ planned, repositoryId, registered, backfill, error, secrets });
   }
   return {
     repo: planned.repo,
@@ -425,17 +471,108 @@ async function collectRepository({ db, planned, runId, clients, collectedAt, sec
     traffic: written?.traffic ?? null,
     snapshots: written?.snapshots ?? null,
     stamp: written?.stamp ?? null,
+    identity: written?.identity ?? null,
+    unavailableReason: null,
     failure: null,
   };
 }
 
 /**
+ * The outcome for a repository GitHub no longer serves: it is reported as a
+ * repository outcome carrying the reason, never as a crash, and the run carries on
+ * to the next repository. The typed kind the transport assigned travels with it, so
+ * the classifier still owns what the failure was.
+ * @param {object} options
+ * @param {PlannedRepository} options.planned
+ * @param {number|null} options.repositoryId
+ * @param {boolean} options.registered
+ * @param {BackfillOutcome|null} options.backfill
+ * @param {unknown} options.error
+ * @param {string} options.reason The recorded reason, already free of credential material.
+ * @returns {RepositoryOutcome}
+ */
+function unavailableOutcome({ planned, repositoryId, registered, backfill, error, reason }) {
+  return {
+    repo: planned.repo,
+    repositoryId,
+    registered,
+    state: 'unavailable',
+    backfill,
+    traffic: null,
+    snapshots: null,
+    stamp: null,
+    identity: null,
+    unavailableReason: reason,
+    failure: { kind: failureKind(error), message: reason },
+  };
+}
+
+/**
+ * The outcome for a repository that produced no facts and is not unavailable: the
+ * typed failure is reported and the run carries on to the next repository.
+ * @param {object} options
+ * @param {PlannedRepository} options.planned
+ * @param {number|null} options.repositoryId
+ * @param {boolean} options.registered
+ * @param {BackfillOutcome|null} options.backfill
+ * @param {unknown} options.error
+ * @param {readonly string[]} options.secrets
+ * @returns {RepositoryOutcome}
+ */
+function failedOutcome({ planned, repositoryId, registered, backfill, error, secrets }) {
+  return {
+    repo: planned.repo,
+    repositoryId,
+    registered,
+    state: 'failed',
+    backfill,
+    traffic: null,
+    snapshots: null,
+    stamp: null,
+    identity: null,
+    unavailableReason: null,
+    failure: { kind: failureKind(error), message: safeMessage(error, secrets) },
+  };
+}
+
+/**
+ * The outcome for a repository an earlier run marked unavailable. No request is
+ * made, nothing is written, and the run is not degraded by it: the marking is
+ * already recorded and the maintainer has already been told about it.
+ * @param {PlannedRepository} planned
+ * @returns {RepositoryOutcome}
+ */
+function skippedOutcome(planned) {
+  return {
+    repo: planned.repo,
+    repositoryId: planned.repositoryId,
+    registered: false,
+    state: 'skipped',
+    backfill: null,
+    traffic: null,
+    snapshots: null,
+    stamp: null,
+    identity: null,
+    unavailableReason: planned.unavailableReason,
+    failure: null,
+  };
+}
+
+/**
+ * Count what a set of outcomes adds up to. A repository the archive had already
+ * marked unavailable contributes to `skipped` and nothing else: it wrote no day,
+ * appended no capture, and did not make this run fail.
  * @param {RepositoryOutcome[]} outcomes
- * @returns {Pick<CollectTotals, 'days'|'rows'|'written'|'revised'|'unchanged'|'snapshots'|'backfilled'>}
+ * @returns {Pick<CollectTotals, 'ok'|'failed'|'unavailable'|'skipped'|'days'|'rows'|'written'|'revised'|'unchanged'|'snapshots'|'backfilled'>}
  */
 function totalise(outcomes) {
-  const totals = { days: 0, rows: 0, written: 0, revised: 0, unchanged: 0, snapshots: 0, backfilled: 0 };
+  const totals = { ok: 0, failed: 0, unavailable: 0, skipped: 0, days: 0, rows: 0,
+    written: 0, revised: 0, unchanged: 0, snapshots: 0, backfilled: 0 };
   for (const outcome of outcomes) {
+    if (outcome.state === 'ok') totals.ok += 1;
+    else if (outcome.state === 'failed') totals.failed += 1;
+    else if (outcome.state === 'unavailable') totals.unavailable += 1;
+    else totals.skipped += 1;
     if (outcome.backfill !== null) totals.backfilled += 1;
     if (outcome.traffic !== null) {
       totals.days += outcome.traffic.days;
@@ -453,7 +590,8 @@ function totalise(outcomes) {
  * Run the collection: resolve the enrolled set, plan the work, open a run record
  * before the first request, collect each repository inside its own failure
  * boundary, and close the run record with counts, a duration and a status. A
- * repository that fails never aborts the run, and a run where every repository
+ * repository that fails never aborts the run, a repository GitHub no longer serves
+ * is marked unavailable inside its own boundary, and a run where every repository
  * fails still closes a complete run record; the caller turns a degraded run into
  * a non-zero exit code. The run row is appended at the start, so a process killed
  * mid-run is still visible as an unclosed run in the journal.
@@ -481,7 +619,9 @@ export async function collectRun({
       runId: null,
       plan,
       outcomes: [],
-      totals: { repositories: plan.length, ok: 0, failed: 0, ...totalise([]), requests: 0, durationMs: 0 },
+      totals: {
+        repositories: plan.length, ...totalise([]), requests: 0, durationMs: 0,
+      },
       status: RUN_STATUS_PLANNED,
     };
   }
@@ -500,6 +640,7 @@ export async function collectRun({
     traffic: createTrafficClient({ policy: counted.policy }),
     stars: createStarsClient({ policy: counted.policy }),
     stats: createStatsClient({ policy: counted.policy }),
+    repo: createRepoClient({ policy: counted.policy }),
   };
 
   /** @type {RepositoryOutcome[]} */
@@ -507,19 +648,25 @@ export async function collectRun({
   for (const planned of plan) {
     // Sequential on purpose: a handful of repositories stays inside the rate
     // limit, and a sequential run keeps the transaction story readable.
-    outcomes.push(await collectRepository({ db, planned, runId: identifier, clients, collectedAt: startedAt, secrets }));
+    // A repository an earlier run marked unavailable is skipped without a request:
+    // it keeps its row and its history, and asking again would only fail again.
+    outcomes.push(planned.skipped
+      ? skippedOutcome(planned)
+      : await collectRepository({ db, planned, runId: identifier, clients, collectedAt: startedAt, secrets }));
   }
 
-  const ok = outcomes.filter((outcome) => outcome.state === 'ok').length;
-  const failed = outcomes.length - ok;
+  const totals = totalise(outcomes);
+  // A repository that vanished is not a repository that was collected, so the run
+  // reports it as degraded rather than complete; a repository an earlier run already
+  // marked is only skipped, because the marking is already recorded and reported.
+  const status = totals.failed + totals.unavailable === 0 ? RUN_STATUS_COMPLETED : RUN_STATUS_DEGRADED;
   const closedAtMs = clock();
   const durationMs = Math.max(0, closedAtMs - startedAtMs);
-  const status = failed === 0 ? RUN_STATUS_COMPLETED : RUN_STATUS_DEGRADED;
   completeRun(db, identifier, {
     closedAt: new Date(closedAtMs).toISOString(),
     status,
-    successCount: ok,
-    failureCount: failed,
+    successCount: totals.ok,
+    failureCount: totals.failed + totals.unavailable,
     requestCount: counted.count(),
     durationMs,
   });
@@ -529,14 +676,7 @@ export async function collectRun({
     runId: identifier,
     plan,
     outcomes,
-    totals: {
-      repositories: outcomes.length,
-      ok,
-      failed,
-      ...totalise(outcomes),
-      requests: counted.count(),
-      durationMs,
-    },
+    totals: { repositories: outcomes.length, ...totals, requests: counted.count(), durationMs },
     status,
   };
 }
