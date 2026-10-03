@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: DASHBOARD-VIEWS-AND-ACCESSIBILITY-2
 **Status**: In Progress
-**Validation Gaps**: 57 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-03T16:29:19.121Z
+**Validation Gaps**: 62 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-03T17:26:29.336Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -96,6 +96,8 @@
   - Files: src/server/views/health.js, src/server/views/index.js, tests/views/health-view.test.js, src/commands/serve.js
 - [x] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-2, Task RS-UI-04: Define the accessibility helpers and contrast-checked theme tokens (@ui-engineer)
   - Files: src/server/views/a11y.js, src/server/views/index.js, src/ui/theme.css, tests/views/a11y.test.js, tests/contrast.test.js, src/commands/serve.js, src/server/views/health.js, src/server/views/repo-detail.js, src/server/views/repo-list.js, tests/views/repo-list.test.js
+- [x] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-2, Task RS-UI-05: Exercise every page against the running server (@qa-engineer)
+  - Files: tests/integration/dashboard-e2e.test.js
 - [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-01: Build the backup drill and the backup and migration runbook (@platform-engineer)
   - Files: docs/operations/backup-and-migrate.md, scripts/backup-drill.mjs, tests/backup-drill.test.js
 - [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-02: Write the unattended operation and troubleshooting runbooks (@platform-engineer)
@@ -109,7 +111,6 @@
 - None currently running
 
 ## Remaining
-- [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-2: Phase 2: Accessibility contract and end-to-end verification
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-3: Phase 3: Human journey and accessibility review
 - [ ] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-3: Phase 3: Human gates
 
@@ -164,6 +165,11 @@
 - Task RS-UI-04: No live GitHub request and no real token were used; the only host reached over HTTP was the test's own loopback dashboard and my own loopback smoke test
 - Task RS-UI-04: The accessibility assertions are structural and mechanical. They cover landmarks, heading order, table pairing, control names, contrast ratios and stylesheet isolation, but a human has not judged the pages
 - Task RS-UI-04: Tests ran on the Node 24.15.0 installed here; package.json's engines floor of 24.12.0 was not separately verified
+- Task RS-UI-05: No live GitHub request and no real token were used; the only host reached over HTTP was the test's own loopback servers, enforced by a fetch guard that is itself probed live
+- Task RS-UI-05: The accessibility assertions are structural and mechanical over served markup (landmarks, heading order, table pairing, control names, no-substituted-zero). No human has judged whether the pages answer the maintainer's question, which is RS-UI-REV-01's gate and was not created or claimed
+- Task RS-UI-05: The render budget is not asserted here; it is RS-SRV-04's criterion, covered by tests/integration/server-e2e.test.js
+- Task RS-UI-05: The spawned-serve test seeds against the wall clock, so it asserts the six outcomes, the header policy, the shell, the stylesheet route and the gap text rather than elapsed-time-dependent health states
+- Task RS-UI-05: Tests ran on the Node version installed here; package.json's engines floor of 24.12.0 was not separately verified
 - Task RS-OPS-01: No real archive, no real credential and no network were involved: every check ran against scratch homes in the system temporary directory and spawned commands that make no outbound request, so the drill proves the restore path, not the behaviour of a live collection.
 - Task RS-OPS-02: No real GitHub request was made and no real token was used. The 401/403/429 refusal lines quoted in the page are transcribed from the classifier's own message templates in src/supervision/errors.js and src/github/retry.js, not from a live response, so real-service wording remains unverified behind the RS-OPS-LIVE-01 human gate.
 - Task RS-OPS-02: The cron, launchd and systemd entries are written against the documented behaviour of those three schedulers; only the systemd timer's semantics were cross-checked against the repository's own conventions. No schedule was installed or observed firing on any machine.
