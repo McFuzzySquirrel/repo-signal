@@ -161,6 +161,9 @@ export async function serve(context) {
     context.print(redact(`serve listening on ${server.url}`));
     context.print(redact(`repository list: ${server.url}/repos`));
     context.print(redact(`collection health: ${server.url}${registry.healthPath}`));
+    // The stylesheet is served by the registry's own asset route rather than by a
+    // static file server, and it is printed so a 404 on it is a one-line check.
+    context.print(redact(`stylesheet: ${server.url}${registry.themePath}`));
     context.print(redact(`archive: ${paths.databasePath}`));
     context.print('stop with Ctrl-C; the dashboard only reads the archive while it is open');
 

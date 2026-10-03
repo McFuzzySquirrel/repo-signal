@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: DASHBOARD-VIEWS-AND-ACCESSIBILITY-1
+**Phase**: DASHBOARD-VIEWS-AND-ACCESSIBILITY-2
 **Status**: In Progress
-**Validation Gaps**: 54 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-03T15:35:09.459Z
+**Validation Gaps**: 57 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-03T16:29:19.121Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -94,6 +94,8 @@
   - Files: src/server/views/repo-detail.js, src/server/views/index.js, tests/views/repo-detail.test.js, tests/views/repo-list.test.js
 - [x] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-1, Task RS-UI-03: Render the collection health page with text states (@ui-engineer)
   - Files: src/server/views/health.js, src/server/views/index.js, tests/views/health-view.test.js, src/commands/serve.js
+- [x] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-2, Task RS-UI-04: Define the accessibility helpers and contrast-checked theme tokens (@ui-engineer)
+  - Files: src/server/views/a11y.js, src/server/views/index.js, src/ui/theme.css, tests/views/a11y.test.js, tests/contrast.test.js, src/commands/serve.js, src/server/views/health.js, src/server/views/repo-detail.js, src/server/views/repo-list.js, tests/views/repo-list.test.js
 - [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-01: Build the backup drill and the backup and migration runbook (@platform-engineer)
   - Files: docs/operations/backup-and-migrate.md, scripts/backup-drill.mjs, tests/backup-drill.test.js
 - [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-02: Write the unattended operation and troubleshooting runbooks (@platform-engineer)
@@ -159,6 +161,9 @@
 - Task RS-UI-03: Elapsed-time-dependent states in the spawned-serve test are the wall clock's to decide, so that test asserts the two clock-independent states (needs-re-authentication, never-collected), the row count and the served markup rather than every state word
 - Task RS-UI-03: Whether the page answers the maintainer's question, its keyboard pass and its screen-reader pass are RS-UI-REV-01's human gate; no file in docs/reviews/ was created, edited or claimed
 - Task RS-UI-03: Tests ran on the Node 24.15.0 installed here; package.json's engines floor of 24.12.0 was not separately checked
+- Task RS-UI-04: No live GitHub request and no real token were used; the only host reached over HTTP was the test's own loopback dashboard and my own loopback smoke test
+- Task RS-UI-04: The accessibility assertions are structural and mechanical. They cover landmarks, heading order, table pairing, control names, contrast ratios and stylesheet isolation, but a human has not judged the pages
+- Task RS-UI-04: Tests ran on the Node 24.15.0 installed here; package.json's engines floor of 24.12.0 was not separately verified
 - Task RS-OPS-01: No real archive, no real credential and no network were involved: every check ran against scratch homes in the system temporary directory and spawned commands that make no outbound request, so the drill proves the restore path, not the behaviour of a live collection.
 - Task RS-OPS-02: No real GitHub request was made and no real token was used. The 401/403/429 refusal lines quoted in the page are transcribed from the classifier's own message templates in src/supervision/errors.js and src/github/retry.js, not from a live response, so real-service wording remains unverified behind the RS-OPS-LIVE-01 human gate.
 - Task RS-OPS-02: The cron, launchd and systemd entries are written against the documented behaviour of those three schedulers; only the systemd timer's semantics were cross-checked against the repository's own conventions. No schedule was installed or observed firing on any machine.

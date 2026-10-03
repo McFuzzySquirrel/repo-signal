@@ -1,6 +1,7 @@
 import { escapeUrl } from '../html.js';
 import { findRepository } from '../repo-data.js';
 import { isIsoDay } from '../router.js';
+import { THEME_CONTENT_TYPE, THEME_STYLESHEET_PATH, readThemeStylesheet } from './a11y.js';
 import {
   readRepositoryDetailPage, renderRepositoryDetailPage,
 } from './repo-detail.js';
@@ -20,11 +21,12 @@ import {
  * needs through the layer that owns it, and hands it to a pure render function.
  *
  * Adding a page is a change in this file plus its own view module, and nothing else.
- * There are two mount tables and both are here: {@link VIEW_MOUNT_TABLE} holds the
- * three routes the router dispatches, and {@link VIEW_PATH_TABLE} holds the pages the
- * dashboard serves at a path the router does not name - the collection health page
- * today. The router's own route table is server-engineer's and is never edited from
- * here.
+ * There are three mount tables and all of them are here: {@link VIEW_MOUNT_TABLE}
+ * holds the three routes the router dispatches, {@link VIEW_PATH_TABLE} holds the
+ * pages the dashboard serves at a path the router does not name - the collection
+ * health page today - and {@link VIEW_ASSET_TABLE} holds the fixed files those
+ * pages refer to by name, which is the theme stylesheet and nothing else. The
+ * router's own route table is server-engineer's and is never edited from here.
  */
 
 /** @typedef {import('node:sqlite').DatabaseSync} Database */
@@ -197,6 +199,38 @@ export const VIEW_PATH_TABLE = Object.freeze([
 ]);
 
 /**
+ * One fixed file this dashboard serves at a path of its own.
+ *
+ * An asset mount is not a page: it reads no archive and renders no document, so it
+ * carries a content type and the bytes instead of a read and a render pair. The
+ * list is the whole of what the dashboard will serve from disk, which is what makes
+ * "there is no static file server" a property of this table rather than a promise:
+ * a URL naming anything not named here - a source file, a sibling of the
+ * stylesheet, a directory - is handed to the router, which answers 404 for it.
+ *
+ * @typedef {object} ViewAssetMount
+ * @property {string} path The absolute path this file is served from, exactly.
+ * @property {string} contentType The content type it is served with.
+ * @property {() => string} read The bytes, read fresh on each request.
+ */
+
+/**
+ * Every fixed file this registry serves. The theme stylesheet is the only entry,
+ * and the path it is served from is the one the shared document shell links to, so
+ * the link in every page resolves without a static file server and without a
+ * second copy of the path.
+ *
+ * @type {readonly ViewAssetMount[]}
+ */
+export const VIEW_ASSET_TABLE = Object.freeze([
+  Object.freeze({
+    path: THEME_STYLESHEET_PATH,
+    contentType: THEME_CONTENT_TYPE,
+    read: readThemeStylesheet,
+  }),
+]);
+
+/**
  * The context a page mounted at a path of its own is rendered with.
  *
  * The router builds its own context for the routes it dispatches, carrying the day
@@ -234,8 +268,9 @@ function ownPageContext(route) {
  * archive itself and can never disagree with the CLI about a repository's state.
  *
  * `answerOwnRoutes` is what the `serve` command mounts in front of the router: the
- * pages in {@link VIEW_PATH_TABLE} are served from here rather than from the router's
- * route table, which the router's owner extends separately.
+ * pages in {@link VIEW_PATH_TABLE} and the files in {@link VIEW_ASSET_TABLE} are
+ * served from here rather than from the router's route table, which the router's
+ * owner extends separately.
  *
  * @param {object} options
  * @param {Database} options.db Open archive; the caller owns closing it.
@@ -243,9 +278,10 @@ function ownPageContext(route) {
  * @param {string} options.today Reference UTC day a route with no bound resolves to.
  * @returns {{ views: RouterViews, hasRepository: (owner: string, name: string) => boolean,
  *   routes: readonly string[], mounts: Readonly<Record<string, ViewMount>>,
- *   paths: readonly ViewPathMount[], healthPath: string,
- *   answerOwnRoutes: (next: (req: import('node:http').IncomingMessage) => Promise<{status: number, body: string}>)
- *     => (req: import('node:http').IncomingMessage) => Promise<{status: number, body: string}> }}
+ *   paths: readonly ViewPathMount[], assets: readonly ViewAssetMount[],
+ *   healthPath: string, themePath: string,
+ *   answerOwnRoutes: (next: (req: import('node:http').IncomingMessage) => Promise<{status: number, body: string, headers?: Record<string, string>}>)
+ *     => (req: import('node:http').IncomingMessage) => Promise<{status: number, body: string, headers?: Record<string, string>}> }}
  */
 export function createViewRegistry({ db, clock = Date.now, today }) {
   if (!db) throw new TypeError('The view registry needs an open archive');
@@ -276,7 +312,8 @@ export function createViewRegistry({ db, clock = Date.now, today }) {
   };
 
   /**
-   * Answer the paths in {@link VIEW_PATH_TABLE} and hand every other request to `next`.
+   * Answer the paths this registry mounted - the pages in {@link VIEW_PATH_TABLE} and
+   * the files in {@link VIEW_ASSET_TABLE} - and hand every other request to `next`.
    *
    * The router keeps ownership of the three routes it dispatches and of every status
    * it returns: this wrapper only recognises a path the registry itself mounted, and
@@ -284,9 +321,13 @@ export function createViewRegistry({ db, clock = Date.now, today }) {
    * answers with its own 400 - goes straight through. A trailing slash is folded the
    * same way the router folds it, so `/health/` and `/health` are one page.
    *
-   * @param {(req: import('node:http').IncomingMessage) => Promise<{status: number, body: string}>} next
+   * A query string on a mounted path changes nothing: a page reads its own range from
+   * the route context and a stylesheet reads nothing at all, so `/assets/theme.css?v=2`
+   * is the same file as `/assets/theme.css`.
+   *
+   * @param {(req: import('node:http').IncomingMessage) => Promise<{status: number, body: string, headers?: Record<string, string>}>} next
    *   The router's handler, or anything with that shape.
-   * @returns {(req: import('node:http').IncomingMessage) => Promise<{status: number, body: string}>}
+   * @returns {(req: import('node:http').IncomingMessage) => Promise<{status: number, body: string, headers?: Record<string, string>}>}
    *   A handler the server factory can mount in place of `next` alone.
    */
   const answerOwnRoutes = (next) => async (req) => {
@@ -301,6 +342,13 @@ export function createViewRegistry({ db, clock = Date.now, today }) {
     const path = url.pathname.length > 1 && url.pathname.endsWith('/')
       ? url.pathname.slice(0, -1)
       : url.pathname;
+    const asset = VIEW_ASSET_TABLE.find((candidate) => candidate.path === path);
+    if (asset !== undefined) {
+      // The content type is the only header this route sets, and it sets it on the
+      // route's own answer: the server factory's security headers are added on top of
+      // whatever a handler returns and always win.
+      return { status: 200, body: asset.read(), headers: { 'Content-Type': asset.contentType } };
+    }
     const entry = VIEW_PATH_TABLE.find((candidate) => candidate.path === path);
     if (entry === undefined) return next(req);
     const data = entry.read({ db, clock });
@@ -315,7 +363,9 @@ export function createViewRegistry({ db, clock = Date.now, today }) {
     routes: VIEW_ROUTES,
     mounts: VIEW_MOUNT_TABLE,
     paths: VIEW_PATH_TABLE,
+    assets: VIEW_ASSET_TABLE,
     healthPath: HEALTH_PAGE_PATH,
+    themePath: THEME_STYLESHEET_PATH,
     answerOwnRoutes,
   };
 }

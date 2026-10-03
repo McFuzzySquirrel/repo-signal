@@ -1,0 +1,306 @@
+/*
+ * RepoSignal theme tokens, and the only rules that give a dashboard page its
+ * appearance.
+ *
+ * Three rules decide what may appear in this file, and each of them is asserted
+ * by `tests/contrast.test.js` rather than trusted to review.
+ *
+ * 1. **Every colour is declared once, here, and nowhere else.** Every rule below
+ *    the token block refers to a colour through `var(--rs-...)`, so the contrast
+ *    test can see every colour the product can draw. A colour literal in a view
+ *    module, in markup or in a second stylesheet is invisible to that test and
+ *    therefore unprotected: this file is the only place one may appear.
+ * 2. **Every token that names a colour takes part in at least one declared
+ *    contrast pair**, so a colour added here cannot escape the check. Each pair
+ *    names the two tokens it compares and the role they are compared in -
+ *    `text` or `non-text` - and the test computes the ratio from the two resolved
+ *    values rather than trusting a number written in a comment. WCAG 2.1 AA asks
+ *    for 4.5:1 for text and 3:1 for everything else that has to be seen.
+ * 3. **There is no motion and no remote asset.** No `transition`, no
+ *    `animation`, no `@keyframes`, no `@import`, no `@font-face` and no `url()`:
+ *    the reduced-motion preference is respected trivially, because there is
+ *    nothing to switch off, and the page cannot reach a host to fetch anything.
+ *    The font stack names only fonts the operating system already has, so the
+ *    dashboard needs no font download to be legible.
+ *
+ * The rules below the tokens exist so a maintainer can read the page. They are
+ * deliberately plain: no colour carries meaning here either, because every state
+ * the product reports - re-authentication, a stalled collection, a gap, an empty
+ * archive - is already a word on the page, and a colour that only repeats a word
+ * is a second way to be wrong.
+ */
+
+:root {
+  /*
+   * Surfaces. The page and the tinted band behind a table head. Both are declared
+   * here and used by name below; neither is a colour a reader has to decode.
+   */
+  --rs-surface: #ffffff;
+  --rs-surface-subtle: #eef1f4;
+
+  /* Text: the body colour, the secondary colour, and the link colour. */
+  --rs-text: #14181d;
+  --rs-text-muted: #565e69;
+  --rs-link: #0a4b8c;
+
+  /* Everything that has to be seen rather than read. */
+  --rs-border: #767f8a;
+  --rs-focus: #b34700;
+
+  /*
+   * The font stacks. System fonts only, so the page is legible with no font
+   * download and no network request of any kind.
+   */
+  --rs-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --rs-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  /*
+   * The contrast pairs. Each one names the two tokens it compares and the role
+   * the comparison is for; `tests/contrast.test.js` parses these declarations,
+   * resolves both tokens to the values above, computes the ratio and fails below
+   * 4.5:1 for a `text` pair and below 3:1 for a `non-text` pair. A pair is
+   * declared here rather than in the test so that adding a colour here forces a
+   * decision about what it is read against.
+   */
+  --rs-pair-body-text: text var(--rs-text) var(--rs-surface);
+  --rs-pair-muted-text: text var(--rs-text-muted) var(--rs-surface);
+  --rs-pair-link-text: text var(--rs-link) var(--rs-surface);
+  --rs-pair-table-head-text: text var(--rs-text) var(--rs-surface-subtle);
+  --rs-pair-table-note-text: text var(--rs-text-muted) var(--rs-surface-subtle);
+  --rs-pair-border: non-text var(--rs-border) var(--rs-surface);
+  --rs-pair-border-subtle: non-text var(--rs-border) var(--rs-surface-subtle);
+  --rs-pair-focus-ring: non-text var(--rs-focus) var(--rs-surface);
+  --rs-pair-focus-ring-on-text: non-text var(--rs-focus) var(--rs-text);
+
+  /* The colour scheme the browser paints its own chrome with. */
+  color-scheme: light;
+}
+
+html {
+  /* The page is text first: a reader who never sees the stylesheet reads the
+     same document, so nothing here may be the only carrier of a value. */
+  background-color: var(--rs-surface);
+  color: var(--rs-text);
+  font-family: var(--rs-font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+  padding: 0 1rem 2rem;
+}
+
+main {
+  max-width: 78rem;
+  margin: 0 auto;
+}
+
+/*
+ * The skip link the document shell emits as the first focusable element. It is
+ * out of the way until it takes focus, at which point it becomes visible in
+ * place: there is no transition and no animation, so the change is instant.
+ */
+.skip-link {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+  background-color: var(--rs-surface);
+  color: var(--rs-link);
+}
+
+.skip-link:focus {
+  position: static;
+  display: block;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  overflow: visible;
+  white-space: normal;
+  clip-path: none;
+  outline: 3px solid var(--rs-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * The focus ring. It is an outline rather than a background change, so the text
+ * underneath it is still readable and the control is still found by keyboard.
+ */
+a:focus-visible,
+.skip-link:focus {
+  outline: 3px solid var(--rs-focus);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--rs-link);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--rs-text);
+  line-height: 1.25;
+  margin: 1.5rem 0 0.5rem;
+}
+
+h1 {
+  font-size: 1.6rem;
+}
+
+h2 {
+  font-size: 1.3rem;
+}
+
+h3 {
+  font-size: 1.1rem;
+}
+
+p,
+li,
+dd {
+  margin: 0.5rem 0;
+}
+
+code,
+pre {
+  font-family: var(--rs-font-mono);
+  font-size: 0.95em;
+  background-color: var(--rs-surface-subtle);
+  border: 1px solid var(--rs-border);
+  border-radius: 3px;
+  padding: 0 0.2em;
+}
+
+/*
+ * Tables. The header row is tinted so a reader can find the columns without
+ * reading every cell, and every cell carries a border because a border is a
+ * non-text cue and has to meet the 3:1 threshold on both surfaces.
+ */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0;
+}
+
+caption {
+  caption-side: top;
+  text-align: left;
+  color: var(--rs-text-muted);
+  padding: 0 0 0.5rem;
+}
+
+th,
+td {
+  border: 1px solid var(--rs-border);
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+thead th {
+  background-color: var(--rs-surface-subtle);
+  color: var(--rs-text);
+}
+
+tbody th {
+  font-weight: 600;
+}
+
+/*
+ * The chart and its paired table. The figure is boxed rather than coloured, and
+ * the gap row is marked in words by the page itself; nothing here is the only
+ * place a day or a state is stated.
+ */
+figure.chart {
+  margin: 0.75rem 0;
+  padding: 0.5rem;
+  border: 1px solid var(--rs-border);
+  background-color: var(--rs-surface);
+}
+
+figure.chart svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  color: var(--rs-text);
+}
+
+figcaption {
+  color: var(--rs-text-muted);
+  padding: 0.5rem 0;
+}
+
+.chart-legend {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.chart-legend-swatch {
+  color: var(--rs-text);
+  vertical-align: middle;
+}
+
+/*
+ * A gap row. The page writes the day and the words "No stored value (gap)" in the
+ * row itself, so the tint below is a second cue and never the only one.
+ */
+.chart-row-gap > th,
+.chart-row-gap > td {
+  background-color: var(--rs-surface-subtle);
+  color: var(--rs-text-muted);
+}
+
+/*
+ * The notes, the figures and the state words. A state word is bold rather than
+ * coloured: stripping every class attribute leaves the same information, and the
+ * stylesheet is not a second source of it.
+ */
+.figure {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.figure-note,
+.caption-note,
+.read-at,
+.state-note {
+  color: var(--rs-text-muted);
+}
+
+.state-word {
+  font-weight: 700;
+}
+
+.state-sentence,
+.provenance-caption,
+.first-connect-caption,
+.insight-summary {
+  max-width: 60rem;
+}
+
+.coverage,
+.range-sentence {
+  color: var(--rs-text-muted);
+}
+
+footer {
+  max-width: 78rem;
+  margin: 2rem auto 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--rs-border);
+  color: var(--rs-text-muted);
+}

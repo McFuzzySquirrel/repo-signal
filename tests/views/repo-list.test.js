@@ -589,14 +589,24 @@ test('the mount table is the only place a view is mounted', () => {
   // Arrange: the files under the views directory, read as they are on disk.
   const names = readdirSync(VIEWS_DIRECTORY).filter((name) => name.endsWith('.js')).sort();
   const registrySource = readFileSync(REGISTRY_FILE, 'utf8');
+  // `a11y.js` is the one module here that is not a page: it holds the shared
+  // accessibility pieces - the skip link, the labelled section, the named control,
+  // the chart-and-table wrapper - which every page calls so no page can answer the
+  // structural contract differently. It exports no `render(ctx, data)` pair and it
+  // is mounted nowhere, so a page importing it is a page calling a helper, not a page
+  // mounting another page. Pages still may not import each other.
+  const helpers = ['a11y.js'];
+  const pages = names.filter((name) => !helpers.includes(name));
 
   // Act and assert: every view module is imported by the registry, no view module
-  // imports another, and the router imports none of them. That is what makes
+  // imports another page, and the router imports none of them. That is what makes
   // "adding a page is a change in this file plus its own view module" true rather
   // than aspirational.
   assert.ok(names.includes('index.js'), 'the composition root is the registry itself');
   assert.ok(names.includes('repo-list.js'), 'the list page is its own module');
   assert.ok(names.includes('repo-detail.js'), 'the detail page is its own module');
+  assert.ok(names.includes('health.js'), 'the health page is its own module');
+  assert.ok(helpers.includes('a11y.js'), 'the shared accessibility helper is its own module');
   for (const name of names) {
     if (name === 'index.js') continue;
     assert.match(registrySource, new RegExp(`from '\\./${name.replaceAll('.', String.raw`\.`)}'`),
@@ -605,11 +615,18 @@ test('the mount table is the only place a view is mounted', () => {
   for (const name of names) {
     if (name === 'index.js') continue;
     const source = readFileSync(path.join(VIEWS_DIRECTORY, name), 'utf8');
-    for (const other of names) {
+    for (const other of pages) {
       if (other === name) continue;
       assert.equal(source.includes(`from './${other}'`), false,
         `${name} must not import the view module ${other}; the registry mounts views`);
     }
+  }
+  // The helper is not a page: it mounts nothing, and no page can be reached through it.
+  const helperSource = readFileSync(path.join(VIEWS_DIRECTORY, 'a11y.js'), 'utf8');
+  for (const name of pages) {
+    if (name === 'index.js') continue;
+    assert.equal(helperSource.includes(`from './${name}'`), false,
+      `the shared helper must not import the page module ${name}`);
   }
   const routerSource = readFileSync(path.join(ROOT, 'src', 'server', 'router.js'), 'utf8');
   assert.equal(routerSource.includes("from './views/"), false, 'the router never imports a view module');

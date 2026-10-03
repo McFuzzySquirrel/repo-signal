@@ -6,8 +6,8 @@ import { changeList } from '../../insight/changes.js';
 import { sevenDayDelta } from '../../insight/deltas.js';
 import { starsVersusClonesDivergence } from '../../insight/divergence.js';
 import { TRAFFIC_PERMISSION } from '../../supervision/errors.js';
-import { renderLineChart } from '../../views/components/line-chart.js';
 import { documentShell, escapeAttribute, escapeText, escapeUrl } from '../html.js';
+import { chartWithTable, labelledSection, namedLink } from './a11y.js';
 import {
   PAGE_STATUS_KNOWN, readRepositoryPage,
 } from '../repo-data.js';
@@ -62,6 +62,13 @@ import {
  * context, so an identity whose stored spelling is markup reaches the page as text.
  * There is no script tag, no inline handler, no remote asset, no colour literal and no
  * motion anywhere in the output.
+ *
+ * The structural half of the accessibility contract is not written out here either:
+ * each section is a labelled landmark built by `labelledSection`, each link is a named
+ * control built by `namedLink`, and each chart goes through `chartWithTable`, which
+ * refuses to return a figure whose values exist only as a picture. All three live in
+ * `./a11y.js`, so every page of this feature answers the same structural questions the
+ * same way.
  */
 
 /** @typedef {import('node:sqlite').DatabaseSync} Database */
@@ -571,17 +578,22 @@ function unknownChanges(range, identity) {
  * One labelled section with its own heading, so the page can be navigated by heading
  * and so the heading sequence is structural rather than remembered.
  *
+ * The wrapper itself is `labelledSection` from `./a11y.js`: it emits the section
+ * element, the generated heading identifier and the `aria-labelledby` that points at
+ * it, so this page cannot grow a landmark that announces itself as nothing.
+ *
  * @param {string} key A member of {@link DETAIL_SECTION_ORDER}.
  * @param {string} body
  * @returns {string}
  */
 function section(key, body) {
   const heading = SECTION_HEADINGS[/** @type {keyof typeof SECTION_HEADINGS} */ (key)];
-  return `<section class="detail-section detail-${escapeAttribute(key)}" data-section="${escapeAttribute(key)}" `
-    + `aria-labelledby="${escapeAttribute(`${key}-heading`)}">`
-    + `<h2 id="${escapeAttribute(`${key}-heading`)}">${escapeText(heading)}</h2>`
-    + body
-    + '</section>';
+  return labelledSection({
+    key,
+    heading,
+    body,
+    className: `detail-section detail-${key}`,
+  });
 }
 
 /**
@@ -604,7 +616,7 @@ function rangeSentence(range) {
 function selfLink(data) {
   if (data.selfHref === '') return '';
   return '<p class="self-link">This page\'s own address for the selected range: '
-    + `<a href="${escapeAttribute(data.selfHref)}">${escapeText(data.selfHref)}</a>.</p>`;
+    + `${namedLink({ href: data.selfHref, name: data.selfHref })}.</p>`;
 }
 
 /**
@@ -689,8 +701,8 @@ function chartGroup(data, group) {
       return `<h3 id="${escapeAttribute(`${chart.metric}-chart-heading`)}">${escapeText(chart.label)} `
         + `per stored day</h3>`
         + `<p class="chart-basis">One stored value is the ${escapeText(chart.basis)}. `
-        + `The line is broken where the archive holds no day, and the table beside it names every such day.</p>`
-        + renderLineChart({
+        + 'The line is broken where the archive holds no day, and the table beside it names every such day.</p>'
+        + chartWithTable({
           label: chart.label,
           observations: observationsOf(rows),
           calendarDays: data.page?.calendarDays,
@@ -1052,9 +1064,11 @@ export function renderRepositoryDetailPage(ctx, data) {
     section('captures', capturePanel(data)),
     section('collection-state', healthPanel(data)),
     section('provenance', provenancePanel(data)),
-    `<p class="way-on"><a href="${escapeAttribute(listHref(data.range))}">Enrolled repositories over the selected `
-    + 'range</a> &middot; <a href="'
-    + `${escapeAttribute(ctx.links.index)}">Back to the index</a></p>`,
+    '<p class="way-on">'
+    + namedLink({ href: listHref(data.range), name: 'Enrolled repositories over the selected range' })
+    + ' &middot; '
+    + namedLink({ href: ctx.links.index, name: 'Back to the index' })
+    + '</p>',
   ].join('\n');
   return documentShell({
     title: `${data.repo} ${data.range.from} to ${data.range.to} - ${TITLE_SUFFIX}`,

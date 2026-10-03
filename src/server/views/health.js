@@ -3,6 +3,7 @@ import {
   REPOSITORY_STATE_PRECEDENCE, collectionHealth, statePhrase,
 } from '../../supervision/health.js';
 import { documentShell, escapeAttribute, escapeText } from '../html.js';
+import { labelledSection, namedLink } from './a11y.js';
 
 /**
  * The collection health page: whether collection is working, one row per enrolled
@@ -183,6 +184,10 @@ function counted(count, singular, many) {
  * guidance a section carries. The link then resolves inside the document rather than
  * pointing at a host the loopback dashboard does not serve.
  *
+ * The wrapper is `labelledSection` from `./a11y.js`, which emits the section element,
+ * the generated heading identifier and the `aria-labelledby` pointing at it, so this
+ * page cannot grow a landmark that announces itself as nothing.
+ *
  * @param {string} key A member of {@link HEALTH_SECTION_ORDER}.
  * @param {string} body
  * @param {string} [anchor] Identifier for the section element itself.
@@ -190,13 +195,13 @@ function counted(count, singular, many) {
  */
 function section(key, body, anchor) {
   const heading = SECTION_HEADINGS[/** @type {keyof typeof SECTION_HEADINGS} */ (key)];
-  const id = `${key}-heading`;
-  const identifier = anchor === undefined ? '' : ` id="${escapeAttribute(anchor)}"`;
-  return `<section class="health-section health-${escapeAttribute(key)}" data-section="${escapeAttribute(key)}"`
-    + `${identifier} aria-labelledby="${escapeAttribute(id)}">`
-    + `<h2 id="${escapeAttribute(id)}">${escapeText(heading)}</h2>`
-    + body
-    + '</section>';
+  return labelledSection({
+    key,
+    heading,
+    body,
+    className: `health-section health-${key}`,
+    ...(anchor === undefined ? {} : { anchor }),
+  });
 }
 
 /**
@@ -241,7 +246,7 @@ function recordedTime(instant) {
  */
 function identityCell(health, ctx) {
   const href = ctx.links.detail(health.owner, health.name);
-  return `<th scope="row" class="identity"><a href="${escapeAttribute(href)}">${escapeText(health.repo)}</a>`
+  return `<th scope="row" class="identity">${namedLink({ href, name: health.repo })}`
     + `<span class="figure-note">Lifecycle as the archive holds it: ${escapeText(health.lifecycle)}.</span></th>`;
 }
 
@@ -325,8 +330,13 @@ function lastFailureCell(health) {
 function actionCell(health) {
   if (health.needsReauthentication) {
     return '<td class="action" data-action="re-authenticate">'
-      + `<p class="action-lead"><a href="#${escapeAttribute(REAUTHENTICATE_ANCHOR)}">Re-authenticate: the token `
-      + `is missing the ${escapeText(TRAFFIC_PERMISSION)} this repository's traffic endpoints require</a>.</p>`
+      + '<p class="action-lead">'
+      + namedLink({
+        href: `#${REAUTHENTICATE_ANCHOR}`,
+        name: `Re-authenticate: the token is missing the ${TRAFFIC_PERMISSION} this repository's `
+          + 'traffic endpoints require',
+      })
+      + '.</p>'
       + '<p class="action-step">Grant that permission for this repository, accept the permission upgrade on '
       + 'GitHub, then run <code>node src/cli.js collect</code>. A new token is the only thing that leaves the '
       + '<code>needs-re-authentication</code> state.</p></td>';
@@ -510,8 +520,11 @@ export function renderCollectionHealthPage(ctx, data) {
       + `${escapeText(counted(enrolled, 'repository', 'repositories'))} enrolled carries.</p>`
       + (enrolled === 0 ? emptyState() : repositoryTable(data, ctx))),
     section('re-authentication', reauthenticationPanel(), REAUTHENTICATE_ANCHOR),
-    `<p class="way-on"><a href="${escapeAttribute(ctx.links.list)}">Enrolled repositories</a> &middot; `
-      + `<a href="${escapeAttribute(ctx.links.index)}">Back to the index</a></p>`,
+    '<p class="way-on">'
+    + namedLink({ href: ctx.links.list, name: 'Enrolled repositories' })
+    + ' &middot; '
+    + namedLink({ href: ctx.links.index, name: 'Back to the index' })
+    + '</p>',
   ].join('\n');
   return documentShell({ title: `Collection health - ${TITLE_SUFFIX}`, body });
 }

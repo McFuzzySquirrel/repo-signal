@@ -5,6 +5,7 @@ import { listEnrolledRepositories } from '../../db/ops-repo.js';
 import { collectionHealth } from '../../supervision/health.js';
 import { documentShell, escapeAttribute, escapeText, escapeUrl } from '../html.js';
 import { readRepositoryPage } from '../repo-data.js';
+import { labelledSection, namedLink } from './a11y.js';
 
 /**
  * The index a maintainer lands on and the table of enrolled repositories.
@@ -404,7 +405,9 @@ function stateCell(health) {
 function repositoryRow(repository, range) {
   const href = detailHref(repository.owner, repository.name, range);
   return `<tr data-repository="${escapeAttribute(repository.repo)}">` +
-    `<th scope="row" class="identity"><a href="${escapeAttribute(href)}">${escapeText(repository.repo)}</a></th>` +
+    '<th scope="row" class="identity">'
+    + namedLink({ href, name: repository.repo })
+    + '</th>' +
     repository.readings.map((reading) => {
       const column = /** @type {MetricColumn} */ (TRAFFIC_COLUMNS.find((entry) => entry.metric === reading.metric));
       return metricCell(reading, column, repository.rangeDays);
@@ -458,14 +461,21 @@ function emptyState() {
  * from. A page that silently resolved a range nobody chose is a page whose numbers
  * cannot be reproduced from its URL.
  *
+ * The section is a labelled landmark with its own heading, built by
+ * `labelledSection`, so the window a page read can be reached by heading navigation
+ * rather than only by reading the page from the top.
+ *
  * @param {ResolvedRange} range
  * @returns {string}
  */
 function rangeSection(range) {
-  return `<section class="range">`
-    + `<p class="range-sentence">Selected range: ${escapeText(rangeText(range))}, `
-    + `${range.from === range.to ? 'one day' : 'inclusive'} and read from the archive as stored.</p>`
-    + '</section>';
+  return labelledSection({
+    key: 'selected-range',
+    heading: 'Selected range',
+    className: 'range',
+    body: `<p class="range-sentence">Selected range: ${escapeText(rangeText(range))}, `
+      + `${range.from === range.to ? 'one day' : 'inclusive'} and read from the archive as stored.</p>`,
+  });
 }
 
 /**
@@ -484,14 +494,17 @@ export function renderIndexPage(ctx, data) {
     + 'serves that archive read-only from this machine. Every number on a page is a measurement the archive '
     + 'holds; a day with no stored row stays a gap rather than becoming a zero.</p>',
     rangeSection(range),
-    '<section class="collection-state">',
-    '<h2>Collection state</h2>',
-    `<p class="state-sentence">${escapeText(summary.reason)}</p>`,
-    `<p class="enrolled-count">${escapeText(counted(summary.enrolled, 'repository', 'repositories'))} enrolled in `
-    + 'this archive.</p>',
-    `<p class="run-state">${escapeText(run.reason)}.</p>`,
-    `<p><a href="${escapeAttribute(listHref(range))}">Enrolled repositories over the selected range</a></p>`,
-    '</section>',
+    labelledSection({
+      key: 'collection-state',
+      heading: 'Collection state',
+      body: `<p class="state-sentence">${escapeText(summary.reason)}</p>`
+        + `<p class="enrolled-count">${escapeText(counted(summary.enrolled, 'repository', 'repositories'))} `
+        + 'enrolled in this archive.</p>'
+        + `<p class="run-state">${escapeText(run.reason)}.</p>`
+        + '<p>'
+        + namedLink({ href: listHref(range), name: 'Enrolled repositories over the selected range' })
+        + '</p>',
+    }),
   ].join('\n');
   return documentShell({ title: TITLE_SUFFIX, body });
 }
@@ -522,11 +535,13 @@ export function renderRepositoryListPage(ctx, data) {
         + 'collection state its last run recorded.</p>',
     rangeSection(range),
     refusal === null ? '' : refusal,
-    '<section class="section-repositories">'
-    + `<h2>${onDetailRoute ? 'Enrolled repositories' : 'Traffic totals and collection state'}</h2>`
-    + (data.repositories.length === 0 ? emptyState() : repositoryTable(data))
-    + '</section>',
-    `<p><a href="${escapeAttribute(ctx.links.index)}">Back to the index</a></p>`,
+    labelledSection({
+      key: 'repositories',
+      heading: onDetailRoute ? 'Enrolled repositories' : 'Traffic totals and collection state',
+      className: 'section-repositories',
+      body: data.repositories.length === 0 ? emptyState() : repositoryTable(data),
+    }),
+    `<p>${namedLink({ href: ctx.links.index, name: 'Back to the index' })}</p>`,
   ].join('\n');
   return documentShell({
     title: onDetailRoute
