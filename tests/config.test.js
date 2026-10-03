@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { loadConfig, parseConfig } from '../src/config/load.js';
@@ -24,6 +24,40 @@ test('unknown top-level key is rejected with the offending key', () => {
 
 test('malformed JSON is rejected with the document key and no input excerpt', () => {
   rejects(() => parseConfig('{"enrolled":'), '$', 'ERR_REPO_SIGNAL_CONFIG_PARSE');
+});
+
+test('whole-line // annotations are accepted by the loader every command reads', () => {
+  const text = [
+    '{',
+    '  // Explicit opt-in only: add owner/name strings to enroll repositories.',
+    '\t// Indented guidance is still a whole line.',
+    '  "enrolled": ["Owner/Repo"],',
+    '  // Trailing guidance before the closing brace.',
+    '  "collectionHourUtc": 7',
+    '}',
+  ].join('\n');
+  assert.deepEqual(parseConfig(text), {
+    enrolled: ['Owner/Repo'], denyList: [], collectionHourUtc: 7, enabled: { 'Owner/Repo': true },
+  });
+});
+
+test('comment tolerance cannot alter a value: // inside a string still reaches schema validation', () => {
+  // A JSON string cannot span a raw newline, so a line beginning with // is never
+  // inside a value. These reach the schema as an invalid owner/name, which is the
+  // proof they were neither stripped nor mangled into something acceptable.
+  rejects(() => parseConfig('{\n  "enrolled": ["owner/repo//suffix"]\n}'), 'enrolled[0]');
+  rejects(() => parseConfig('{\n// guidance\n  "enrolled": ["owner/repo//suffix"]\n}\n'), 'enrolled[0]');
+});
+
+test('inline comments, block comments and trailing commas remain strict JSON errors', () => {
+  for (const text of [
+    '{\n  "enrolled": [] // inline\n}\n',
+    '{\n  /* block */ "enrolled": []\n}\n',
+    '{\n  "enrolled": [],\n}\n',
+    '{\n  // unterminated object\n',
+  ]) {
+    rejects(() => parseConfig(text), '$', 'ERR_REPO_SIGNAL_CONFIG_PARSE');
+  }
 });
 
 test('entry without a slash is rejected with its enrolled index', () => {
@@ -139,6 +173,16 @@ test('loader reads the home configuration and does not create other state files'
   });
   assert.equal(statSync(paths.home).mode & 0o777, 0o700);
   assert.deepEqual(readdirSync(paths.home), ['config.json']);
+});
+
+test('loader reads a commented home configuration without repairing the file', t => {
+  const { options, paths } = temporaryHome(t);
+  const text = '{\n  // guidance\n  "enrolled": ["owner/repo"]\n}\n';
+  writeFileSync(paths.configPath, text, { mode: 0o600 });
+  assert.deepEqual(loadConfig(options), {
+    enrolled: ['owner/repo'], denyList: [], collectionHourUtc: 0, enabled: { 'owner/repo': true },
+  });
+  assert.equal(readFileSync(paths.configPath, 'utf8'), text);
 });
 
 test('loader distinguishes malformed JSON, schema failure and filesystem failure', t => {

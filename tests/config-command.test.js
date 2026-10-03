@@ -65,6 +65,27 @@ test('config init then config check succeed through the entry point with private
   assert.deepEqual(readdirSync(f.home).sort(), ['config.json', 'credentials.json']);
 });
 
+test('the configuration config init writes is loadable by the commands that read it', t => {
+  const f = fixture(t);
+  outcome(f.run(['config', 'init']), 0);
+  // The trap this pins: the template carries whole-line // comments, and the
+  // commands that read it must accept exactly what config check accepted. When
+  // only the check tolerated them, this plan failed while the check said ok.
+  const unedited = readFileSync(f.config, 'utf8');
+  assert.match(unedited, /\/\/ Explicit opt-in/);
+  const plan = f.run(['collect', '--dry-run']);
+  outcome(plan, 0);
+  assert.match(plan.stdout, /^summary .*mode=dry-run/m);
+  assert.equal(readFileSync(f.config, 'utf8'), unedited, 'the plan did not repair the template');
+  // The other direction: a document the check refuses is refused by the command
+  // too, rather than only by one of the two.
+  writeFileSync(f.config, '{\n  "enrolled": [] // inline comments are not accepted\n}\n', { mode: 0o600 });
+  outcome(f.run(['config', 'check']), 1);
+  const refused = f.run(['collect', '--dry-run']);
+  outcome(refused, 1);
+  assert.match(refused.stdout + refused.stderr, /malformed JSON/);
+});
+
 test('config check never prints a configured token or repository values', t => {
   const f = fixture(t);
   outcome(f.run(['config', 'init']), 0);

@@ -53,7 +53,7 @@ after(() => {
  * transport and the real retry policy over an injected fetch, with an injected
  * clock and an injected sleep so no request is retried over real time.
  * @param {number} status
- * @param {{endpointType?: 'repository'|'traffic'|'statistics', endpoint?: string, rejectWith?: unknown}} [options]
+ * @param {{endpointType?: 'repository'|'traffic'|'statistics'|'stargazers', endpoint?: string, rejectWith?: unknown}} [options]
  * @returns {Promise<unknown>} The thrown value, exactly as a client would receive it.
  */
 async function httpFailure(status, { endpointType = 'traffic', endpoint = trafficEndpoint, rejectWith } = {}) {
@@ -137,6 +137,26 @@ test('a traffic 403 is permission-missing and names the Administration read perm
   assert.equal(fromRepository.endpointType, 'repository');
   assert.match(fromRepository.message, /required by the traffic endpoints only/);
   assert.equal(fromRepository.action.includes('Grant the Administration'), false);
+});
+
+test('a stargazer 403 names the access restriction, never a permission to grant', async () => {
+  // GitHub limits the stargazer listing to admins and collaborators from July 2026.
+  // Telling the maintainer to grant a token permission here sends them after a cause
+  // that cannot be the answer, so the restriction is named instead.
+  const endpoint = '/repos/owner/repo/stargazers?per_page=100&page=1';
+  const failure = await httpFailure(403, { endpointType: 'stargazers', endpoint });
+  const classified = classifyFailure(failure, { repo, endpointType: 'stargazers' });
+  assert.equal(classified.kind, 'permission-missing', 'it stays one of the six known kinds');
+  assert.equal(classified.status, 403);
+  assert.equal(classified.endpointType, 'stargazers');
+  assert.match(classified.message, /limits the stargazer listing to admins and collaborators/);
+  assert.match(classified.message, /traffic endpoints this repository needs are unaffected/);
+  assert.equal(/grant the required token permissions/i.test(classified.action), false);
+  assert.equal(/Grant the Administration/.test(classified.action), false);
+  // The same failure is recognised from its path when no caller says which family it was.
+  const fromPath = classifyFailure(await httpFailure(403, { endpoint }));
+  assert.equal(fromPath.endpointType, 'stargazers');
+  assert.match(fromPath.message, /limits the stargazer listing/);
 });
 
 test('a repository GitHub does not serve is repository-missing and is never a permission state', async () => {

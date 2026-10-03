@@ -58,6 +58,16 @@ the response advertises no next page, handing each page to a caller-supplied cal
 repository with thousands of stars is never buffered whole. A fixed page count is wrong: three
 pages in a test says nothing about a thirty-page repository.
 
+**This listing is restricted, and the restriction is not a permission.** In July 2026 GitHub limited
+`/repos/{owner}/{repo}/stargazers` (and `/subscribers`) to admins and collaborators, because the
+public lists were being used to harvest users for spam. Announced 2026-06-30:
+<https://github.blog/changelog/2026-06-30-upcoming-access-restrictions-to-public-api-endpoints-and-ui-views/>.
+A caller can also receive an empty response rather than a 403. So a 403 on this endpoint is an
+access restriction, and no token permission the maintainer can grant will change it. The endpoint is
+therefore its own `endpointType` (`stargazers`), never `repository`: classified as a repository read
+it produces "grant the required token permissions", which is advice that cannot work. Note that
+`/stargazers/history` and `/stargazers/count` are *not* in the restricted list.
+
 ### Step 7: Re-read the vendor page before assuming a detail
 
 An endpoint detail that was assumed rather than verified - a query parameter, a payload field, a
@@ -77,6 +87,10 @@ disagree, then the page wins and the fixture is updated in the same change.
 - **A 403 on a traffic endpoint is a permission state, not a rate limit.** It names the
   `Administration` repository read permission for a fine-grained token, and it persists until the
   install accepts the permission upgrade. Retrying it, or re-reading the credential, wastes the run.
+- **A 403 on the stargazer listing is neither of those.** It is GitHub's admin-and-collaborator
+  restriction on that one endpoint. Granting every permission in the product still leaves it 403, so
+  the refusal is recorded against the repository, the star history is reported absent, and traffic
+  collection continues. An optional history step must never be able to cost the product its data.
 - **The pinned version has a real fallback window.** `2022-11-28` remains supported until
   2028-03-10, so an unaccepted pin is recoverable by moving one constant - but only a live check
   proves acceptance, and the fallback must not be written as two active versions.

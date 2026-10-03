@@ -2,8 +2,18 @@ import { setTimeout as sleepDefault } from 'node:timers/promises';
 import { redact } from '../credentials/redact.js';
 import { parseRateLimitHeaders, primaryBudgetDelay } from './rate-limit.js';
 
-/** @typedef {'repository' | 'traffic' | 'statistics'} EndpointType */
+/** @typedef {'repository' | 'traffic' | 'statistics' | 'stargazers'} EndpointType */
 /** @typedef {'authentication-rejected' | 'permission-missing' | 'repository-missing' | 'rate-limited' | 'transient' | 'unexpected'} ErrorKind */
+
+/**
+ * GitHub limited the public stargazer listing to admins and collaborators in July
+ * 2026, so a 403 there is an access restriction rather than a token permission the
+ * maintainer can grant. Announced 2026-06-30:
+ * https://github.blog/changelog/2026-06-30-upcoming-access-restrictions-to-public-api-endpoints-and-ui-views/
+ */
+export const STARGAZERS_RESTRICTED_ACTION =
+  'GitHub now limits the stargazer listing to admins and collaborators, so this token cannot read it; ' +
+  'collection continues without star history, and re-enrol the repository once access is restored';
 
 /** HTTP policy failure. Raw bodies, headers and causes are never retained. */
 export class GitHubRequestError extends Error {
@@ -13,8 +23,9 @@ export class GitHubRequestError extends Error {
    * @param {string} endpoint
    * @param {string} action
    * @param {number} attempts
+   * @param {EndpointType} [endpointType] Which endpoint family answered, so a caller can classify without parsing the path.
    */
-  constructor(kind, status, endpoint, action, attempts) {
+  constructor(kind, status, endpoint, action, attempts, endpointType) {
     super(redact(`GitHub HTTP ${status}: ${action}`));
     this.name = 'GitHubRequestError';
     this.kind = kind;
@@ -22,6 +33,7 @@ export class GitHubRequestError extends Error {
     this.endpoint = redact(endpoint);
     this.action = redact(action);
     this.attempts = attempts;
+    this.endpointType = endpointType;
   }
 }
 
@@ -37,7 +49,9 @@ function statusError(status, endpoint, type, attempts) {
     kind = 'permission-missing';
     action = type === 'traffic'
       ? 'Grant Administration repository permission (read), accept the permission upgrade, and reconnect'
-      : 'Check repository access and grant the required token permissions';
+      : type === 'stargazers'
+        ? STARGAZERS_RESTRICTED_ACTION
+        : 'Check repository access and grant the required token permissions';
   } else if (status === 404) {
     kind = 'repository-missing';
     action = 'Check the repository name, whether it still exists, and token access';
@@ -50,7 +64,7 @@ function statusError(status, endpoint, type, attempts) {
       ? 'Statistics are not ready yet; try collecting again later'
       : 'GitHub is temporarily unavailable; try collecting again later';
   }
-  return new GitHubRequestError(kind, status, endpoint, action, attempts);
+  return new GitHubRequestError(kind, status, endpoint, action, attempts, type);
 }
 
 /**

@@ -230,6 +230,48 @@ export function recordIdentity({ db, repositoryId, remote, collectedAt }) {
 }
 
 /**
+ * Whether this archive has recorded that the first-connect backfill was refused
+ * for this repository. A refusal is not a completed backfill, so the provenance
+ * read still reports none; this is the separate record of why.
+ * @param {Repository} stored
+ * @returns {boolean}
+ */
+export function isBackfillRefused(stored) {
+  return stored.backfillRefusedAt !== null;
+}
+
+/**
+ * Record that the first-connect backfill was refused for this repository, with
+ * the reason GitHub gave. The row keeps its identity, its enrolment and every
+ * fact already written: only this refusal is added, so a later run can stop
+ * asking an endpoint that has refused without losing collected traffic. The
+ * first reason is kept, so a repeat never overwrites the original cause, and
+ * explicit null clears it.
+ * @param {object} options
+ * @param {Database} options.db
+ * @param {number} options.repositoryId
+ * @param {string} options.reason A single-line reason naming what refused and what it costs.
+ * @param {string} options.collectedAt canonical UTC ISO timestamp for this write
+ * @returns {void}
+ */
+export function markBackfillRefused({ db, repositoryId, reason, collectedAt }) {
+  assertTimestamp(collectedAt);
+  const stored = getRepository(db, repositoryId);
+  if (typeof reason !== 'string' || reason.trim() === '') {
+    throw new TypeError('A refused backfill needs a reason; record what GitHub answered');
+  }
+  const already = stored.backfillRefusedAt !== null;
+  upsertRepository(db, {
+    id: repositoryId,
+    owner: stored.owner,
+    name: stored.name,
+    lastSeenAt: collectedAt,
+    backfillRefusedAt: already ? stored.backfillRefusedAt : collectedAt,
+    backfillRefusedReason: already ? stored.backfillRefusedReason : reason,
+  });
+}
+
+/**
  * Mark a repository the archive holds as unavailable, with the reason GitHub gave.
  * The row stays enrolled and keeps every fact ever written under its identity; only
  * its lifecycle changes, which is what later runs read to skip it. A repository

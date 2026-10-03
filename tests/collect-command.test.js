@@ -131,11 +131,16 @@ function scriptTraffic(stub, options = {}) {
 }
 
 /**
- * Script the first-connect backfill endpoints.
+ * Script the first-connect backfill endpoints. `restricted` answers the stargazer
+ * listing with the 403 GitHub now serves it to anyone who is not an admin or a
+ * collaborator, which is the July 2026 access restriction rather than a permission.
  * @param {import('./helpers/stub-github-server.mjs').StubGitHub} stub
+ * @param {{ restricted?: boolean }} [options]
  */
-function scriptBackfill(stub) {
-  stub.route('GET /repos/:owner/:name/stargazers*', () => ({ json: STARGAZERS }));
+function scriptBackfill(stub, options = {}) {
+  stub.route('GET /repos/:owner/:name/stargazers*', () => (options.restricted
+    ? { status: 403, json: { message: 'Resource not accessible by personal access token' } }
+    : { json: STARGAZERS }));
   stub.route('GET /repos/:owner/:name/stats/commit_activity', () => ({ json: COMMIT_ACTIVITY }));
   stub.route('GET /repos/:owner/:name/stats/participation', () => ({ json: PARTICIPATION }));
 }
@@ -245,6 +250,81 @@ test('--repo collects only that repository, exits 0 and prints the run it wrote'
     'every request presented the configured credential');
 });
 
+test('a stargazer listing GitHub refuses costs the star history, not the traffic', async (t) => {
+  // The regression this build exists for: GitHub limits the stargazer listing to
+  // admins and collaborators, and before this the refusal aborted the repository
+  // before a single traffic fact was written, so the run degraded to nothing.
+  const f = await createCollectHome(t);
+  scriptResolution(f.stub);
+  scriptTraffic(f.stub);
+  scriptBackfill(f.stub, { restricted: true });
+
+  const result = await f.run(['collect']);
+
+  assert.equal(result.status, 0, 'a refused star backfill is not a failed collection');
+  assertNoCredentialMaterial(result, 'restricted stargazer listing');
+  const printed = lines(result.stdout);
+  assert.match(printed[0], /^owner\/alpha ok 14 days written 56 revised 0 unchanged 0 snapshots 3 backfill first-connect /,
+    'the repository collected its traffic');
+  // The absence is named, so a gap in the star series is never read as a zero.
+  assert.match(printed[0], /stars-history absent GitHub HTTP 403: GitHub now limits the stargazer listing/);
+  // And it never tells the maintainer to grant a permission that is not the cause.
+  assert.doesNotMatch(result.stdout, /grant the required token permissions/);
+  const runId = printedRunId(result.stdout);
+  assert.match(printed[2], new RegExp(`^summary run=${runId} repositories=2 ok=2 failed=0 unavailable=0 skipped=0 ` +
+    `days=28 rows=\\d+ written=\\d+ revised=0 unchanged=0 snapshots=6 backfilled=2 requests=\\d+ ` +
+    'duration_ms=\\d+ status=completed$'));
+
+  f.archive((db) => {
+    // Traffic is real: the day rows the traffic endpoints served are stored.
+    assert.equal(rows(db, 'day_series', `WHERE metric='views' AND repository_id=1`), WINDOW_DAYS,
+      'the collected views are stored despite the refused backfill');
+    assert.equal(rows(db, 'day_series', `WHERE metric='stars'`), 0,
+      'no star row is invented from a listing that was never read');
+    // The refusal is recorded against the repository, with the reason.
+    const stored = /** @type {{at: unknown, reason: unknown}} */ (
+      /** @type {unknown} */ (db.prepare('SELECT backfill_refused_at AS at, backfill_refused_reason AS reason ' +
+        'FROM repositories WHERE id=1').get()));
+    assert.match(String(stored.at), /^\d{4}-\d{2}-\d{2}T/);
+    assert.match(String(stored.reason), /stargazer listing to admins and collaborators/);
+    // And the development backfill did complete, so provenance reports that one
+    // kind and not a star backfill that never happened.
+    const kinds = db.prepare('SELECT DISTINCT kind FROM backfill_records ORDER BY kind')
+      .all().map((row) => String(row.kind));
+    assert.ok(kinds.includes('development'), `expected a development record, got ${JSON.stringify(kinds)}`);
+    assert.ok(!kinds.includes('stars'), `the archive must not claim a star backfill: ${JSON.stringify(kinds)}`);
+    assert.equal(rows(db, 'repository_errors'), 0, 'a refused backfill records no repository failure');
+  });
+});
+
+test('a recorded stargazer refusal is not asked again, and is still reported', async (t) => {
+  const f = await createCollectHome(t, { enrolled: ['owner/alpha'] });
+  scriptResolution(f.stub);
+  scriptTraffic(f.stub);
+  scriptBackfill(f.stub, { restricted: true });
+  const first = await f.run(['collect']);
+  assert.equal(first.status, 0, first.stderr);
+
+  const before = f.stub.requests().filter((request) => request.path.includes('/stargazers')).length;
+  const second = await f.run(['collect']);
+
+  assert.equal(second.status, 0, second.stderr);
+  assertNoCredentialMaterial(second, 'second run after a refusal');
+  // The refusal is reported on every run, not only the one that recorded it: the
+  // star history is still absent, and a run that stayed silent would hide that.
+  assert.match(lines(second.stdout)[0], /^owner\/alpha ok \d+ days .* backfill skipped stars-history absent /,
+    'the absence of star history is still named after the backfill step is skipped');
+  assert.equal(
+    f.stub.requests().filter((request) => request.path.includes('/stargazers')).length, before,
+    'the refused listing was not requested a second time',
+  );
+
+  f.archive((db) => {
+    assert.equal(rows(db, 'day_series', `WHERE metric='stars'`), 0);
+    assert.equal(rows(db, 'backfill_records', `WHERE kind='stars'`), 0);
+  });
+});
+
 test('one failing repository does not stop the others, and the run record is still complete', async (t) => {
   const f = await createCollectHome(t);
   scriptResolution(f.stub);
@@ -258,7 +338,7 @@ test('one failing repository does not stop the others, and the run record is sti
   const printed = lines(result.stdout);
   assert.equal(printed.length, 3, 'one line per repository and one summary');
   assert.match(printed[0], /^owner\/alpha ok 14 days written 56 revised 0 unchanged 0 snapshots 3 backfill first-connect$/);
-  assert.match(printed[1], /^owner\/beta failed permission-missing backfill first-connect GitHub HTTP 403: /);
+  assert.match(printed[1], /^owner\/beta failed permission-missing backfill first-connect endpoint=\/repos\/owner\/beta\/traffic\/clones\?per=day GitHub HTTP 403: /);
   assert.match(printed[1], /Administration repository permission \(read\)/);
   const runId = printedRunId(result.stdout);
   assert.match(printed[2], new RegExp(`^summary run=${runId} repositories=2 ok=1 failed=1 unavailable=0 skipped=0 ` +

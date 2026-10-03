@@ -65,7 +65,10 @@ export function createStarsClient({ policy }) {
       const current = endpoint;
       page += 1;
       const response = await policy.get(current, {
-        accept: STARGAZER_ACCEPT, endpointType: 'repository',
+        // Named as its own family, not as a repository read: GitHub restricts this
+        // listing to admins and collaborators, and a 403 here must not be reported
+        // as a repository the token cannot read.
+        accept: STARGAZER_ACCEPT, endpointType: 'stargazers',
       });
       if (response.status !== 200) {
         throw new GitHubRequestError('unexpected', response.status, current,

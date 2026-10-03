@@ -129,10 +129,11 @@ node src/cli.js collect
 Editing the templates: `config.json` takes `enrolled` (the repositories you chose, as `owner/name`),
 an optional `denyList` that wins over enrollment, an optional `collectionHourUtc` recording the UTC
 hour you intend to collect in, and an optional per-repository `enabled` map. The `config init`
-template carries whole-line `//` comments, which `config check` accepts and the strict loader used
-by `collect` does not: remove those comment lines when you are done reading them. Leave the
-credential template's placeholder token in place until you have a real one - local validation is not
-authentication, and the placeholder is deliberately not a GitHub token.
+template carries whole-line `//` comments, and every command that reads `config.json` accepts them
+- `config check` included - so leave them in place or delete them as you prefer. An inline `//`
+after a value and a trailing comma are refused everywhere. Leave the credential template's
+placeholder token in place until you have a real one - local validation is not authentication, and
+the placeholder is deliberately not a GitHub token.
 
 ---
 
@@ -146,6 +147,12 @@ RepoSignal needs exactly one credential, and it is used for reads only.
   traffic endpoints require it. It is scoped per repository, so the token cannot read anything else
   of yours. `Contents` is not required and is never requested; if a tool asks you for write access,
   the answer is no.
+- **Star history is the one thing no permission can unlock.** The first-connect backfill reads the
+  repository's stargazer listing, and in July 2026 GitHub limited that listing to admins and
+  collaborators, so a token that reads everything else can still be refused it. That costs the star
+  series and nothing else: the tool records the refusal, says so on every collection line
+  (`stars-history absent ...`) rather than leaving a gap to be read as a zero, and collects traffic as
+  normal. If GitHub ever restores access for your token, re-enrol the repository to try again.
 - **It lives in `credentials.json` in the home directory with mode `0600`, exactly.** The tool
   refuses to read the file at any other mode - `0644` and `0666` are both refused with the mode it
   observed named in the message - and it never repairs the mode for you.

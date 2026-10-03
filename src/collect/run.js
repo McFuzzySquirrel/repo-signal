@@ -13,8 +13,8 @@ import { createTrafficClient } from '../github/traffic-client.js';
 import { createRunJournal } from '../supervision/journal.js';
 import { createRepoStateReporter } from '../supervision/repo-state-reporter.js';
 import {
-  confirmRepository, findRepositoryByName, isUnavailable, markUnavailable, recordIdentity,
-  splitRepository, unavailableReason,
+  confirmRepository, findRepositoryByName, isBackfillRefused, isUnavailable, markBackfillRefused,
+  markUnavailable, recordIdentity, splitRepository, unavailableReason,
 } from './lifecycle.js';
 import { writeSnapshotCaptures } from './snapshots.js';
 import { TRAFFIC_GRANULARITY, writeTrafficDays } from './traffic.js';
@@ -87,8 +87,10 @@ export const FAILURE_KINDS = Object.freeze([
 
 /**
  * @typedef {object} BackfillOutcome
- * @property {{pages: number, entries: number, rows: number}} stars
+ * @property {{pages: number, entries: number, rows: number}} stars Zero pages when the listing was refused.
  * @property {{kind: string, weeks: number, rows: number, truncated: boolean, windowFrom: string|null, windowTo: string|null}} development
+ * @property {string|null} starsRefusal Why the stargazer listing was unavailable this run, or null when
+ *   it was read. A refusal here is not a completed backfill and is recorded on the repository row.
  */
 
 /**
@@ -105,7 +107,9 @@ export const FAILURE_KINDS = Object.freeze([
  * @property {{day: string, stamped: boolean}|null} stamp Provenance boundary in force after the write.
  * @property {IdentityChange|null} identity Lifecycle change this run recorded, or null.
  * @property {string|null} unavailableReason Why the repository is marked unavailable.
- * @property {{kind: string, message: string}|null} failure
+ * @property {string|null} backfillRefusal Why the star history is absent, when the archive
+ *   recorded a refused stargazer listing. Null when the listing was read.
+ * @property {{kind: string, message: string, endpoint: string|null}|null} failure
  */
 
 /**
@@ -267,12 +271,15 @@ export function planCollect({ db, config, filter = null }) {
       };
     }
     const backfill = stored === null || !readProvenance(db, stored.id).backfillCompleted;
+    // A refused stargazer listing is not asked again, so the plan does not count
+    // its request floor; the development half of the backfill still runs.
+    const starsRefused = stored !== null && isBackfillRefused(stored);
     return {
       repo,
       repositoryId: stored?.id ?? null,
       backfill,
       requests: RESOLUTION_REQUESTS_PER_REPOSITORY + TRAFFIC_REQUESTS_PER_REPOSITORY
-        + (backfill ? BACKFILL_REQUESTS_FLOOR : 0),
+        + (backfill && !starsRefused ? BACKFILL_REQUESTS_FLOOR : 0),
       exactRequests: !backfill,
       skipped: false,
       unavailableReason: null,
@@ -327,28 +334,73 @@ function firstCollectedDay(clones, views, collectedAt) {
  */
 
 /**
+ * Whether GitHub refused the stargazer listing itself, rather than the repository.
+ * This is an access restriction on that one endpoint family, not a permission the
+ * maintainer can grant and not a fault in the repository, so it is the one
+ * backfill failure that must not cost the repository its traffic.
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+function isStargazersRefusal(error) {
+  const failure = /** @type {{kind?: unknown, status?: unknown, endpointType?: unknown}} */ (
+    error instanceof Object && error !== null ? error : {});
+  return failure.kind === 'permission-missing' && failure.status === 403
+    && failure.endpointType === 'stargazers';
+}
+
+/**
  * First-connect backfill for one repository, before its traffic. It runs only
  * while no backfill has completed, so history is reconstructed on connect and
  * never re-derived daily, and a second run skips it. The step is not a
  * per-day pass: it writes what GitHub serves once and records the window it
  * actually observed.
+ *
+ * The two halves are independent. A refused stargazer listing is recorded against
+ * the repository and returned, because GitHub limits that listing to admins and
+ * collaborators: the star history is simply absent, and the traffic this run came
+ * to collect is unaffected. Any other backfill failure still propagates, so a
+ * genuine fault is never swallowed.
  * @param {object} options
  * @param {Database} options.db
  * @param {number} options.repositoryId
  * @param {string} options.repo
  * @param {Clients} options.clients
  * @param {string} options.collectedAt
+ * @param {readonly string[]} [options.secrets]
  * @returns {Promise<BackfillOutcome>}
  */
-async function runFirstConnectBackfill({ db, repositoryId, repo, clients, collectedAt }) {
-  const stars = await backfillStars({ db, repositoryId, repo, starsClient: clients.stars, collectedAt });
+async function runFirstConnectBackfill({ db, repositoryId, repo, clients, collectedAt, secrets = [] }) {
+  /** @type {{pages: number, entries: number, rows: number}|null} */
+  let stars = null;
+  /** @type {string|null} */
+  let starsRefusal = null;
+  const refused = getRepository(db, repositoryId);
+  if (isBackfillRefused(refused)) {
+    // Already refused once. Re-asking an endpoint that has refused costs a request
+    // every run and cannot change the answer, so the recorded reason is reported
+    // again: the star history is still absent on this run too.
+    starsRefusal = refused.backfillRefusedReason;
+  } else {
+    try {
+      stars = await backfillStars({ db, repositoryId, repo, starsClient: clients.stars, collectedAt });
+    } catch (error) {
+      if (!isStargazersRefusal(error)) throw error;
+      // The policy's own sentence is the reason: it is the transport's redacted
+      // status and next step, already naming the stargazer restriction. The
+      // reporter remains the only place the classifier is called from.
+      const reason = safeMessage(error, secrets);
+      starsRefusal = reason;
+      withTransaction(db, () => markBackfillRefused({ db, repositoryId, reason, collectedAt }));
+    }
+  }
   const development = await backfillDevelopment({ db, repositoryId, repo, statsClient: clients.stats, collectedAt });
   return {
-    stars: { pages: stars.pages, entries: stars.entries, rows: stars.rows },
+    stars: stars ?? { pages: 0, entries: 0, rows: 0 },
     development: {
       kind: development.kind, weeks: development.weeks, rows: development.rows,
       truncated: development.truncated, windowFrom: development.windowFrom, windowTo: development.windowTo,
     },
+    starsRefusal,
   };
 }
 
@@ -429,7 +481,7 @@ async function collectRepository({ db, planned, runId, clients, collectedAt, sec
     const remote = await confirmRepository({ repo: planned.repo, repoClient: clients.repo });
 
     if (!readProvenance(db, id).backfillCompleted) {
-      backfill = await runFirstConnectBackfill({ db, repositoryId: id, repo: remote.repo, clients, collectedAt });
+      backfill = await runFirstConnectBackfill({ db, repositoryId: id, repo: remote.repo, clients, collectedAt, secrets });
     }
 
     const clones = await clients.traffic.clones(remote.repo, TRAFFIC_GRANULARITY);
@@ -481,6 +533,10 @@ async function collectRepository({ db, planned, runId, clients, collectedAt, sec
     registered,
     state: 'ok',
     backfill,
+    // Read from the archive rather than from this run's backfill step: once the
+    // development half has completed, later runs skip the step entirely, and the
+    // star history is still absent on every one of them.
+    backfillRefusal: repositoryId === null ? null : getRepository(db, repositoryId).backfillRefusedReason,
     traffic: written?.traffic ?? null,
     snapshots: written?.snapshots ?? null,
     stamp: written?.stamp ?? null,
@@ -537,12 +593,13 @@ function unavailableOutcome({ planned, repositoryId, registered, backfill, error
     registered,
     state: 'unavailable',
     backfill,
+    backfillRefusal: null,
     traffic: null,
     snapshots: null,
     stamp: null,
     identity: null,
     unavailableReason: reason,
-    failure: { kind: failureKind(error), message: reason },
+    failure: { kind: failureKind(error), message: reason, endpoint: failureEndpoint(error) },
   };
 }
 
@@ -565,13 +622,30 @@ function failedOutcome({ planned, repositoryId, registered, backfill, error, sec
     registered,
     state: 'failed',
     backfill,
+    backfillRefusal: null,
     traffic: null,
     snapshots: null,
     stamp: null,
     identity: null,
     unavailableReason: null,
-    failure: { kind: failureKind(error), message: safeMessage(error, secrets) },
+    failure: {
+      kind: failureKind(error),
+      message: safeMessage(error, secrets),
+      endpoint: failureEndpoint(error),
+    },
   };
+}
+
+/**
+ * The endpoint a failure names, already redacted where the policy built it. A run
+ * makes several requests per repository, so the endpoint is what distinguishes
+ * them; it carries an owner and a name and nothing else.
+ * @param {unknown} error
+ * @returns {string|null}
+ */
+function failureEndpoint(error) {
+  const failure = /** @type {{endpoint?: unknown}} */ (error instanceof Object && error !== null ? error : {});
+  return typeof failure.endpoint === 'string' && failure.endpoint !== '' ? failure.endpoint : null;
 }
 
 /**
@@ -588,6 +662,7 @@ function skippedOutcome(planned) {
     registered: false,
     state: 'skipped',
     backfill: null,
+    backfillRefusal: null,
     traffic: null,
     snapshots: null,
     stamp: null,

@@ -3,10 +3,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import {
-  LifecycleContractError, confirmRepository, findRepositoryByName, isUnavailable, markUnavailable,
-  recordIdentity, splitRepository, unavailableReason,
+  LifecycleContractError, confirmRepository, findRepositoryByName, isBackfillRefused, isUnavailable,
+  markBackfillRefused, markUnavailable, recordIdentity, splitRepository, unavailableReason,
 } from '../src/collect/lifecycle.js';
 import { planCollect } from '../src/collect/run.js';
+import { readProvenance } from '../src/backfill/provenance.js';
 import { validateConfig } from '../src/config/schema.js';
 import { upsertDayFact } from '../src/db/day-series-repo.js';
 import { getRepository, openArchive, upsertRepository, withTransaction } from '../src/db/ops-repo.js';
@@ -252,6 +253,44 @@ test('a not-found response marks the repository unavailable with the reason, and
   // something this step performs: the identity is already decided.
   assert.throws(() => db.exec('DELETE FROM repositories'), /cannot be deleted/);
   assert.throws(() => db.exec(`UPDATE repositories SET id=99`), /FOREIGN KEY constraint/);
+});
+
+test('a refused backfill is recorded with its reason, keeps the first, and is not a completion', async (t) => {
+  const db = await archiveWith(t);
+  const reason = 'GitHub HTTP 403: GitHub now limits the stargazer listing to admins and collaborators';
+
+  // Before any refusal the row reads as never refused, and a plan counts the backfill.
+  assert.equal(isBackfillRefused(getRepository(db, REPO_ID)), false);
+  assert.equal(planCollect({ db, config: validateConfig({ enrolled: ['owner/alpha'] }) })[0]?.requests > 0, true);
+
+  withTransaction(db, () => markBackfillRefused({ db, repositoryId: REPO_ID, reason, collectedAt: second }));
+
+  const stored = getRepository(db, REPO_ID);
+  assert.ok(isBackfillRefused(stored));
+  assert.equal(stored.backfillRefusedReason, reason);
+  assert.equal(stored.backfillRefusedAt, second);
+  assert.equal(stored.lifecycle, 'active', 'a refused backfill is not an unavailable repository');
+  assert.equal(stored.enrolled, 1, 'the row stays enrolled: only the backfill was refused');
+  assert.equal(storedDays(db), 2, 'recording a refusal deletes none of the history already written');
+  assert.equal(readProvenance(db, REPO_ID).backfillCompleted, false,
+    'a refusal is not a completed backfill and must never be read as one');
+  assert.equal(db.prepare("SELECT count(*) AS n FROM backfill_records WHERE kind='stars'").get()?.n, 0,
+    'no star backfill record is written for a listing that was never read');
+
+  // The plan stops counting the request floor for a listing it will not ask again.
+  const planned = planCollect({ db, config: validateConfig({ enrolled: ['owner/alpha'] }) })[0];
+  assert.equal(planned?.skipped, false, 'the repository is still collected');
+  assert.equal(planned?.backfill, true, 'the development half still runs');
+  assert.equal(planned?.requests, 5, 'the refused listing adds no request');
+
+  // Marking it again keeps the reason it was first given rather than replacing it.
+  withTransaction(db, () => markBackfillRefused({ db, repositoryId: REPO_ID, reason: 'something else', collectedAt: second }));
+  assert.equal(getRepository(db, REPO_ID).backfillRefusedReason, reason);
+  assert.equal(getRepository(db, REPO_ID).backfillRefusedAt, second);
+  assert.throws(
+    () => markBackfillRefused({ db, repositoryId: REPO_ID, reason: '   ', collectedAt: second }),
+    /needs a reason/,
+  );
 });
 
 test('only a repository GitHub no longer serves is treated as unavailable', () => {

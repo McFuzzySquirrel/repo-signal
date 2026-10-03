@@ -1,8 +1,9 @@
 # Troubleshooting runbook
 
-This page is for the maintainer whose daily collection stopped producing data. It maps six failure
-modes to the state word the product reports for each, so a symptom can be matched to a cause without
-guessing, and it gives the next command to run.
+This page is for the maintainer whose daily collection stopped producing data. It maps seven failure
+modes to the state word the product reports for each, or says plainly where the product has no state
+word to report, so a symptom can be matched to a cause without guessing, and it gives the next
+command to run.
 
 Read it in this order: find the **state word** in the table below, then read the section named for
 that word. The word is the product's own; it is defined once in `src/supervision/health.js` and the
@@ -49,10 +50,11 @@ read, so a surface that renders it shows them beside the repository list:
 | `degraded` | the last run finished with at least one repository failed |
 | `empty` | the roll-up word for a home that has enrolled nothing at all |
 
-Two of the six failure modes below - a migration that will not apply and a database that will not
-open - have **no state word at all**, because the health read needs the archive and the archive is
-the thing that is broken. Both are named as refusals by the commands instead. See
-[Two failure modes that cannot show a state word](#two-failure-modes-that-cannot-show-a-state-word).
+Three of the seven failure modes below - a configuration file that will not load, a migration that
+will not apply and a database that will not open - have **no state word at all**, because each one
+breaks something the health read itself depends on. They are named as refusals by the commands
+instead. See
+[Three failure modes that cannot show a state word](#three-failure-modes-that-cannot-show-a-state-word).
 
 ---
 
@@ -115,8 +117,13 @@ the state as the most recent failure.
 endpoints may still succeed. `collect` prints:
 
 ```
-owner/name failed permission-missing backfill skipped GitHub HTTP 403: Grant Administration repository permission (read), accept the permission upgrade, and reconnect
+owner/name failed permission-missing backfill skipped endpoint=/repos/owner/name/traffic/clones?per=day GitHub HTTP 403: Grant Administration repository permission (read), accept the permission upgrade, and reconnect
 ```
+
+**Read the endpoint before the permission.** A collection makes several requests per repository and a
+failure names the endpoint that answered it, so `endpoint=.../traffic/clones` is a traffic permission
+problem while `endpoint=.../stargazers` is not a permission problem at all. See
+[A stargazer listing GitHub will not serve](#a-stargazer-listing-github-will-not-serve).
 
 **Why it happens.** The traffic endpoints - clones, views, referrers and popular paths - require the
 `Administration repository permission (read)`, so a token without it is rejected on exactly those
@@ -139,6 +146,39 @@ token changed, and nothing new arrives.
 permission this tool asks for; it never asks for `Contents` and never writes to a repository. If you
 are being asked for write access, the answer is no, and that is not a configuration this tool
 produces.
+
+---
+
+## A stargazer listing GitHub will not serve
+
+**No state word, because nothing failed.** The repository collects normally and its state word stays
+`healthy`; the star series is simply absent, and the collection line says so on every run rather than
+leaving a gap that would read as a zero. This is the one answer on this page with no state word that
+is not a failure mode at all, which is why it is not counted among the
+[three that cannot show one](#three-failure-modes-that-cannot-show-a-state-word).
+
+**What you see.** The per-repository line ends with the reason:
+
+```
+owner/name ok 14 days written 56 revised 0 unchanged 0 snapshots 3 backfill first-connect stars-history absent GitHub HTTP 403: GitHub now limits the stargazer listing to admins and collaborators, so this token cannot read it; collection continues without star history, and re-enrol the repository once access is restored
+```
+
+**Why it happens.** In July 2026 GitHub limited the public stargazer listing,
+`/repos/{owner}/{repo}/stargazers`, to admins and collaborators, because those lists were being used
+to collect users for spam. GitHub may answer with a `403` or with an empty list. This is a
+restriction on one endpoint, not a permission your token lacks: granting every permission this tool
+uses still leaves it refused.
+
+**What to do.** Nothing, for the traffic data - it is already collected. The star series before the
+day GitHub restricted the listing cannot be reconstructed, and this tool does not invent it.
+
+If you later gain access - GitHub lifts the restriction, or the token is one the listing admits - the
+refusal is recorded once and the listing is not asked again. Re-enrol the repository to clear that
+record and try the backfill again:
+
+```
+node src/cli.js config check
+```
 
 ---
 
@@ -220,6 +260,48 @@ process is being killed by a supervisor.
 gap: days outside GitHub's 14-day traffic window cannot be recovered by catching up, and nothing
 should be written into the archive by hand to close one. The recovery path for the days GitHub still
 serves is to collect again.
+
+---
+
+## A configuration file that will not load
+
+**No state word.** This failure happens before any repository state can be computed: the health read
+begins by reading `config.json` to learn which repositories exist, so a configuration it cannot parse
+leaves nothing to report a state from. The refusal names the cause, and every command that reads the
+configuration refuses the same way.
+
+**What you see.** Both commands that read the configuration - `discover` and `collect` - exit `1` with
+one line:
+
+```
+discover failed: Configuration key $: malformed JSON; correct the JSON syntax in config.json and retry
+```
+
+The `$` names the document as a whole rather than one field. When the document parses but a value is
+wrong, the message names that key instead, such as `Configuration key enrolled[0]: expected a single
+nonempty owner/name pair without whitespace`.
+
+**What to do.** Validate the file the way the commands read it:
+
+```
+node src/cli.js config check
+```
+
+`configuration ok` means `discover` and `collect` will read the same file the same way: the check calls
+the loader they call, so its verdict is theirs rather than a second opinion. `configuration failed`
+names the offending key.
+
+Two mistakes account for most of these refusals. A whole-line `//` comment is **not** one of them:
+`config init` writes a commented template and every command that reads `config.json` accepts those
+comments, so leave them or delete them as you prefer. An inline `//` after a value and a trailing
+comma are both refused, everywhere, by every command.
+
+**To go back to the templates.** `config init --force` replaces **both** files, including
+`credentials.json`, so copy your token somewhere safe before you run it:
+
+```
+node src/cli.js config init --force
+```
 
 ---
 
@@ -355,13 +437,14 @@ all, which is reported as a runtime API mismatch rather than as a data fault.
 
 ---
 
-## Two failure modes that cannot show a state word
+## Three failure modes that cannot show a state word
 
 An expired token, a missing permission, an exhausted limit and a stalled schedule all leave the
-archive readable, so the health read can report a state for them. A migration that will not apply and
-a database that will not open do not: the archive is the source of the state, and when it cannot be
-opened there is nothing to read a state from. Rather than invent a word for them, this page names the
-refusal each command prints, which is where the evidence actually is.
+archive readable, so the health read can report a state for them. A configuration file that will not
+load, a migration that will not apply and a database that will not open do not: the archive is the
+source of the state, and when it cannot be opened, or when the configuration naming the repositories
+cannot be read, there is nothing to read a state from. Rather than invent a word for them, this page
+names the refusal each command prints, which is where the evidence actually is.
 
 If you are reading state words and none of the seven above is present while collection is visibly
 not happening, that itself is a symptom: look for a refusal in the collection log and check whether

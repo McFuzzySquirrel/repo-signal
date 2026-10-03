@@ -118,12 +118,29 @@ function collectedLine(outcome) {
   }
   if (outcome.state === 'failed' || outcome.traffic === null) {
     const kind = outcome.failure?.kind ?? 'unexpected';
-    return `${outcome.repo} failed ${kind} backfill ${backfill} ${outcome.failure?.message ?? ''}`.trimEnd();
+    // The endpoint is named so a failure among the several a run makes can be
+    // located without inferring it from a request count.
+    const endpoint = outcome.failure?.endpoint === undefined ? '' : ` endpoint=${outcome.failure.endpoint}`;
+    return `${outcome.repo} failed ${kind} backfill ${backfill}${endpoint} ${outcome.failure?.message ?? ''}`.trimEnd();
   }
   const traffic = outcome.traffic;
   return `${outcome.repo} ok ${traffic.days} days written ${traffic.written} revised ${traffic.revised} ` +
     `unchanged ${traffic.unchanged} snapshots ${outcome.snapshots?.rows ?? 0} backfill ${backfill}` +
+    backfillRefusalNote(outcome) +
     identityNote(outcome);
+}
+
+/**
+ * What the stargazer listing cost this repository, when GitHub refused it. The
+ * traffic this line reports is real; the star history is genuinely absent, and
+ * saying so is the difference between a gap and a zero.
+ * @param {RepositoryOutcome} outcome
+ * @returns {string}
+ */
+function backfillRefusalNote(outcome) {
+  const refusal = outcome.backfillRefusal;
+  if (typeof refusal !== 'string' || refusal === '') return '';
+  return ` stars-history absent ${refusal}`;
 }
 
 /**

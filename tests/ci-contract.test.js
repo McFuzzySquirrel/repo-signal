@@ -307,6 +307,28 @@ test('the workflow performs a clean install, the type check and the repository t
   assert.doesNotMatch(workflow, /node --test/, 'the workflow bypasses the wrapper with the bare runner');
 });
 
+test('the lock file states the same Node floor as package.json', () => {
+  // The lock file is what `npm ci` installs from, so a floor it states that
+  // package.json does not is a floor the pipeline appears to support. 22.13.0 is
+  // the release that dropped the experimental SQLite flag, not the one that
+  // exposes `enableDefensive`; on that line the module imports and the archive
+  // then fails to open. Only package.json may set the floor, and the lock file
+  // has to agree with it.
+  const engines = manifest().engines;
+  assert.ok(engines !== undefined && typeof engines.node === 'string',
+    'package.json declares no Node range, so there is no floor to keep');
+  const lock = JSON.parse(read(LOCKFILE));
+  const locked = lock.packages?.['']?.engines;
+  assert.deepEqual(locked, engines,
+    `package-lock.json states ${JSON.stringify(locked)} but package.json states ` +
+    `${JSON.stringify(engines)}; regenerate the lock file with ` +
+    '`npm install --package-lock-only` rather than editing it');
+  // The floor itself is a storage requirement, not a preference, so it is asserted
+  // here as well as in the release checklist: it is the release that exposes the
+  // defensive driver option the archive connection depends on.
+  assert.match(engines.node, /^>=24\.12\.0$/);
+});
+
 test('the workflow runs the four steps in order, the drill last', () => {
   const workflow = read(WORKFLOW);
   const positions = ['run: npm ci', 'run: npm run typecheck', 'run: npm test', 'run: node scripts/backup-drill.mjs'].map(

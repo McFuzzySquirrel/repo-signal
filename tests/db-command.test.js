@@ -67,12 +67,12 @@ test('db migrate, status, verify, backup and restore each exit 0 on a temporary 
   const f = fixture(t, 'group');
   const migrate = f.run(['db', 'migrate']);
   outcome(migrate, 0);
-  assert.match(migrate.stdout, /migrated: applied 1/);
+  assert.match(migrate.stdout, /migrated: applied 1, 2/);
   const status = f.run(['db', 'status']);
   outcome(status, 0);
   assert.match(status.stdout, /database: .*archive\.sqlite3/);
-  assert.match(status.stdout, /schema version \(code\): 1/);
-  assert.match(status.stdout, /schema version \(on disk\): 1/);
+  assert.match(status.stdout, /schema version \(code\): 2/);
+  assert.match(status.stdout, /schema version \(on disk\): 2/);
   assert.match(status.stdout, /migration pending: no/);
   const verify = f.run(['db', 'verify']);
   outcome(verify, 0);
@@ -92,13 +92,13 @@ test('db status reports a pending migration when the on-disk version is behind t
   const f = fixture(t, 'pending');
   const before = f.run(['db', 'status']);
   outcome(before, 0);
-  assert.match(before.stdout, /schema version \(code\): 1/);
+  assert.match(before.stdout, /schema version \(code\): 2/);
   assert.match(before.stdout, /schema version \(on disk\): 0/);
-  assert.match(before.stdout, /migration pending: yes \(1\)/);
+  assert.match(before.stdout, /migration pending: yes \(1, 2\)/);
   outcome(f.run(['db', 'migrate']), 0);
   const after = f.run(['db', 'status']);
   outcome(after, 0);
-  assert.match(after.stdout, /schema version \(on disk\): 1/);
+  assert.match(after.stdout, /schema version \(on disk\): 2/);
   assert.match(after.stdout, /migration pending: no/);
 });
 

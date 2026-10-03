@@ -21,7 +21,7 @@ fails the suite if a page names a command this build does not register.
 
 | Fact | Value | The authority for it |
 |------|-------|----------------------|
-| Schema version (code) | `1` | the highest numbered file in `src/db/migrations/`, here `001-core-schema.js` |
+| Schema version (code) | `2` | the highest numbered file in `src/db/migrations/`, here `002-backfill-refusal.js` |
 | Supported Node range | `>=24.12.0` | `"engines": { "node": ">=24.12.0" }` in `package.json` |
 | Node line also verified | `24.21.0`, the current 24 Active LTS line | the matrix in `.github/workflows/ci.yml` |
 | Licence | MIT | `LICENSE` |

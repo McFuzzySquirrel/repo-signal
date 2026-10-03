@@ -10,6 +10,8 @@ import { migrate } from './migrate.js';
  * @property {'active'|'unavailable'} lifecycle
  * @property {string|null} unavailableReason
  * @property {number} enrolled SQLite 0 or 1.
+ * @property {string|null} backfillRefusedAt When the first-connect backfill was first refused, or null.
+ * @property {string|null} backfillRefusedReason Why it was refused, recorded once and never overwritten.
  * @property {string} lastSeenAt
  * @property {string|null} lastSuccessAt
  * @property {number} consecutiveFailures
@@ -19,7 +21,9 @@ import { migrate } from './migrate.js';
 /** @typedef {{closedAt: string, status: string, successCount: number, failureCount: number, requestCount: number, durationMs: number}} RunCompletion */
 
 const repositoryColumns = `id, owner, name, lifecycle, unavailable_reason AS unavailableReason,
-  enrolled, last_seen_at AS lastSeenAt, last_success_at AS lastSuccessAt,
+  enrolled, backfill_refused_at AS backfillRefusedAt,
+  backfill_refused_reason AS backfillRefusedReason,
+  last_seen_at AS lastSeenAt, last_success_at AS lastSuccessAt,
   consecutive_failures AS consecutiveFailures`;
 
 /**
@@ -117,13 +121,17 @@ export function upsertRepository(db, input) {
   const row = { lifecycle: 'active', unavailableReason: null, enrolled: 0,
     lastSuccessAt: null, consecutiveFailures: 0, ...existing, ...input };
   db.prepare(`INSERT INTO repositories
-    (id, owner, name, lifecycle, unavailable_reason, enrolled, last_seen_at, last_success_at, consecutive_failures)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (id, owner, name, lifecycle, unavailable_reason, enrolled, backfill_refused_at,
+      backfill_refused_reason, last_seen_at, last_success_at, consecutive_failures)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET owner=excluded.owner, name=excluded.name,
       lifecycle=excluded.lifecycle, unavailable_reason=excluded.unavailable_reason,
-      enrolled=excluded.enrolled, last_seen_at=excluded.last_seen_at,
+      enrolled=excluded.enrolled, backfill_refused_at=excluded.backfill_refused_at,
+      backfill_refused_reason=excluded.backfill_refused_reason,
+      last_seen_at=excluded.last_seen_at,
       last_success_at=excluded.last_success_at, consecutive_failures=excluded.consecutive_failures`)
     .run(row.id, row.owner, row.name, row.lifecycle, row.unavailableReason, row.enrolled,
+      row.backfillRefusedAt ?? null, row.backfillRefusedReason ?? null,
       row.lastSeenAt, row.lastSuccessAt, row.consecutiveFailures);
 }
 

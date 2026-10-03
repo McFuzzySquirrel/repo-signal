@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createHttpTransport } from '../src/github/http.js';
-import { createRetryPolicy } from '../src/github/retry.js';
+import { createRetryPolicy, GitHubRequestError } from '../src/github/retry.js';
 import { createStarsClient, STARGAZER_ACCEPT } from '../src/github/stars-client.js';
 
 // Contract: https://docs.github.com/en/rest/activity/starring —
@@ -44,6 +44,27 @@ test('stargazers: the star-timestamp media type is sent on every page', async ()
   assert.equal(headersOf(h.calls[0]?.init).get('Accept'), 'application/vnd.github.star+json');
   assert.equal(h.calls[0]?.init?.method, 'GET');
   assert.equal(h.calls[0]?.init?.body, undefined);
+});
+
+test('stargazers: a 403 is the access restriction, attempted once and not a repository read', async () => {
+  // GitHub limits this listing to admins and collaborators from July 2026, so the
+  // failure must name that rather than the Administration permission a maintainer
+  // would otherwise be told to grant, and must not be retried.
+  const refused = new Map([
+    [`https://api.github.com/repos/example/repo/stargazers?per_page=100&page=1`, { status: 403, payload: {} }],
+  ]);
+  const h = harness(refused);
+  await assert.rejects(h.client.stargazerStars(repo, async () => {}), (error) => {
+    assert.ok(error instanceof GitHubRequestError);
+    assert.equal(error.kind, 'permission-missing');
+    assert.equal(error.status, 403);
+    assert.equal(error.endpointType, 'stargazers');
+    assert.equal(error.attempts, 1);
+    assert.match(error.action, /limits the stargazer listing to admins and collaborators/);
+    assert.equal(/grant the required token permissions/i.test(error.action), false);
+    return true;
+  });
+  assert.equal(h.calls.length, 1, 'a refusal is not retried');
 });
 
 test('stargazers: three pages are followed to the last and each handed to onPage', async () => {

@@ -250,9 +250,9 @@ version, with the database path on the first line as your machine resolves it:
 
 ```
 database: <your home>/archive.sqlite3
-schema version (code): 1
+schema version (code): 2
 schema version (on disk): 0
-migration pending: yes (1)
+migration pending: yes (1, 2)
 ```
 
 Migrations in this repository are forward-only, so a newer build brings pending work with it

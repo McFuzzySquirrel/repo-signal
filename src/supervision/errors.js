@@ -1,4 +1,8 @@
 import { redact } from '../credentials/redact.js';
+// The vendor fact - GitHub's July 2026 stargazer restriction and the changelog
+// that records it - belongs to the transport layer, so the next step for it is
+// spelled once there and classified here rather than drifted across both.
+import { STARGAZERS_RESTRICTED_ACTION } from '../github/retry.js';
 
 /**
  * Collection failure classification.
@@ -23,7 +27,7 @@ import { redact } from '../credentials/redact.js';
 /**
  * @typedef {'authentication-rejected'|'permission-missing'|'repository-missing'
  *   |'rate-limited'|'transient'|'unexpected'} FailureKind
- * @typedef {'repository'|'traffic'|'statistics'} EndpointType
+ * @typedef {'repository'|'traffic'|'statistics'|'stargazers'} EndpointType
  * @typedef {object} ClassifiedFailure
  * @property {FailureKind} kind Exactly one of the six kinds; never empty and never a guess.
  * @property {number|null} status HTTP status when the failure carries one, otherwise null.
@@ -148,7 +152,9 @@ function locateEndpoint(endpoint, hint) {
   const rest = path.slice(at + marker.length);
   const [owner, name] = rest.split('/');
   const repo = owner === undefined || owner === '' || name === undefined || name === '' ? null : `${owner}/${name}`;
-  const type = /\/traffic(\/|$)/.test(rest) ? 'traffic' : /\/stats(\/|$)/.test(rest) ? 'statistics' : 'repository';
+  const type = /\/traffic(\/|$)/.test(rest) ? 'traffic' : /\/stats(\/|$)/.test(rest) ? 'statistics'
+    : /\/(?:stargazers|subscribers)(\/|$)/.test(rest) ? 'stargazers'
+      : 'repository';
   return { type: hint ?? type, repo };
 }
 
@@ -193,17 +199,27 @@ function describeKind(kind, endpointType, status) {
       };
     case 'permission-missing':
       // Only a traffic endpoint requires the Administration read permission, so only a traffic
-      // endpoint may report that permission as the one missing.
-      return endpointType === 'traffic'
-        ? {
+      // endpoint may report that permission as the one missing. The stargazer listing is a
+      // third case again: GitHub restricts it to admins and collaborators, so no token
+      // permission the maintainer can grant is what is missing.
+      if (endpointType === 'traffic') {
+        return {
           detail: `the token is missing the ${TRAFFIC_PERMISSION} that the traffic endpoints require`,
           action: GRANT_TRAFFIC_PERMISSION_ACTION,
-        }
-        : {
-          detail: 'the token cannot read this endpoint; the '
-            + `${TRAFFIC_PERMISSION} is required by the traffic endpoints only`,
-          action: CHECK_REPOSITORY_ACCESS_ACTION,
         };
+      }
+      if (endpointType === 'stargazers') {
+        return {
+          detail: 'GitHub limits the stargazer listing to admins and collaborators, so this token cannot '
+            + 'read it; the traffic endpoints this repository needs are unaffected',
+          action: STARGAZERS_RESTRICTED_ACTION,
+        };
+      }
+      return {
+        detail: 'the token cannot read this endpoint; the '
+          + `${TRAFFIC_PERMISSION} is required by the traffic endpoints only`,
+        action: CHECK_REPOSITORY_ACCESS_ACTION,
+      };
     case 'repository-missing':
       return {
         detail: 'GitHub does not serve this repository under this name, or the token cannot see it',

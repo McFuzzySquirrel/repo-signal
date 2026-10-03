@@ -3,6 +3,16 @@ import { resolveHomePaths } from '../paths.js';
 import { ConfigurationError, validateConfig } from './schema.js';
 
 /**
+ * Whole-line `//` annotations, and only those. `config init` writes a commented
+ * template, so tolerating them here is what keeps every command reading the same
+ * document `config check` called valid. A JSON string cannot contain a raw
+ * newline, so a line whose first non-whitespace characters are `//` is never
+ * inside a value: this cannot alter data. Inline `//` after a value, trailing
+ * commas and every other deviation from strict JSON stay errors.
+ */
+const WHOLE_LINE_COMMENT = /^[\t ]*\/\/[^\r\n]*/gm;
+
+/**
  * Parse without exposing JSON parser excerpts, which could contain a token.
  * `$` names the document when malformed JSON prevents identifying a field.
  * @param {string} text JSON configuration text.
@@ -12,7 +22,7 @@ export function parseConfig(text) {
   /** @type {unknown} */
   let value;
   try {
-    value = JSON.parse(text);
+    value = JSON.parse(text.replace(WHOLE_LINE_COMMENT, ''));
   } catch {
     throw new ConfigurationError(
       'ERR_REPO_SIGNAL_CONFIG_PARSE', '$',

@@ -111,7 +111,7 @@ const KNOWN_ROW_COUNTS = [
   ['repository_aliases', 1],
   ['repository_errors', 1],
   ['runs', 1],
-  ['schema_migrations', 1],
+  ['schema_migrations', 2],
   ['snapshots', 2],
 ];
 

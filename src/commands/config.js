@@ -1,9 +1,9 @@
 import {
   closeSync, constants, fchmodSync, fstatSync, ftruncateSync,
-  lstatSync, openSync, readFileSync, writeFileSync,
+  lstatSync, openSync, writeFileSync,
 } from 'node:fs';
 import { resolveHomePaths } from '../paths.js';
-import { loadConfig, parseConfig } from '../config/load.js';
+import { loadConfig } from '../config/load.js';
 import { CREDENTIAL_FILE_MODE, loadCredentials } from '../credentials/store.js';
 import { redact } from '../credentials/redact.js';
 import { UsageError } from './index.js';
@@ -77,30 +77,13 @@ export function configInit(context) {
     writeTemplate(paths.configPath, CONFIG_TEMPLATE, force);
     writeTemplate(paths.credentialsPath, CREDENTIAL_TEMPLATE, force);
     context.print(safeMessage(`configuration template created: ${paths.configPath} (0600)`));
-    context.print(redact('configuration comments: config check accepts whole-line // annotations; remove them for strict JSON consumers'));
+    context.print(redact('configuration comments: whole-line // annotations stay accepted everywhere; leave them or delete them as you prefer'));
     context.print(safeMessage(`credential template created: ${paths.credentialsPath} (0600)`));
     context.print(redact('credential setup: replace the non-secret placeholder in credentials.json before connecting to GitHub'));
     return 0;
   } catch (error) {
     context.printError(`config init failed: ${safeMessage(error)}`);
     return 1;
-  }
-}
-
-/**
- * The shared loader owns strict JSON and schema validation. The init template
- * additionally permits whole-line // annotations; no inline comments, trailing
- * commas, or edits to string values are accepted by this command adapter.
- * @param {import('../paths.js').HomePathOptions} options
- * @param {string} file
- */
-function checkConfiguration(options, file) {
-  try {
-    loadConfig(options);
-  } catch (error) {
-    if (/** @type {{code?: string}} */ (error).code !== 'ERR_REPO_SIGNAL_CONFIG_PARSE') throw error;
-    const text = readFileSync(file, 'utf8');
-    parseConfig(text.replace(/^[\t ]*\/\/[^\r\n]*/gm, ''));
   }
 }
 
@@ -120,7 +103,9 @@ export function configCheck(context) {
   }
   let failed = false;
   try {
-    checkConfiguration(options, paths.configPath);
+    // The shared loader owns both strict JSON and whole-line // tolerance, so
+    // this verdict is the one collect and discover will reach.
+    loadConfig(options);
     context.print(redact('configuration ok: syntax and schema valid'));
   } catch (error) {
     failed = true;

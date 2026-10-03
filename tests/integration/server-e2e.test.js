@@ -1032,7 +1032,8 @@ test('the fixture is a real migrated archive the server read, not an empty one',
   const versions = /** @type {{version: number}[]} */ (/** @type {unknown} */ (
     f.db.prepare('SELECT version FROM schema_migrations ORDER BY version').all()))
     .map((row) => ({ version: Number(row.version) }));
-  assert.deepEqual(versions, [{ version: 1 }], 'the archive was migrated by the product, not hand-built');
+  assert.deepEqual(versions, [{ version: 1 }, { version: 2 }],
+    'the archive was migrated by the product, not hand-built');
   assert.equal(path.dirname(f.home) !== ROOT, true, 'the temporary home is outside the work tree');
   const stored = readDayFacts(f.db, 1, VIEWS_METRIC, FROM);
   const calendar = calendarDays(FROM, TO);

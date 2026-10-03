@@ -19,7 +19,7 @@ async function fixture(t) {
   assert.equal(statSync(paths.home).mode & 0o777, 0o700);
   const db = openDatabase(paths.databasePath);
   t.after(() => db.close());
-  assert.deepEqual(await migrate(db), [1]);
+  assert.deepEqual(await migrate(db), [1, 2]);
   db.prepare('INSERT INTO repositories (id, owner, name, enrolled, last_seen_at) VALUES (?, ?, ?, ?, ?)')
     .run(1, 'maintainer', 'archive', 1, earlier);
   db.prepare('INSERT INTO runs (id, started_at) VALUES (?, ?)').run('run-1', earlier);
@@ -37,12 +37,26 @@ test('initial migration creates every archive table and reapplication is a read-
   const db = await fixture(t);
   assert.deepEqual(db.prepare("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name")
     .all().map((row) => row.name), tables);
-  assert.deepEqual(await migrationStatus(db), { onDiskVersion: 1, codeVersion: 1, pendingVersions: [] });
+  // 002 only adds columns; the tables the core schema created are still the ones here.
+  assert.deepEqual(await migrationStatus(db), { onDiskVersion: 2, codeVersion: 2, pendingVersions: [] });
   const before = db.prepare('SELECT * FROM schema_migrations').all();
   db.exec('PRAGMA query_only = ON');
   assert.deepEqual(await migrate(db), []);
   assert.deepEqual(db.prepare('SELECT * FROM schema_migrations').all(), before);
   assert.equal(db.prepare('PRAGMA integrity_check').get()?.integrity_check, 'ok');
+});
+
+test('the backfill refusal columns default to null and never fake a completed backfill', async (t) => {
+  const db = await fixture(t);
+  const columns = db.prepare('PRAGMA table_info(repositories)').all()
+    .filter((row) => String(row.name).startsWith('backfill_refused'));
+  assert.deepEqual(columns.map((row) => String(row.name)), ['backfill_refused_at', 'backfill_refused_reason']);
+  // Nullable by construction: an archive that predates the refusal reads as never refused.
+  for (const column of columns) {
+    assert.equal(Number(column.notnull), 0, `${String(column.name)} must stay nullable`);
+    assert.equal(column.dflt_value, null, `${String(column.name)} must have no default to invent a refusal`);
+  }
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM backfill_records').get()?.n, 0);
 });
 
 test('duplicate day key upserts to one row carrying the later value, source and collection time', async (t) => {

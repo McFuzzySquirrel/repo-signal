@@ -293,7 +293,7 @@ test('the troubleshooting page names the first-connect and unavailable lifecycle
   );
 });
 
-test('the troubleshooting page covers the six failure modes, each with its dashboard state word', () => {
+test('the troubleshooting page covers the seven failure modes, each with its dashboard state word', () => {
   const page = read(TROUBLESHOOTING);
   /** @type {[string, RegExp, RegExp][]} */
   const modes = [
@@ -301,6 +301,7 @@ test('the troubleshooting page covers the six failure modes, each with its dashb
     ['A token without the traffic permission', /A token without the traffic permission/, new RegExp(`\\*\\*State word: \`${REPOSITORY_STATE_NEEDS_REAUTHENTICATION}\`, the same word`)],
     ['An exhausted rate limit', /An exhausted rate limit/, new RegExp(`\\*\\*State word: \`${REPOSITORY_STATE_DEGRADED}\``)],
     ['A stalled collector', /A stalled collector/, new RegExp(`\\*\\*State word: \`${REPOSITORY_STATE_STALLED}\``)],
+    ['A configuration file that will not load', /A configuration file that will not load/, /\*\*No state word\.\*\*/],
     ['A migration that will not apply', /A migration that will not apply/, /\*\*No state word\.\*\*/],
     ['A database that will not open', /A database that will not open/, /\*\*No state word\*\*/],
   ];
@@ -309,13 +310,23 @@ test('the troubleshooting page covers the six failure modes, each with its dashb
     assert.match(section(TROUBLESHOOTING, heading), statePattern, `"## ${heading}" names no dashboard state word`);
   }
 
-  // The page says up front which two of the six have no state word, and the
+  // The page says up front which of the seven have no state word, and the
   // dedicated section explains why rather than inventing one the product lacks.
   assert.match(flatten(read(TROUBLESHOOTING)), /have \*\*no state word at all\*\*/);
-  const noState = section(TROUBLESHOOTING, 'Two failure modes that cannot show a state word');
+  const noState = section(TROUBLESHOOTING, 'Three failure modes that cannot show a state word');
   assert.match(noState, /the archive is the source of the state/);
   assert.match(noState, /nothing to read a state from/);
   assert.match(noState, /names the refusal each command prints/);
+});
+
+test('the troubleshooting page says a whole-line comment is not what makes a configuration unreadable', () => {
+  // The template `config init` writes carries whole-line // comments and every
+  // command reads it, so a page that told an operator to blame a comment - or to
+  // delete one to make the file load - would send them after the wrong cause.
+  const comments = section(TROUBLESHOOTING, 'A configuration file that will not load');
+  assert.match(comments, /A whole-line `\/\/` comment is \*\*not\*\*/);
+  assert.match(comments, /An inline `\/\/` after a value and a trailing\s+comma are both refused/);
+  assert.match(comments, /the check calls\s+the loader they call/);
 });
 
 test('the troubleshooting page uses the state words the product defines', () => {

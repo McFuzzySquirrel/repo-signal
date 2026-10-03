@@ -1127,7 +1127,8 @@ test('serving the six pages wrote nothing, and the archive they read is the arch
   const versions = /** @type {{version: number}[]} */ (/** @type {unknown} */ (
     f.db.prepare('SELECT version FROM schema_migrations ORDER BY version').all()))
     .map((row) => ({ version: Number(row.version) }));
-  assert.deepEqual(versions, [{ version: 1 }], 'the archive was migrated by the product, not hand-built');
+  assert.deepEqual(versions, [{ version: 1 }, { version: 2 }],
+    'the archive was migrated by the product, not hand-built');
 
   // The rows the fixture wrote are the rows the archive holds: a hole stored as an
   // absence, a backfilled range before the boundary and a collected range after

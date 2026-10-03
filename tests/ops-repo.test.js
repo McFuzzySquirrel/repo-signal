@@ -35,7 +35,7 @@ test('archive opens through the guarded connection, migrates and persists across
   const { db, paths } = await fixture(t);
   assert.equal(db.prepare('PRAGMA foreign_keys').get()?.foreign_keys, 1);
   assert.equal(db.prepare('PRAGMA journal_mode').get()?.journal_mode, 'wal');
-  assert.equal(db.prepare('SELECT max(version) AS version FROM schema_migrations').get()?.version, 1);
+  assert.equal(db.prepare('SELECT max(version) AS version FROM schema_migrations').get()?.version, 2);
   upsertRepository(db, repository);
   upsertDayFact(db, fact);
   const reopened = await openArchive(paths.databasePath);
@@ -43,7 +43,7 @@ test('archive opens through the guarded connection, migrates and persists across
     assert.equal(getRepository(reopened, 1).name, 'archive');
     assert.equal(readDaySeries(reopened, range)[0].value, 0);
     assert.equal(reopened.prepare('PRAGMA integrity_check').get()?.integrity_check, 'ok');
-    assert.equal(reopened.prepare('SELECT count(*) AS n FROM schema_migrations').get()?.n, 1);
+    assert.equal(reopened.prepare('SELECT count(*) AS n FROM schema_migrations').get()?.n, 2);
   } finally {
     reopened.close();
   }
@@ -57,7 +57,8 @@ test('repository upsert preserves stable identity, omitted health and observatio
     lifecycle: 'unavailable', unavailableReason: 'not found' });
   assert.deepEqual({ ...getRepository(db, 1) }, { ...repository, owner: 'new-owner', name: 'renamed',
     lastSeenAt: later, lifecycle: 'unavailable', unavailableReason: 'not found',
-    lastSuccessAt: earlier, consecutiveFailures: 2 });
+    lastSuccessAt: earlier, consecutiveFailures: 2,
+    backfillRefusedAt: null, backfillRefusedReason: null });
   assert.equal(readDaySeries(db, range).length, 1);
   upsertRepository(db, { ...repository, lastSeenAt: later, lifecycle: 'active', unavailableReason: null,
     lastSuccessAt: later, consecutiveFailures: 0 });
