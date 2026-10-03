@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: CHART-AND-INSIGHT-RENDERING-1
+**Phase**: CHART-AND-INSIGHT-RENDERING-2
 **Status**: In Progress
 **Validation Gaps**: 40 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-03T11:41:44.751Z
+**Last Updated**: 2026-10-03T11:58:00.961Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -70,6 +70,8 @@
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-REV-01: Human review of the legibility spike and the chart order it decides
   - Files: docs/reviews/dashboard-legibility-spike.json
+- [x] Phase CHART-AND-INSIGHT-RENDERING-2, Task RS-VIZ-01: Compute seven-day and week-over-week deltas honestly (@insight-engineer)
+  - Files: src/insight/deltas.js, tests/insight-deltas.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
   - Files: src/server/server.js, src/server/security.js, tests/server.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-02: Route the three pages and escape every dynamic value (@server-engineer)
