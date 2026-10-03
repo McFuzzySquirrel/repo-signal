@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: DASHBOARD-VIEWS-AND-ACCESSIBILITY-1
 **Status**: In Progress
-**Validation Gaps**: 47 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-03T14:14:26.706Z
+**Validation Gaps**: 50 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-03T14:53:56.206Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -90,6 +90,8 @@
   - Files: tests/integration/server-e2e.test.js
 - [x] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-1, Task RS-UI-01: Mount the view registry and expose the serve command (@ui-engineer)
   - Files: src/server/views/index.js, src/server/views/repo-list.js, src/commands/serve.js, src/commands/index.js, tests/views/repo-list.test.js, tests/serve-command.test.js, tests/config-command.test.js
+- [x] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-1, Task RS-UI-02: Render the repository detail page in the reviewed order (@ui-engineer)
+  - Files: src/server/views/repo-detail.js, src/server/views/index.js, tests/views/repo-detail.test.js, tests/views/repo-list.test.js
 - [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-01: Build the backup drill and the backup and migration runbook (@platform-engineer)
   - Files: docs/operations/backup-and-migrate.md, scripts/backup-drill.mjs, tests/backup-drill.test.js
 - [x] Phase OPERATIONS-AND-OPEN-SOURCE-POSTURE-1, Task RS-OPS-02: Write the unattended operation and troubleshooting runbooks (@platform-engineer)
@@ -149,6 +151,9 @@
 - Task RS-UI-01: No live GitHub request and no real token were used; serve imports no credential store and no configuration module, and the only host any test reached was its own loopback server.
 - Task RS-UI-01: The accessibility assertions here are structural on the rendered markup; the mechanical RS-AX contract (landmarks, heading order, table pairing, contrast ratios against theme tokens) is RS-UI-04's to assert once the stylesheet exists.
 - Task RS-UI-01: The repository-list table's numbers were verified against a temporary home seeded through the product's own writes; no human has judged whether the page answers the maintainer's question, which is RS-UI-REV-01's gate and was neither created nor claimed.
+- Task RS-UI-02: No human has judged whether the page answers the maintainer's question; that is RS-UI-REV-01's gate, and nothing in docs/reviews/ was created or claimed
+- Task RS-UI-02: No live GitHub request and no real token were used; the only host any test reached was its own loopback server
+- Task RS-UI-02: The contrast half of RS-AX-01 (theme token ratios) cannot be checked until RS-UI-04 supplies src/ui/theme.css; the structural assertions here cover landmarks, heading order and table pairing on the served markup
 - Task RS-OPS-01: No real archive, no real credential and no network were involved: every check ran against scratch homes in the system temporary directory and spawned commands that make no outbound request, so the drill proves the restore path, not the behaviour of a live collection.
 - Task RS-OPS-02: No real GitHub request was made and no real token was used. The 401/403/429 refusal lines quoted in the page are transcribed from the classifier's own message templates in src/supervision/errors.js and src/github/retry.js, not from a live response, so real-service wording remains unverified behind the RS-OPS-LIVE-01 human gate.
 - Task RS-OPS-02: The cron, launchd and systemd entries are written against the documented behaviour of those three schedulers; only the systemd timer's semantics were cross-checked against the repository's own conventions. No schedule was installed or observed firing on any machine.

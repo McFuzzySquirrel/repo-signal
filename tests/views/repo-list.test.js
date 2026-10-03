@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { stampFirstCollected } from '../../src/backfill/provenance.js';
 import {
   CLONES_METRIC, UNIQUE_CLONERS_METRIC, UNIQUE_VISITORS_METRIC, VIEWS_METRIC,
 } from '../../src/collect/traffic.js';
@@ -13,9 +14,10 @@ import { resolveHomePaths } from '../../src/paths.js';
 import { escapeAttribute, escapeText, escapeUrl } from '../../src/server/html.js';
 import { createRouter } from '../../src/server/router.js';
 import {
-  DEFAULT_WINDOW_DAYS, ROUTE_INDEX, ROUTE_LIST, VIEW_MOUNT_TABLE, VIEW_ROUTES,
+  DEFAULT_WINDOW_DAYS, ROUTE_INDEX, ROUTE_LIST, ROUTE_DETAIL, VIEW_MOUNT_TABLE, VIEW_ROUTES,
   createViewRegistry, resolvePageRange,
 } from '../../src/server/views/index.js';
+import { readRepositoryDetailPage, renderRepositoryDetailPage } from '../../src/server/views/repo-detail.js';
 import {
   NO_STORED_VALUE_TEXT, readIndexPage, readRepositoryListPage, renderIndexPage, renderRepositoryListPage,
 } from '../../src/server/views/repo-list.js';
@@ -136,6 +138,13 @@ async function fixture(t) {
       });
     }
   });
+  // The collection boundary is stamped the way a run stamps it, in the same
+  // transaction as the traffic it describes. A repository with collected day rows and
+  // no boundary is a state the archive's own writers cannot produce, so the fixture
+  // must write both halves or the provenance read and the stored rows contradict
+  // each other on any surface that labels a day from them.
+  stampFirstCollected(db, 1, { day: FROM, collectedAt: COLLECTED_AT });
+  stampFirstCollected(db, 4, { day: TO, collectedAt: COLLECTED_AT });
   recordSuccess({ db, repositoryId: 1, collectedAt: COLLECTED_AT });
   recordSuccess({ db, repositoryId: 4, collectedAt: COLLECTED_AT });
 
@@ -209,6 +218,10 @@ test('the registry maps the index, list and detail routes to a view module expor
   assert.equal(VIEW_MOUNT_TABLE[ROUTE_INDEX].render, renderIndexPage, 'the index renders through its own module');
   assert.equal(VIEW_MOUNT_TABLE[ROUTE_LIST].read, readRepositoryListPage, 'the list reads through its own module');
   assert.equal(VIEW_MOUNT_TABLE[ROUTE_LIST].render, renderRepositoryListPage, 'the list renders through its own module');
+  assert.equal(VIEW_MOUNT_TABLE[ROUTE_DETAIL].read, readRepositoryDetailPage,
+    'the detail reads through the detail page module');
+  assert.equal(VIEW_MOUNT_TABLE[ROUTE_DETAIL].render, renderRepositoryDetailPage,
+    'the detail renders through the detail page module');
 
   // Each route really produces its own page when the router asks for it.
   const index = await request(f, '/');
@@ -219,9 +232,13 @@ test('the registry maps the index, list and detail routes to a view module expor
   assert.equal(detail.status, 200);
   assert.match(index.body, /<title>RepoSignal<\/title>/, 'the index is its own page');
   assert.match(list.body, /<h1>Enrolled repositories<\/h1>/, 'the list is its own page');
-  assert.match(detail.body, /<h1>Repository detail<\/h1>/, 'the detail URL answers with the list page');
-  assert.match(detail.body, /no per-repository detail page yet/, 'the degraded detail page says so in words');
-  assert.ok(detail.body.includes(escapeText(`The repository this URL asks for is ${OWNER}/${NAME}.`)),
+  // The detail route was mounted on the repository list until RS-UI-02 gave it a page
+  // of its own; it no longer degrades, and it names the repository it is about.
+  assert.match(detail.body, new RegExp(`<h1>${escapeText(`${OWNER}/${NAME}`)}</h1>`),
+    'the detail URL answers with the detail page');
+  assert.equal(/no per-repository detail page yet/.test(detail.body), false,
+    'the detail route no longer degrades to the list');
+  assert.ok(detail.body.includes(`data-repository="${escapeAttribute(`${OWNER}/${NAME}`)}"`),
     `the detail page names the repository the route asked for; got ${JSON.stringify(detail.body.slice(0, 700))}`);
 
   // The titles are distinct per page, which is what a history entry and a browser
@@ -579,6 +596,7 @@ test('the mount table is the only place a view is mounted', () => {
   // than aspirational.
   assert.ok(names.includes('index.js'), 'the composition root is the registry itself');
   assert.ok(names.includes('repo-list.js'), 'the list page is its own module');
+  assert.ok(names.includes('repo-detail.js'), 'the detail page is its own module');
   for (const name of names) {
     if (name === 'index.js') continue;
     assert.match(registrySource, new RegExp(`from '\\./${name.replaceAll('.', String.raw`\.`)}'`),

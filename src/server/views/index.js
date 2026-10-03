@@ -1,6 +1,9 @@
 import { findRepository } from '../repo-data.js';
 import { isIsoDay } from '../router.js';
 import {
+  readRepositoryDetailPage, renderRepositoryDetailPage,
+} from './repo-detail.js';
+import {
   readIndexPage, readRepositoryListPage, renderIndexPage, renderRepositoryListPage,
 } from './repo-list.js';
 
@@ -105,30 +108,46 @@ export function resolvePageRange(ctx, today) {
 
 /**
  * One mounted page: the read that produces its data and the pure function that
- * renders it. The read is called with the open archive, the clock and the resolved
- * window; the render function receives only the route context and that data, so it
- * stays a function of its arguments and nothing else.
+ * renders it. The read is called with the open archive, the clock, the resolved
+ * window and the route context, and the render function receives only the context
+ * and that data, so it stays a function of its arguments and nothing else.
+ *
+ * The context and the reference day travel to the read because the detail page needs
+ * both: it reads one repository named by the route, and it passes `today` on so the
+ * provenance read answers its connected-today question without reading the wall clock
+ * inside a function whose output has to be reproducible. A read that needs neither -
+ * the index and the list - ignores them.
  *
  * @typedef {object} ViewMount
- * @property {(options: { db: Database, clock: () => number, range: ResolvedRange }) => unknown} read
+ * @property {(options: ViewReadOptions) => unknown} read
  * @property {(ctx: PageContext, data: any) => string} render
+ */
+
+/**
+ * @typedef {object} ViewReadOptions
+ * @property {Database} db Open archive; the caller owns closing it.
+ * @property {() => number} clock Epoch milliseconds the health read is judged against.
+ * @property {ResolvedRange} range The window the page resolved.
+ * @property {PageContext} ctx The route context, naming the repository on the detail route.
+ * @property {string} today Reference UTC day this registry was built for.
  */
 
 /**
  * The mount table: route to the page that answers it. This is the one list a new
  * page is added to.
  *
- * `detail` currently answers with the repository list and says so on the page,
- * because this build has no per-repository detail page yet. A detail URL that names
- * an enrolled repository still gets 200 and a page rather than an error, and the
- * page states that the whole enrolled set is shown instead.
+ * `detail` is answered by the repository detail page: the per-repository charts,
+ * comparisons, captures, collection state and provenance boundary, composed in
+ * `./repo-detail.js` from the modules the earlier features built. Before that page
+ * existed the detail route degraded to the list, and it says so on the page rather
+ * than erroring; that degradation is gone now that there is something better to show.
  *
  * @type {Readonly<Record<typeof ROUTE_INDEX|typeof ROUTE_LIST|typeof ROUTE_DETAIL, ViewMount>>}
  */
 export const VIEW_MOUNT_TABLE = Object.freeze({
   [ROUTE_INDEX]: Object.freeze({ read: readIndexPage, render: renderIndexPage }),
   [ROUTE_LIST]: Object.freeze({ read: readRepositoryListPage, render: renderRepositoryListPage }),
-  [ROUTE_DETAIL]: Object.freeze({ read: readRepositoryListPage, render: renderRepositoryListPage }),
+  [ROUTE_DETAIL]: Object.freeze({ read: readRepositoryDetailPage, render: renderRepositoryDetailPage }),
 });
 
 /**
@@ -164,7 +183,7 @@ export function createViewRegistry({ db, clock = Date.now, today }) {
   const mount = (route, ctx) => {
     const entry = VIEW_MOUNT_TABLE[route];
     const range = resolvePageRange(ctx, today);
-    const data = entry.read({ db, clock, range });
+    const data = entry.read({ db, clock, range, ctx, today });
     return entry.render(ctx, data);
   };
 
