@@ -17,9 +17,9 @@ import { EXIT_OPERATIONAL_FAILURE, EXIT_SUCCESS, UsageError } from './index.js';
  * the router maps the three routes and refuses an unknown repository or a malformed
  * range before a view runs, and the view registry decides which page module answers
  * which route. This command resolves the home, opens the archive through the guarded
- * connection, and prints the URL the factory actually listened on - never a
- * configured default, because a printed port the process is not listening on is the
- * one lie an operator cannot see through.
+ * connection, mounts the registry's own pages in front of the router, and prints the
+ * URL the factory actually listened on - never a configured default, because a printed
+ * port the process is not listening on is the one lie an operator cannot see through.
  *
  * The command reads the archive and nothing else: no configuration file, no
  * credential, no outbound request and no GitHub client, so a dashboard on a home
@@ -151,11 +151,16 @@ export async function serve(context) {
     const today = new Date().toISOString().slice(0, 10);
     const registry = createViewRegistry({ db, today });
     const router = createRouter({ views: registry.views, hasRepository: registry.hasRepository });
-    server = await createServer({ handler: router });
+    // The router dispatches the three routes it owns and every status it returns. The
+    // pages the registry mounts at a path of its own - the collection health page today
+    // - are answered in front of it, so adding a page stays a change in the registry
+    // plus that page's view module and never an edit to the router.
+    server = await createServer({ handler: registry.answerOwnRoutes(router) });
 
     // The URL the factory returned is the only address and port this command reports.
     context.print(redact(`serve listening on ${server.url}`));
     context.print(redact(`repository list: ${server.url}/repos`));
+    context.print(redact(`collection health: ${server.url}${registry.healthPath}`));
     context.print(redact(`archive: ${paths.databasePath}`));
     context.print('stop with Ctrl-C; the dashboard only reads the archive while it is open');
 

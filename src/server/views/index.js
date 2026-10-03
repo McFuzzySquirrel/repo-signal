@@ -1,8 +1,10 @@
+import { escapeUrl } from '../html.js';
 import { findRepository } from '../repo-data.js';
 import { isIsoDay } from '../router.js';
 import {
   readRepositoryDetailPage, renderRepositoryDetailPage,
 } from './repo-detail.js';
+import { HEALTH_PAGE_PATH, readCollectionHealthPage, renderCollectionHealthPage } from './health.js';
 import {
   readIndexPage, readRepositoryListPage, renderIndexPage, renderRepositoryListPage,
 } from './repo-list.js';
@@ -18,14 +20,17 @@ import {
  * needs through the layer that owns it, and hands it to a pure render function.
  *
  * Adding a page is a change in this file plus its own view module, and nothing else.
- * The renderer list below is the whole of the mount table: a new route is a new
- * `read`/`render` pair here, and the router's own route table is server-engineer's
- * to extend separately.
+ * There are two mount tables and both are here: {@link VIEW_MOUNT_TABLE} holds the
+ * three routes the router dispatches, and {@link VIEW_PATH_TABLE} holds the pages the
+ * dashboard serves at a path the router does not name - the collection health page
+ * today. The router's own route table is server-engineer's and is never edited from
+ * here.
  */
 
 /** @typedef {import('node:sqlite').DatabaseSync} Database */
 /** @typedef {import('../router.js').PageContext} PageContext */
 /** @typedef {import('../router.js').RouterViews} RouterViews */
+/** @typedef {import('./health.js').HealthPageContext} HealthPageContext */
 
 /** The three routes the dashboard serves, in the order the route table declares them. */
 export const ROUTE_INDEX = /** @type {const} */ ('index');
@@ -151,6 +156,75 @@ export const VIEW_MOUNT_TABLE = Object.freeze({
 });
 
 /**
+ * The name of the collection health page. It is a route in its own right - the
+ * repository list, the detail page and this page are three answers to three questions -
+ * but it is not one of the three routes the router dispatches, so it is named here
+ * rather than added to {@link VIEW_ROUTES}.
+ * @typedef {'health'} HealthRouteName
+ */
+
+/**
+ * One page mounted at a path the router's own route table does not name.
+ *
+ * The router owns `/`, `/repos` and `/repo/{owner}/{name}` and refuses anything else
+ * with a 404; that table is server-engineer's, so this registry does not extend it. A
+ * page the dashboard serves at its own path - the collection health page today, the
+ * theme stylesheet route in RS-UI-04 - is mounted here instead, and
+ * {@link createViewRegistry}'s `answerOwnRoutes` answers these paths in front of the
+ * router. The page owns the path it is served from, so a page added here needed no
+ * change anywhere else.
+ *
+ * @typedef {object} ViewPathMount
+ * @property {string} path The absolute path this page answers, exactly.
+ * @property {HealthRouteName} route The route name this page is mounted for.
+ * @property {(options: { db: Database, clock: () => number }) => unknown} read
+ * @property {(ctx: HealthPageContext, data: any) => string} render
+ */
+
+/**
+ * Every page this registry mounts at a path of its own. This list is the whole of that
+ * mount table, exactly as {@link VIEW_MOUNT_TABLE} is the whole of the router's.
+ *
+ * @type {readonly ViewPathMount[]}
+ */
+export const VIEW_PATH_TABLE = Object.freeze([
+  Object.freeze({
+    path: HEALTH_PAGE_PATH,
+    route: /** @type {const} */ ('health'),
+    read: readCollectionHealthPage,
+    render: renderCollectionHealthPage,
+  }),
+]);
+
+/**
+ * The context a page mounted at a path of its own is rendered with.
+ *
+ * The router builds its own context for the routes it dispatches, carrying the day
+ * range the URL selected. A registry-mounted page gets the same shape with no
+ * repository and no range: the collection health page reads the archive's recorded
+ * collection state, which has no day dimension, so there is no window here for a range
+ * to select and nothing a reader could mistake for a measurement of one.
+ *
+ * @param {HealthRouteName} route
+ * @returns {import('./health.js').HealthPageContext}
+ */
+function ownPageContext(route) {
+  return {
+    route,
+    owner: null,
+    name: null,
+    from: null,
+    to: null,
+    links: {
+      index: '/',
+      list: '/repos',
+      detail: (/** @type {string} */ owner, /** @type {string} */ name) =>
+        `/repo/${escapeUrl(owner)}/${escapeUrl(name)}`,
+    },
+  };
+}
+
+/**
  * The registry the router mounts, together with the identity predicate it asks
  * before a detail page runs.
  *
@@ -159,12 +233,19 @@ export const VIEW_MOUNT_TABLE = Object.freeze({
  * shares - and handed to the pure render function, so a view module never opens the
  * archive itself and can never disagree with the CLI about a repository's state.
  *
+ * `answerOwnRoutes` is what the `serve` command mounts in front of the router: the
+ * pages in {@link VIEW_PATH_TABLE} are served from here rather than from the router's
+ * route table, which the router's owner extends separately.
+ *
  * @param {object} options
  * @param {Database} options.db Open archive; the caller owns closing it.
  * @param {() => number} [options.clock] Epoch milliseconds the health read is judged against.
  * @param {string} options.today Reference UTC day a route with no bound resolves to.
  * @returns {{ views: RouterViews, hasRepository: (owner: string, name: string) => boolean,
- *   routes: readonly string[], mounts: Readonly<Record<string, ViewMount>> }}
+ *   routes: readonly string[], mounts: Readonly<Record<string, ViewMount>>,
+ *   paths: readonly ViewPathMount[], healthPath: string,
+ *   answerOwnRoutes: (next: (req: import('node:http').IncomingMessage) => Promise<{status: number, body: string}>)
+ *     => (req: import('node:http').IncomingMessage) => Promise<{status: number, body: string}> }}
  */
 export function createViewRegistry({ db, clock = Date.now, today }) {
   if (!db) throw new TypeError('The view registry needs an open archive');
@@ -194,6 +275,38 @@ export function createViewRegistry({ db, clock = Date.now, today }) {
     [ROUTE_DETAIL]: (ctx) => mount(ROUTE_DETAIL, ctx),
   };
 
+  /**
+   * Answer the paths in {@link VIEW_PATH_TABLE} and hand every other request to `next`.
+   *
+   * The router keeps ownership of the three routes it dispatches and of every status
+   * it returns: this wrapper only recognises a path the registry itself mounted, and
+   * anything it does not recognise - including a URL it cannot parse, which the router
+   * answers with its own 400 - goes straight through. A trailing slash is folded the
+   * same way the router folds it, so `/health/` and `/health` are one page.
+   *
+   * @param {(req: import('node:http').IncomingMessage) => Promise<{status: number, body: string}>} next
+   *   The router's handler, or anything with that shape.
+   * @returns {(req: import('node:http').IncomingMessage) => Promise<{status: number, body: string}>}
+   *   A handler the server factory can mount in place of `next` alone.
+   */
+  const answerOwnRoutes = (next) => async (req) => {
+    const rawUrl = typeof req.url === 'string' ? req.url : '/';
+    /** @type {URL} */
+    let url;
+    try {
+      url = new URL(rawUrl, 'http://127.0.0.1');
+    } catch {
+      return next(req);
+    }
+    const path = url.pathname.length > 1 && url.pathname.endsWith('/')
+      ? url.pathname.slice(0, -1)
+      : url.pathname;
+    const entry = VIEW_PATH_TABLE.find((candidate) => candidate.path === path);
+    if (entry === undefined) return next(req);
+    const data = entry.read({ db, clock });
+    return { status: 200, body: entry.render(ownPageContext(entry.route), data) };
+  };
+
   return {
     views,
     // The router asks the archive, not a view, whether an identity is enrolled: a
@@ -201,5 +314,8 @@ export function createViewRegistry({ db, clock = Date.now, today }) {
     hasRepository: (owner, name) => findRepository(db, owner, name) !== null,
     routes: VIEW_ROUTES,
     mounts: VIEW_MOUNT_TABLE,
+    paths: VIEW_PATH_TABLE,
+    healthPath: HEALTH_PAGE_PATH,
+    answerOwnRoutes,
   };
 }
