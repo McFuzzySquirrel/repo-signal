@@ -10,6 +10,7 @@ import { collect } from './collect.js';
 import { configCheck, configInit } from './config.js';
 import { dbBackup, dbMigrate, dbRestore, dbStatus, dbVerify } from './db.js';
 import { discover } from './discover.js';
+import { serve } from './serve.js';
 
 export const EXIT_SUCCESS = 0;
 export const EXIT_OPERATIONAL_FAILURE = 1;
@@ -211,4 +212,9 @@ registerCommand('db restore', {
   summary: 'Load a backup over the archive, re-verify it and print per-table counts.',
   usage: '<path>',
   run: dbRestore,
+});
+registerCommand('serve', {
+  summary: 'Start the read-only dashboard on 127.0.0.1 and print the URL it is listening on.',
+  usage: '[--port 0]',
+  run: serve,
 });

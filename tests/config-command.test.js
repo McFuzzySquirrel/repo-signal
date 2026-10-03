@@ -207,8 +207,11 @@ test('help and unknown config subcommands list only the scoped commands without 
   assert.match(help.stdout, /config check/);
   assert.match(help.stdout, /discover \[--json\]/);
   // The listing names the commands this build registers and no others, so a
-  // command that is not registered yet is never advertised.
-  assert.doesNotMatch(help.stdout, /\b(?:serve|backfill)\b/);
+  // command that is not registered yet is never advertised. `serve` is registered
+  // now, so the only name left to keep out of the listing is the one this build
+  // still does not have.
+  assert.match(help.stdout, /^ {2}serve \[--port 0\]/m, 'the registered dashboard command is listed');
+  assert.doesNotMatch(help.stdout, /\bbackfill\b/);
   const unknown = f.run(['config', 'unknown']);
   outcome(unknown, 2);
   assert.match(unknown.stderr, /Usage:/);
