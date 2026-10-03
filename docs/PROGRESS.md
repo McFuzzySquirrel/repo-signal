@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: OPERATIONS-AND-OPEN-SOURCE-POSTURE-2
-**Status**: Paused
+**Phase**: CHART-AND-INSIGHT-RENDERING-1
+**Status**: In Progress
 **Validation Gaps**: 40 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-03T09:26:50.705Z
+**Last Updated**: 2026-10-03T11:41:44.751Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -68,6 +68,8 @@
   - Files: src/supervision/health.js, tests/supervision-health.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-00: Build a throwaway legibility spike with three shaped histories (@ui-engineer)
   - Files: spikes/dashboard-legibility.html, tests/legibility-spike.test.js
+- [x] Phase CHART-AND-INSIGHT-RENDERING-1, Task RS-VIZ-REV-01: Human review of the legibility spike and the chart order it decides
+  - Files: docs/reviews/dashboard-legibility-spike.json
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
   - Files: src/server/server.js, src/server/security.js, tests/server.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-02: Route the three pages and escape every dynamic value (@server-engineer)
@@ -89,7 +91,6 @@
 - None currently running
 
 ## Remaining
-- [ ] Phase CHART-AND-INSIGHT-RENDERING-1: Phase 1: Legibility spike and the decision it produces
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-2: Phase 2: Insight calculations
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-3: Phase 3: The chart
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-1: Phase 1: Composition root and the pages
