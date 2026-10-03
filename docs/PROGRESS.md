@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: CHART-AND-INSIGHT-RENDERING-2
 **Status**: In Progress
-**Validation Gaps**: 41 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-03T12:28:34.553Z
+**Validation Gaps**: 42 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-03T12:42:09.903Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -74,6 +74,8 @@
   - Files: src/insight/deltas.js, tests/insight-deltas.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-2, Task RS-VIZ-02: Compute the stars-versus-clones divergence without a verdict (@insight-engineer)
   - Files: src/insight/divergence.js, tests/insight-divergence.test.js
+- [x] Phase CHART-AND-INSIGHT-RENDERING-2, Task RS-VIZ-03: Produce a flat dated list of what changed (@insight-engineer)
+  - Files: src/insight/changes.js, tests/insight-changes.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
   - Files: src/server/server.js, src/server/security.js, tests/server.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-02: Route the three pages and escape every dynamic value (@server-engineer)
@@ -95,7 +97,6 @@
 - None currently running
 
 ## Remaining
-- [ ] Phase CHART-AND-INSIGHT-RENDERING-2: Phase 2: Insight calculations
 - [ ] Phase CHART-AND-INSIGHT-RENDERING-3: Phase 3: The chart
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-1: Phase 1: Composition root and the pages
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-2: Phase 2: Accessibility contract and end-to-end verification
@@ -132,6 +133,7 @@
 - Task RS-SUP-03: Nothing in docs/reviews/ was created or claimed, and no gap in existing data was hand-repaired.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 - Task RS-VIZ-02: Tests ran on the Node version installed on this host; the Node 24 line named in the PRD was not available
+- Task RS-VIZ-03: Tests were run on the Node version available on this host; the Node 24.12.0+ line named in package.json engines was not checked separately
 - Task RS-SRV-03: No live GitHub request was made and no real token was used; globalThis.fetch is refused for the whole test file and the module is asserted to contain no fetch call or HTTP import.
 - Task RS-SRV-03: No rendering and no CLI wiring was in scope and none was written, so the claim that the running server cannot disagree with this read is asserted at the module boundary (page data equals the owned reads' output) rather than through a spawned command.
 - Task RS-SRV-03: Nothing in docs/reviews/ was created or claimed, and no review gate was self-served.
