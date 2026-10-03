@@ -8,12 +8,14 @@ import { parseRateLimitHeaders, primaryBudgetDelay } from './rate-limit.js';
 /**
  * GitHub limited the public stargazer listing to admins and collaborators in July
  * 2026, so a 403 there is an access restriction rather than a token permission the
- * maintainer can grant. Announced 2026-06-30:
+ * maintainer can grant. The star backfill reads `/stargazers/history` instead,
+ * which that restriction does not cover, so this is the message for the case where
+ * even the history endpoint is refused. Announced 2026-06-30:
  * https://github.blog/changelog/2026-06-30-upcoming-access-restrictions-to-public-api-endpoints-and-ui-views/
  */
 export const STARGAZERS_RESTRICTED_ACTION =
-  'GitHub now limits the stargazer listing to admins and collaborators, so this token cannot read it; ' +
-  'collection continues without star history, and re-enrol the repository once access is restored';
+  'GitHub refused the star history for this token, so star history is unavailable; collection continues ' +
+  'without it, and re-enrol the repository once the token can read it';
 
 /** HTTP policy failure. Raw bodies, headers and causes are never retained. */
 export class GitHubRequestError extends Error {

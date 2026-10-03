@@ -16,6 +16,7 @@ import {
   assertNoCredentialMaterial, createCollectHome, outputLines as lines, plainRows as plain,
   rowCount as rows,
 } from './helpers/collect-home.js';
+import { starHistory } from './helpers/star-history.js';
 
 // The run journal and the stall rule, at three levels: the journal module against an
 // open archive with an injected clock, a whole run driven through `collectRun` over a
@@ -69,7 +70,7 @@ function dayWindow(lastDay, count) {
 const WINDOW = dayWindow('2026-10-02', WINDOW_DAYS);
 const REFERRERS = [{ referrer: 'example.org', count: 12, uniques: 7 }];
 const POPULAR_PATHS = [{ path: '/', title: 'RepoSignal', count: 30, uniques: 18 }];
-const STARGAZERS = [{ starred_at: '2026-09-01T10:00:00Z' }, { starred_at: '2026-09-20T09:00:00Z' }];
+const STARGAZERS = starHistory(2);
 const COMMIT_ACTIVITY = [{
   week: Date.parse('2026-09-21T00:00:00Z') / 1000, total: 4, days: [1, 2, 0, 1, 0, 0, 0],
 }];
@@ -108,7 +109,7 @@ function payloadFor(endpoint) {
   if (path.endsWith('/traffic/views')) return { count: 400, uniques: 90, views: day(30 + offset, 3 + offset) };
   if (path.endsWith('/traffic/popular/referrers')) return REFERRERS;
   if (path.endsWith('/traffic/popular/paths')) return POPULAR_PATHS;
-  if (path.endsWith('/stargazers')) return STARGAZERS;
+  if (path.endsWith('/stargazers/history')) return STARGAZERS;
   if (path.endsWith('/stats/commit_activity')) return COMMIT_ACTIVITY;
   if (path.endsWith('/stats/participation')) return PARTICIPATION;
   throw new Error(`this fixture has no payload scripted for ${endpoint}`);
@@ -147,7 +148,7 @@ function scriptStub(stub) {
     'GET /repos/:owner/:name/traffic/views',
     'GET /repos/:owner/:name/traffic/popular/referrers',
     'GET /repos/:owner/:name/traffic/popular/paths',
-    'GET /repos/:owner/:name/stargazers*',
+    'GET /repos/:owner/:name/stargazers/history*',
     'GET /repos/:owner/:name/stats/commit_activity',
     'GET /repos/:owner/:name/stats/participation',
   ]) {

@@ -147,12 +147,13 @@ RepoSignal needs exactly one credential, and it is used for reads only.
   traffic endpoints require it. It is scoped per repository, so the token cannot read anything else
   of yours. `Contents` is not required and is never requested; if a tool asks you for write access,
   the answer is no.
-- **Star history is the one thing no permission can unlock.** The first-connect backfill reads the
-  repository's stargazer listing, and in July 2026 GitHub limited that listing to admins and
-  collaborators, so a token that reads everything else can still be refused it. That costs the star
-  series and nothing else: the tool records the refusal, says so on every collection line
-  (`stars-history absent ...`) rather than leaving a gap to be read as a zero, and collects traffic as
-  normal. If GitHub ever restores access for your token, re-enrol the repository to try again.
+- **Star history comes from an endpoint no permission controls.** The first-connect backfill reads the
+  repository's weekly star history, not its stargazer listing: GitHub limited that listing to admins
+  and collaborators in July 2026, and a token that reads everything else can still be refused it. The
+  history endpoint was not included, so the backfill works with the same token as everything else -
+  and it needs no special scope. If GitHub ever refuses the history too, the tool records that, says
+  so on every collection line (`stars-history absent ...`) rather than leaving a gap to be read as a
+  zero, and collects traffic as normal.
 - **It lives in `credentials.json` in the home directory with mode `0600`, exactly.** The tool
   refuses to read the file at any other mode - `0644` and `0666` are both refused with the mode it
   observed named in the message - and it never repairs the mode for you.

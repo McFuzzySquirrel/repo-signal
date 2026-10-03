@@ -2,14 +2,26 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createHttpTransport } from '../src/github/http.js';
 import { createRetryPolicy, GitHubRequestError } from '../src/github/retry.js';
-import { createStarsClient, STARGAZER_ACCEPT } from '../src/github/stars-client.js';
+import {
+  createStarsClient, STAR_HISTORY_ENDPOINT_TYPE, STAR_HISTORY_PER_PAGE,
+} from '../src/github/stars-client.js';
 
-// Contract: https://docs.github.com/en/rest/activity/starring —
-// the star media type adds `starred_at`; pages end on the Link rel="next".
+// Contract: https://docs.github.com/en/rest/activity/starring#list-repository-star-history
+// The `/stargazers` listing is restricted to admins and collaborators from July 2026,
+// so this client reads `/stargazers/history`, which that restriction does not cover.
+// Pages end on the Link rel="next"; a week is { week, total, days[7] }.
 const token = `github_pat_${'FAKE_TEST_ONLY_'.repeat(4)}`;
 const repo = 'example/repo';
+const PAGE_ONE = `${'https://api.github.com/repos/example/repo/stargazers/history'}?per_page=${STAR_HISTORY_PER_PAGE}&page=1`;
 
-/** @param {Map<string, {status: number, payload: unknown, link?: string}>} pages */
+/** @param {number} daysAgo Midnight UTC, whole days ago. @returns {number} Unix seconds. */
+function weekStart(daysAgo) {
+  return Math.floor(Date.parse(`2026-10-04T00:00:00.000Z`) / 1000) - daysAgo * 86_400;
+}
+
+/**
+ * @param {Map<string, {status: number, payload: unknown, link?: string}>} pages
+ */
 function harness(pages) {
   /** @type {{url: string, init: RequestInit | undefined}[]} */
   const calls = [];
@@ -25,7 +37,7 @@ function harness(pages) {
     },
   });
   const policy = createRetryPolicy({ transport, clock: () => 0,
-    sleep: async () => { assert.fail('stargazer fixture must not sleep'); },
+    sleep: async () => { assert.fail('star history fixture must not sleep'); },
     random: () => 1,
   });
   return { client: createStarsClient({ policy }), calls };
@@ -34,124 +46,110 @@ function harness(pages) {
 /** @param {RequestInit | undefined} init @returns {Headers} */
 function headersOf(init) { return new Headers(init?.headers); }
 
-test('stargazers: the star-timestamp media type is sent on every page', async () => {
-  const h = harness(new Map([
-    [`https://api.github.com/repos/example/repo/stargazers?per_page=100&page=1`,
-      { status: 200, payload: [] }],
-  ]));
-  await h.client.stargazerStars(repo, async () => {});
-  assert.equal(headersOf(h.calls[0]?.init).get('Accept'), STARGAZER_ACCEPT);
-  assert.equal(headersOf(h.calls[0]?.init).get('Accept'), 'application/vnd.github.star+json');
+test('star history: the request is a GET with no body, at the page size the vendor caps', async () => {
+  const h = harness(new Map([[PAGE_ONE, { status: 200, payload: [] }]]));
+  await h.client.starHistory(repo, async () => {});
+  assert.match(String(h.calls[0]?.url), /\/repos\/example\/repo\/stargazers\/history\?per_page=30&page=1$/);
   assert.equal(h.calls[0]?.init?.method, 'GET');
   assert.equal(h.calls[0]?.init?.body, undefined);
 });
 
-test('stargazers: a 403 is the access restriction, attempted once and not a repository read', async () => {
-  // GitHub limits this listing to admins and collaborators from July 2026, so the
-  // failure must name that rather than the Administration permission a maintainer
-  // would otherwise be told to grant, and must not be retried.
-  const refused = new Map([
-    [`https://api.github.com/repos/example/repo/stargazers?per_page=100&page=1`, { status: 403, payload: {} }],
-  ]);
-  const h = harness(refused);
-  await assert.rejects(h.client.stargazerStars(repo, async () => {}), (error) => {
+/** @param {number} page @returns {string} The URL the vendor would advertise for `page`. */
+function pageUrl(page) {
+  return `https://api.github.com/repos/example/repo/stargazers/history?per_page=${STAR_HISTORY_PER_PAGE}&page=${page}`;
+}
+
+/** @param {number} page @returns {string} An RFC 8288 Link header advertising `page` as next. */
+function nextLink(page) {
+  return `<${pageUrl(page)}>; rel="next"`;
+}
+
+test('star history: three weeks pages are followed to the last and each handed to onPage', async () => {
+  const h = harness(new Map([
+    [PAGE_ONE, { status: 200, payload: [{ week: weekStart(0), total: 0, days: [0, 0, 0, 0, 0, 0, 0] }],
+      link: nextLink(2) }],
+    [pageUrl(2), { status: 200, payload: [{ week: weekStart(7), total: 1, days: [0, 0, 0, 0, 1, 0, 0] }],
+      link: nextLink(3) }],
+    [pageUrl(3), { status: 200, payload: [{ week: weekStart(14), total: 2, days: [0, 0, 0, 1, 1, 0, 0] }] }],
+  ]));
+  /** @type {Array<{page: number, count: number}>} */
+  const seen = [];
+  const summary = await h.client.starHistory(repo, (weeks, page) => { seen.push({ page, count: weeks.length }); });
+  assert.deepEqual(seen, [{ page: 1, count: 1 }, { page: 2, count: 1 }, { page: 3, count: 1 }]);
+  assert.deepEqual(summary, { pages: 3, weeks: 3, truncated: false });
+});
+
+test('star history: a single page with no Link header ends pagination', async () => {
+  const h = harness(new Map([[PAGE_ONE, { status: 200, payload: [] }]]));
+  const summary = await h.client.starHistory(repo, async () => {});
+  assert.deepEqual(summary, { pages: 1, weeks: 0, truncated: false });
+  assert.equal(h.calls.length, 1);
+});
+
+test('star history: a 403 is refused as a star-history restriction, attempted once', async () => {
+  const h = harness(new Map([[PAGE_ONE, { status: 403, payload: {} }]]));
+  await assert.rejects(h.client.starHistory(repo, async () => {}), (error) => {
     assert.ok(error instanceof GitHubRequestError);
     assert.equal(error.kind, 'permission-missing');
     assert.equal(error.status, 403);
-    assert.equal(error.endpointType, 'stargazers');
+    assert.equal(error.endpointType, STAR_HISTORY_ENDPOINT_TYPE);
     assert.equal(error.attempts, 1);
-    assert.match(error.action, /limits the stargazer listing to admins and collaborators/);
+    assert.match(error.action, /refused the star history for this token/);
     assert.equal(/grant the required token permissions/i.test(error.action), false);
     return true;
   });
   assert.equal(h.calls.length, 1, 'a refusal is not retried');
 });
 
-test('stargazers: three pages are followed to the last and each handed to onPage', async () => {
-  const pageOne = [{ user: { login: 'a' }, starred_at: '2026-09-01T00:00:00Z' }];
-  const pageTwo = [{ user: { login: 'b' }, starred_at: '2026-09-02T00:00:00Z' }];
-  const pageThree = [
-    { user: { login: 'c' }, starred_at: '2026-09-03T00:00:00Z' },
-    { user: { login: 'd' }, starred_at: '2026-09-04T00:00:00Z' },
+test('star history: a malformed payload is refused rather than reinterpreted', async () => {
+  /** @type {Array<[string, unknown]>} */
+  const cases = [
+    ['response must be valid JSON', 'not json'],
   ];
-  const h = harness(new Map([
-    [`https://api.github.com/repos/example/repo/stargazers?per_page=100&page=1`,
-      { status: 200, payload: pageOne,
-        link: '<https://api.github.com/repos/example/repo/stargazers?per_page=100&page=2>; rel="next", <https://api.github.com/repos/example/repo/stargazers?per_page=100&page=3>; rel="last"' }],
-    [`https://api.github.com/repos/example/repo/stargazers?per_page=100&page=2`,
-      { status: 200, payload: pageTwo,
-        link: '<https://api.github.com/repos/example/repo/stargazers?per_page=100&page=1>; rel="prev", <https://api.github.com/repos/example/repo/stargazers?per_page=100&page=3>; rel="next"' }],
-    [`https://api.github.com/repos/example/repo/stargazers?per_page=100&page=3`,
-      { status: 200, payload: pageThree,
-        link: '<https://api.github.com/repos/example/repo/stargazers?per_page=100&page=2>; rel="prev"' }],
-  ]));
-  /** @type {number[]} */ const pages = [];
-  /** @type {number[]} */ const sizes = [];
-  const summary = await h.client.stargazerStars(repo, (entries, page) => {
-    pages.push(page);
-    sizes.push(entries.length);
-  });
-  assert.deepEqual(pages, [1, 2, 3]);
-  assert.deepEqual(sizes, [1, 1, 2]);
-  assert.deepEqual(summary, { pages: 3, entries: 4 });
-  assert.deepEqual(h.calls.map((call) => new URL(call.url).searchParams.get('page')), ['1', '2', '3']);
-  for (const call of h.calls) {
-    assert.equal(headersOf(call.init).get('Accept'), 'application/vnd.github.star+json');
+  for (const [detail, payload] of cases) {
+    const h = harness(new Map([[PAGE_ONE, { status: 200, payload }]]));
+    await assert.rejects(
+      h.client.starHistory(repo, async () => {}),
+      new RegExp(`star history response contract|${detail}`),
+    );
   }
 });
 
-test('stargazers: an async onPage callback is awaited and order preserved', async () => {
-  const h = harness(new Map([
-    [`https://api.github.com/repos/example/repo/stargazers?per_page=100&page=1`,
-      { status: 200, payload: [{ starred_at: '2026-09-01T00:00:00Z' }],
-        link: '<https://api.github.com/repos/example/repo/stargazers?per_page=100&page=2>; rel="next"' }],
-    [`https://api.github.com/repos/example/repo/stargazers?per_page=100&page=2`,
-      { status: 200, payload: [{ starred_at: '2026-09-02T00:00:00Z' }] }],
-  ]));
-  /** @type {string[]} */ const seen = [];
-  await h.client.stargazerStars(repo, async (entries) => {
-    await new Promise((resolve) => setTimeout(resolve, 1));
-    seen.push(String(entries[0]?.starred_at));
+test('star history: a week that disagrees with its own days is refused, not reconciled', async () => {
+  // A total that does not match its days means the record is not what this client
+  // understands. Reconciling it would invent a distribution across the week.
+  const bad = [
+    { week: weekStart(7), total: 5, days: [0, 0, 0, 1, 1, 0, 0] },
+    { week: weekStart(7), total: 0, days: [0, 0, 0, 1, 1, 0, 0] },
+    { week: weekStart(7), total: 2, days: [0, 0, 0, 1] },
+    { week: weekStart(7), total: 2, days: [0, 0, 0, 1, 1, 0, -1] },
+    { week: 0, total: 0, days: [0, 0, 0, 0, 0, 0, 0] },
+  ];
+  for (const payload of bad) {
+    const h = harness(new Map([[PAGE_ONE, { status: 200, payload: [payload] }]]));
+    await assert.rejects(h.client.starHistory(repo, async () => {}), /star history response contract/);
+  }
+});
+
+test('star history: the page cap reports truncation instead of a complete history', async () => {
+  // GitHub will not page past 100. A series longer than that is cut short, and the
+  // reading says so rather than letting a partial history look whole.
+  let served = 0;
+  const calls = [];
+  const transport = createHttpTransport({
+    credentialProvider: { getToken: () => token },
+    fetch: async (url) => {
+      calls.push(String(url));
+      served += 1;
+      const headers = new Headers();
+      headers.set('link', `<${String(url).replace(/page=\d+/, `page=${served + 1}`)}>; rel="next"`);
+      return new Response(JSON.stringify([{ week: weekStart(7 * served), total: 0, days: [0, 0, 0, 0, 0, 0, 0] }]),
+        { status: 200, headers });
+    },
   });
-  assert.deepEqual(seen, ['2026-09-01T00:00:00Z', '2026-09-02T00:00:00Z']);
-});
-
-test('stargazers: a single page with no Link header ends pagination', async () => {
-  const h = harness(new Map([
-    [`https://api.github.com/repos/example/repo/stargazers?per_page=100&page=1`,
-      { status: 200, payload: [] }],
-  ]));
-  let invocations = 0;
-  const summary = await h.client.stargazerStars(repo, () => { invocations += 1; });
-  assert.equal(invocations, 1);
-  assert.deepEqual(summary, { pages: 1, entries: 0 });
-  assert.equal(h.calls.length, 1);
-});
-
-test('stargazers: entry records pass through untouched, unknown fields kept', async () => {
-  const entry = { user: { login: 'a', future: 1 }, starred_at: '2026-09-01T00:00:00Z', future_field: null };
-  const h = harness(new Map([
-    [`https://api.github.com/repos/example/repo/stargazers?per_page=100&page=1`,
-      { status: 200, payload: [entry] }],
-  ]));
-  /** @type {unknown} */ let seen;
-  await h.client.stargazerStars(repo, (entries) => { seen = entries[0]; });
-  assert.deepEqual(seen, entry);
-});
-
-test('stargazers: a malformed payload rejects without buffering', async () => {
-  const h = harness(new Map([
-    [`https://api.github.com/repos/example/repo/stargazers?per_page=100&page=1`,
-      { status: 200, payload: { not: 'an array' } }],
-  ]));
-  await assert.rejects(h.client.stargazerStars(repo, () => {}), /must be an array/);
-  assert.equal(h.calls.length, 1);
-});
-
-test('stargazers: non-function onPage and bad repo are refused before any request', async () => {
-  const h = harness(new Map());
-  // @ts-expect-error Runtime guard for callers not checked by TypeScript.
-  await assert.rejects(h.client.stargazerStars(repo, null), /onPage callback is required/);
-  await assert.rejects(h.client.stargazerStars('example', () => {}), /owner\/name pair/);
-  assert.equal(h.calls.length, 0);
+  const policy = createRetryPolicy({ transport, clock: () => 0, sleep: async () => {}, random: () => 1 });
+  const summary = await createStarsClient({ policy }).starHistory(repo, async () => {});
+  assert.equal(summary.truncated, true, 'a series past the cap is reported as truncated');
+  assert.equal(summary.pages, 100, 'the cap is the page count this client requested');
+  assert.equal(calls.length, 100, 'no page beyond the vendor cap is requested');
 });

@@ -9,6 +9,7 @@ import test from 'node:test';
 
 import { redact } from '../../src/credentials/redact.js';
 import { createStubGitHub } from '../helpers/stub-github-server.mjs';
+import { starHistory } from '../helpers/star-history.js';
 
 // The whole collection pipeline, driven through the real entry point
 // (`node src/cli.js collect`) over a temporary home and a real migrated archive,
@@ -43,11 +44,7 @@ const REFERRERS = [
 ];
 const POPULAR_PATHS = [{ path: '/', title: 'RepoSignal', count: 30, uniques: 18 }];
 const SNAPSHOT_ROWS_PER_RUN = REFERRERS.length + POPULAR_PATHS.length;
-const STARGAZERS = [
-  { starred_at: '2026-08-01T10:00:00Z' },
-  { starred_at: '2026-08-01T12:00:00Z' },
-  { starred_at: '2026-08-20T09:00:00Z' },
-];
+const STARGAZERS = starHistory(3);
 /** Week-start Unix seconds for two weeks, as the commit-activity endpoint stamps them. */
 const COMMIT_ACTIVITY = ['2026-09-14T00:00:00Z', '2026-09-21T00:00:00Z'].map((week, index) => ({
   week: Date.parse(week) / 1000, total: 4 + index, days: [1, 2, 0, 1, 0, 0, 0],
@@ -322,7 +319,7 @@ function scriptTraffic(stub, options) {
  *   participation?: import('../helpers/stub-github-server.mjs').StubReply }} [options]
  */
 function scriptBackfill(stub, options = {}) {
-  stub.route('GET /repos/:owner/:name/stargazers*', () => ({ json: STARGAZERS }));
+  stub.route('GET /repos/:owner/:name/stargazers/history*', () => ({ json: STARGAZERS }));
   stub.route('GET /repos/:owner/:name/stats/commit_activity', options.commitActivity ?? { json: COMMIT_ACTIVITY });
   stub.route('GET /repos/:owner/:name/stats/participation', options.participation ?? { json: PARTICIPATION });
 }

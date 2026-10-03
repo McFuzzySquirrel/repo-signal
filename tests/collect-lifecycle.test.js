@@ -17,6 +17,7 @@ import { resolveHomePaths } from '../src/paths.js';
 import {
   assertNoCredentialMaterial, createCollectHome, outputLines as lines, plainRows as plain, rowCount as rows,
 } from './helpers/collect-home.js';
+import { starHistory } from './helpers/star-history.js';
 
 // Lifecycle is exercised at two levels: the module itself against an open archive
 // with an injected repository client, and the whole command through
@@ -510,7 +511,7 @@ function scriptCollection(stub) {
   stub.route('GET /repos/:owner/:name/traffic/popular/paths', () => ({
     json: [{ path: '/', title: 'RepoSignal', count: 30, uniques: 18 }],
   }));
-  stub.route('GET /repos/:owner/:name/stargazers*', () => ({ json: [{ starred_at: '2026-09-01T10:00:00Z' }] }));
+  stub.route('GET /repos/:owner/:name/stargazers/history*', () => ({ json: starHistory(1) }));
   stub.route('GET /repos/:owner/:name/stats/commit_activity', () => ({ json: [] }));
   stub.route('GET /repos/:owner/:name/stats/participation', () => ({ json: { all: [1, 2], owner: [1, 1] } }));
 }

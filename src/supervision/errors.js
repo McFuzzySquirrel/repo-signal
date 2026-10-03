@@ -210,8 +210,8 @@ function describeKind(kind, endpointType, status) {
       }
       if (endpointType === 'stargazers') {
         return {
-          detail: 'GitHub limits the stargazer listing to admins and collaborators, so this token cannot '
-            + 'read it; the traffic endpoints this repository needs are unaffected',
+          detail: 'GitHub refused the star history for this token, so the star series is unavailable; the '
+            + 'traffic endpoints this repository needs are unaffected',
           action: STARGAZERS_RESTRICTED_ACTION,
         };
       }

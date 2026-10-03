@@ -122,8 +122,8 @@ owner/name failed permission-missing backfill skipped endpoint=/repos/owner/name
 
 **Read the endpoint before the permission.** A collection makes several requests per repository and a
 failure names the endpoint that answered it, so `endpoint=.../traffic/clones` is a traffic permission
-problem while `endpoint=.../stargazers` is not a permission problem at all. See
-[A stargazer listing GitHub will not serve](#a-stargazer-listing-github-will-not-serve).
+problem while `endpoint=.../stargazers/history` is not a permission problem at all. See
+[A star history GitHub will not serve](#a-star-history-github-will-not-serve).
 
 **Why it happens.** The traffic endpoints - clones, views, referrers and popular paths - require the
 `Administration repository permission (read)`, so a token without it is rejected on exactly those
@@ -149,7 +149,7 @@ produces.
 
 ---
 
-## A stargazer listing GitHub will not serve
+## A star history GitHub will not serve
 
 **No state word, because nothing failed.** The repository collects normally and its state word stays
 `healthy`; the star series is simply absent, and the collection line says so on every run rather than
@@ -160,25 +160,25 @@ is not a failure mode at all, which is why it is not counted among the
 **What you see.** The per-repository line ends with the reason:
 
 ```
-owner/name ok 14 days written 56 revised 0 unchanged 0 snapshots 3 backfill first-connect stars-history absent GitHub HTTP 403: GitHub now limits the stargazer listing to admins and collaborators, so this token cannot read it; collection continues without star history, and re-enrol the repository once access is restored
+owner/name ok 14 days written 56 revised 0 unchanged 0 snapshots 3 backfill first-connect stars-history absent GitHub HTTP 403: GitHub refused the star history for this token, so star history is unavailable; collection continues without it, and re-enrol the repository once the token can read it
 ```
 
 **Why it happens.** In July 2026 GitHub limited the public stargazer listing,
 `/repos/{owner}/{repo}/stargazers`, to admins and collaborators, because those lists were being used
-to collect users for spam. GitHub may answer with a `403` or with an empty list. This is a
-restriction on one endpoint, not a permission your token lacks: granting every permission this tool
-uses still leaves it refused.
+to collect users for spam. GitHub may answer with a `403` or with an empty list.
+
+This tool no longer reads that listing. The first-connect backfill reads
+`/repos/{owner}/{repo}/stargazers/history`, which the restriction did not cover and which answers an
+unauthenticated caller, so an ordinary token reads star history normally and no extra permission is
+needed. If you see this message at all, the *history* endpoint was refused too - which is not a
+permission your token lacks, and granting every permission this tool uses will not change it.
 
 **What to do.** Nothing, for the traffic data - it is already collected. The star series before the
-day GitHub restricted the listing cannot be reconstructed, and this tool does not invent it.
+refusal cannot be reconstructed, and this tool does not invent it.
 
-If you later gain access - GitHub lifts the restriction, or the token is one the listing admits - the
-refusal is recorded once and the listing is not asked again. Re-enrol the repository to clear that
-record and try the backfill again:
-
-```
-node src/cli.js config check
-```
+If you later get a token GitHub answers, the refusal is recorded once and the history is not asked
+again. Nothing in this build clears that record, so restoring star history means restoring an archive
+from before the refusal.
 
 ---
 

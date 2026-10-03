@@ -53,20 +53,27 @@ instant. The clock and the sleep function are injected, so no test spends real t
 
 ### Step 6: Paginate to the last page
 
-The stargazer list is requested with the star-timestamp media type and consumed page by page until
-the response advertises no next page, handing each page to a caller-supplied callback so a
-repository with thousands of stars is never buffered whole. A fixed page count is wrong: three
-pages in a test says nothing about a thirty-page repository.
-
-**This listing is restricted, and the restriction is not a permission.** In July 2026 GitHub limited
-`/repos/{owner}/{repo}/stargazers` (and `/subscribers`) to admins and collaborators, because the
-public lists were being used to harvest users for spam. Announced 2026-06-30:
+**The star backfill reads `/stargazers/history`, not the `/stargazers` listing.** In July 2026
+GitHub limited the listing to admins and collaborators, because the public lists were being used to
+harvest users for spam. Announced 2026-06-30:
 <https://github.blog/changelog/2026-06-30-upcoming-access-restrictions-to-public-api-endpoints-and-ui-views/>.
-A caller can also receive an empty response rather than a 403. So a 403 on this endpoint is an
-access restriction, and no token permission the maintainer can grant will change it. The endpoint is
-therefore its own `endpointType` (`stargazers`), never `repository`: classified as a repository read
-it produces "grant the required token permissions", which is advice that cannot work. Note that
-`/stargazers/history` and `/stargazers/count` are *not* in the restricted list.
+`/stargazers/history` and `/stargazers/count` were not in that list and answer an unauthenticated
+caller, so the restriction is verified rather than assumed whenever this client changes. The
+history endpoint is also the better source: it returns per-day counts without enumerating a single
+user, which is exactly the data the restriction exists to protect. It also means the star-timestamp
+media type is no longer needed - that existed only to make a *listing* reconstructable.
+
+It serves weeks newest first as `{ week, total, days[7] }`, where `total` is the stars created in
+that week, `days` counts them per day from Sunday, and the series walks backwards toward the
+repository's creation week. Pages are followed to the last on the advertised `rel="next"` Link, never
+a fixed page count, and the vendor caps the series at 100 pages - a series past that is reported as
+truncated rather than read as a whole history.
+
+Two contract details are verified rather than trusted. A week whose `total` disagrees with the sum of
+its own `days` is refused, not reconciled, because reconciling it would invent a distribution across
+the week. And "day boundaries are not guaranteed to align with UTC" is checked per week: a week that
+does not begin on a UTC midnight carries buckets this archive cannot name, so it is reported and
+skipped rather than shifted onto days that never held those stars.
 
 ### Step 7: Re-read the vendor page before assuming a detail
 
@@ -82,15 +89,22 @@ disagree, then the page wins and the fixture is updated in the same change.
   response are different results; store only the `200` payload, and record a `202` that never
   resolves as no statistics yet rather than as a failure.
 - **Stargazers without the star media type have no `starred_at`.** The media type in `Accept` is what
-  makes the full star history reconstructable, and the backfill cannot be built from a listing
-  without timestamps. A test asserts the header value, not merely that pagination worked.
+  made the full star history reconstructable from a listing. That listing is now restricted, and the
+  backfill reads `/stargazers/history` instead, so this gotcha is history: if the backfill ever goes
+  back to a listing, the media type in `Accept` is what carries the per-star timestamps, and a
+  backfill built from a listing without them cannot be built at all.
+- **A 403 on the star endpoints is not a permission.** The listing is restricted to admins and
+  collaborators, and no token permission the maintainer can grant changes that. The family is
+  therefore its own `endpointType` (`stargazers`): classified as a repository read it produces
+  "grant the required token permissions", which is advice that cannot work.
 - **A 403 on a traffic endpoint is a permission state, not a rate limit.** It names the
   `Administration` repository read permission for a fine-grained token, and it persists until the
   install accepts the permission upgrade. Retrying it, or re-reading the credential, wastes the run.
-- **A 403 on the stargazer listing is neither of those.** It is GitHub's admin-and-collaborator
-  restriction on that one endpoint. Granting every permission in the product still leaves it 403, so
-  the refusal is recorded against the repository, the star history is reported absent, and traffic
-  collection continues. An optional history step must never be able to cost the product its data.
+- **A 403 on a star endpoint is neither of those.** It is GitHub's admin-and-collaborator
+  restriction on the listing, which the backfill no longer reads. If even `/stargazers/history` is
+  refused, granting every permission in the product still leaves it 403, so the refusal is recorded
+  against the repository, the star history is reported absent, and traffic collection continues. An
+  optional history step must never be able to cost the product its data.
 - **The pinned version has a real fallback window.** `2022-11-28` remains supported until
   2028-03-10, so an unaccepted pin is recoverable by moving one constant - but only a live check
   proves acceptance, and the fallback must not be written as two active versions.
@@ -115,8 +129,10 @@ fixture's shape:
       traffic endpoint is surfaced without a retry.
 - [ ] `401`, `403` and `404` each produce a distinct error kind after exactly one attempt, and the
       `403` message names the `Administration` read permission.
-- [ ] A three-page stargazer listing is fully consumed, with the page numbers requested and the
+- [ ] A three-page star history is fully consumed, with the page numbers requested and the
       callback invocation count asserted.
+- [ ] A week whose `total` disagrees with its own `days` is refused, and a week that does not begin on
+      a UTC midnight is counted as unaligned rather than placed on a calendar day.
 - [ ] Every claim about a live endpoint is recorded in the human live-integration review rather than
       inferred from mocked test output.
 - [ ] `npm test -- <named test file>` selects a non-zero number of tests through

@@ -87,7 +87,10 @@ export const FAILURE_KINDS = Object.freeze([
 
 /**
  * @typedef {object} BackfillOutcome
- * @property {{pages: number, entries: number, rows: number}} stars Zero pages when the listing was refused.
+ * @property {{pages: number, weeks: number, rows: number, truncated: boolean, unalignedWeeks: number}} stars
+ *   Zero weeks when the history was refused. `truncated` means the vendor page cap
+ *   cut the series short, and `unalignedWeeks` counts weeks whose day buckets do not
+ *   start on a UTC midnight and were therefore not placed on a calendar day.
  * @property {{kind: string, weeks: number, rows: number, truncated: boolean, windowFrom: string|null, windowTo: string|null}} development
  * @property {string|null} starsRefusal Why the stargazer listing was unavailable this run, or null when
  *   it was read. A refusal here is not a completed backfill and is recorded on the repository row.
@@ -370,7 +373,7 @@ function isStargazersRefusal(error) {
  * @returns {Promise<BackfillOutcome>}
  */
 async function runFirstConnectBackfill({ db, repositoryId, repo, clients, collectedAt, secrets = [] }) {
-  /** @type {{pages: number, entries: number, rows: number}|null} */
+  /** @type {{pages: number, weeks: number, rows: number, truncated: boolean, unalignedWeeks: number}|null} */
   let stars = null;
   /** @type {string|null} */
   let starsRefusal = null;
@@ -386,8 +389,8 @@ async function runFirstConnectBackfill({ db, repositoryId, repo, clients, collec
     } catch (error) {
       if (!isStargazersRefusal(error)) throw error;
       // The policy's own sentence is the reason: it is the transport's redacted
-      // status and next step, already naming the stargazer restriction. The
-      // reporter remains the only place the classifier is called from.
+      // status and next step. The reporter remains the only place the classifier
+      // is called from.
       const reason = safeMessage(error, secrets);
       starsRefusal = reason;
       withTransaction(db, () => markBackfillRefused({ db, repositoryId, reason, collectedAt }));
@@ -395,7 +398,7 @@ async function runFirstConnectBackfill({ db, repositoryId, repo, clients, collec
   }
   const development = await backfillDevelopment({ db, repositoryId, repo, statsClient: clients.stats, collectedAt });
   return {
-    stars: stars ?? { pages: 0, entries: 0, rows: 0 },
+    stars: stars ?? { pages: 0, weeks: 0, rows: 0, truncated: false, unalignedWeeks: 0 },
     development: {
       kind: development.kind, weeks: development.weeks, rows: development.rows,
       truncated: development.truncated, windowFrom: development.windowFrom, windowTo: development.windowTo,

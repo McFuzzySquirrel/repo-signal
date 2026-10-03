@@ -17,6 +17,7 @@ import {
 } from '../src/supervision/health.js';
 import { createRunJournal } from '../src/supervision/journal.js';
 import { rowCount as rows } from './helpers/collect-home.js';
+import { starHistory } from './helpers/star-history.js';
 
 // The health read is exercised against real archives: every state below was recorded
 // by the collection run and the journal the product actually ships, never written as
@@ -104,7 +105,7 @@ function payloadFor(endpoint) {
   if (path.endsWith('/traffic/views')) return { count: 400, uniques: 90, views: day(30 + offset, 3 + offset) };
   if (path.endsWith('/traffic/popular/referrers')) return [];
   if (path.endsWith('/traffic/popular/paths')) return [];
-  if (path.endsWith('/stargazers')) return [{ starred_at: '2026-09-01T10:00:00Z' }];
+  if (path.endsWith('/stargazers/history')) return starHistory(2);
   if (path.endsWith('/stats/commit_activity')) {
     return [{ week: Date.parse('2026-09-21T00:00:00Z') / 1000, total: 4, days: [1, 2, 0, 1, 0, 0, 0] }];
   }

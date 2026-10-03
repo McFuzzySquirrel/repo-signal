@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   assertNoCredentialMaterial, createCollectHome, outputLines as lines, plainRows as plain, rowCount as rows,
 } from './helpers/collect-home.js';
+import { starHistory } from './helpers/star-history.js';
 
 // Every assertion here drives the real entry point, `node src/cli.js collect`,
 // against the local GitHub stub over a temporary home. No test reaches
@@ -38,11 +39,7 @@ const SNAPSHOT_ROWS = REFERRERS.length + POPULAR_PATHS.length;
 const TRAFFIC_ROWS = WINDOW_DAYS * 4;
 const BACKFILL_ROWS = 6;
 
-const STARGAZERS = [
-  { starred_at: '2026-09-01T10:00:00Z' },
-  { starred_at: '2026-09-01T12:00:00Z' },
-  { starred_at: '2026-09-20T09:00:00Z' },
-];
+const STAR_HISTORY = starHistory(3);
 const WEEK_STARTS = ['2026-09-14T00:00:00Z', '2026-09-21T00:00:00Z'].map((week) => Date.parse(week) / 1000);
 const COMMIT_ACTIVITY = WEEK_STARTS.map((week, index) => ({
   week, total: 4 + index, days: [1, 2, 0, 1, 0, 0, 0],
@@ -131,16 +128,16 @@ function scriptTraffic(stub, options = {}) {
 }
 
 /**
- * Script the first-connect backfill endpoints. `restricted` answers the stargazer
- * listing with the 403 GitHub now serves it to anyone who is not an admin or a
- * collaborator, which is the July 2026 access restriction rather than a permission.
+ * Script the first-connect backfill endpoints. `restricted` answers the star history
+ * with the 403 GitHub serves when it will not release even that endpoint, which is a
+ * restriction on the endpoint rather than a permission the maintainer can grant.
  * @param {import('./helpers/stub-github-server.mjs').StubGitHub} stub
  * @param {{ restricted?: boolean }} [options]
  */
 function scriptBackfill(stub, options = {}) {
-  stub.route('GET /repos/:owner/:name/stargazers*', () => (options.restricted
+  stub.route('GET /repos/:owner/:name/stargazers/history*', () => (options.restricted
     ? { status: 403, json: { message: 'Resource not accessible by personal access token' } }
-    : { json: STARGAZERS }));
+    : { json: STAR_HISTORY }));
   stub.route('GET /repos/:owner/:name/stats/commit_activity', () => ({ json: COMMIT_ACTIVITY }));
   stub.route('GET /repos/:owner/:name/stats/participation', () => ({ json: PARTICIPATION }));
 }
@@ -267,7 +264,7 @@ test('a stargazer listing GitHub refuses costs the star history, not the traffic
   assert.match(printed[0], /^owner\/alpha ok 14 days written 56 revised 0 unchanged 0 snapshots 3 backfill first-connect /,
     'the repository collected its traffic');
   // The absence is named, so a gap in the star series is never read as a zero.
-  assert.match(printed[0], /stars-history absent GitHub HTTP 403: GitHub now limits the stargazer listing/);
+  assert.match(printed[0], /stars-history absent GitHub HTTP 403: GitHub refused the star history/);
   // And it never tells the maintainer to grant a permission that is not the cause.
   assert.doesNotMatch(result.stdout, /grant the required token permissions/);
   const runId = printedRunId(result.stdout);
@@ -286,7 +283,7 @@ test('a stargazer listing GitHub refuses costs the star history, not the traffic
       /** @type {unknown} */ (db.prepare('SELECT backfill_refused_at AS at, backfill_refused_reason AS reason ' +
         'FROM repositories WHERE id=1').get()));
     assert.match(String(stored.at), /^\d{4}-\d{2}-\d{2}T/);
-    assert.match(String(stored.reason), /stargazer listing to admins and collaborators/);
+    assert.match(String(stored.reason), /refused the star history for this token/);
     // And the development backfill did complete, so provenance reports that one
     // kind and not a star backfill that never happened.
     const kinds = db.prepare('SELECT DISTINCT kind FROM backfill_records ORDER BY kind')
@@ -378,7 +375,7 @@ test('a repository with no backfill record is backfilled and collected in one ru
   assert.equal(result.status, 0, result.stderr);
   assert.match(lines(result.stdout)[0], /backfill first-connect$/);
   const paths = f.stub.paths();
-  assert.ok(paths.includes('/repos/owner/alpha/stargazers'), 'the star history was read');
+  assert.ok(paths.includes('/repos/owner/alpha/stargazers/history'), 'the star history was read');
   assert.ok(paths.includes('/repos/owner/alpha/stats/commit_activity'), 'weekly commit activity was read');
   assert.ok(paths.includes('/repos/owner/alpha/stats/participation'), 'owner participation was read');
 
