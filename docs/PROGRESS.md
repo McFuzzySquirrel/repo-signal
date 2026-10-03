@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: CHART-AND-INSIGHT-RENDERING-2
 **Status**: In Progress
-**Validation Gaps**: 40 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-03T11:58:00.961Z
+**Validation Gaps**: 41 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-03T12:28:34.553Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -72,6 +72,8 @@
   - Files: docs/reviews/dashboard-legibility-spike.json
 - [x] Phase CHART-AND-INSIGHT-RENDERING-2, Task RS-VIZ-01: Compute seven-day and week-over-week deltas honestly (@insight-engineer)
   - Files: src/insight/deltas.js, tests/insight-deltas.test.js
+- [x] Phase CHART-AND-INSIGHT-RENDERING-2, Task RS-VIZ-02: Compute the stars-versus-clones divergence without a verdict (@insight-engineer)
+  - Files: src/insight/divergence.js, tests/insight-divergence.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
   - Files: src/server/server.js, src/server/security.js, tests/server.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-02: Route the three pages and escape every dynamic value (@server-engineer)
@@ -129,6 +131,7 @@
 - Task RS-SUP-03: No rendering and no CLI wiring was in scope and none was written; the dashboard and the CLI consuming this read are later tasks, so the claim that the two surfaces cannot disagree is asserted at the module boundary (one repository read equals the whole read's entry) rather than through a spawned command.
 - Task RS-SUP-03: Nothing in docs/reviews/ was created or claimed, and no gap in existing data was hand-repaired.
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
+- Task RS-VIZ-02: Tests ran on the Node version installed on this host; the Node 24 line named in the PRD was not available
 - Task RS-SRV-03: No live GitHub request was made and no real token was used; globalThis.fetch is refused for the whole test file and the module is asserted to contain no fetch call or HTTP import.
 - Task RS-SRV-03: No rendering and no CLI wiring was in scope and none was written, so the claim that the running server cannot disagree with this read is asserted at the module boundary (page data equals the owned reads' output) rather than through a spawned command.
 - Task RS-SRV-03: Nothing in docs/reviews/ was created or claimed, and no review gate was self-served.
