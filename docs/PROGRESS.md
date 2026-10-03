@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: CHART-AND-INSIGHT-RENDERING-2
+**Phase**: CHART-AND-INSIGHT-RENDERING-3
 **Status**: In Progress
 **Validation Gaps**: 42 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-03T12:42:09.903Z
+**Last Updated**: 2026-10-03T13:02:40.631Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -76,6 +76,8 @@
   - Files: src/insight/divergence.js, tests/insight-divergence.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-2, Task RS-VIZ-03: Produce a flat dated list of what changed (@insight-engineer)
   - Files: src/insight/changes.js, tests/insight-changes.test.js
+- [x] Phase CHART-AND-INSIGHT-RENDERING-3, Task RS-VIZ-04: Render a metric series as SVG with gaps drawn as breaks (@ui-engineer)
+  - Files: src/views/components/line-chart.js, tests/line-chart.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
   - Files: src/server/server.js, src/server/security.js, tests/server.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-02: Route the three pages and escape every dynamic value (@server-engineer)
