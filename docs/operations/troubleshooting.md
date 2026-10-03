@@ -563,6 +563,8 @@ the one that owns it:
 | `node src/cli.js db backup <path>` | write a consistent copy of the archive |
 | `node src/cli.js db restore <path>` | load a copy over the archive, re-verify it, print its counts |
 | `node src/cli.js discover` | list repositories this token can reach, with pasteable configuration lines |
+| `node src/cli.js report` | print a written summary of what the archive holds, without contacting GitHub |
+| `node src/cli.js report --repo owner/name` | add one repository's coverage, gap days and change to that summary |
 
 Every command in this table exists in this repository today; `tests/troubleshooting-contract.test.js`
 resolves each one against the command registry and fails if this page names one that does not.

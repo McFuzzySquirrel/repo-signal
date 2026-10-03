@@ -101,7 +101,7 @@ from this page. Nothing in this repository compiles before it runs: `package.jso
 definitions) exist only so `npm run typecheck` can check the JSDoc types, and running the tool does
 not need them.
 
-The five steps to a working archive:
+The six steps to a working archive:
 
 ```
 node src/cli.js config init
@@ -109,6 +109,7 @@ node src/cli.js config check
 node src/cli.js discover
 node src/cli.js collect --dry-run
 node src/cli.js collect
+node src/cli.js report
 ```
 
 1. **`config init`** writes two `0600` templates into the home: `config.json` and
@@ -125,6 +126,11 @@ node src/cli.js collect
 5. **`collect`** does the collection: one request per repository for identity, four for the traffic
    endpoints, and a first-connect backfill the first time a repository is collected. It prints one
    line per repository and a `summary` line, and exits `0` when every repository succeeded.
+6. **`report`** prints a plain-text written summary of what the archive already holds: the most recent
+   run's state word and counts, one line per enrolled repository, and the roll-up. Add
+   `--repo owner/name` for one repository's recorded coverage per metric, its named gap days, and its
+   seven-day and week-over-week change. It contacts no host, reads no credential, and exits `0`
+   whenever it read the archive, so a scheduled run never fails because a repository needs attention.
 
 Editing the templates: `config.json` takes `enrolled` (the repositories you chose, as `owner/name`),
 an optional `denyList` that wins over enrollment, an optional `collectionHourUtc` recording the UTC

@@ -80,3 +80,24 @@ export function readDaySeries(db, range) {
     FROM day_series WHERE repository_id=? AND metric=? AND granularity=? AND day BETWEEN ? AND ?
     ORDER BY day`).all(range.repositoryId, range.metric, range.granularity, range.from, range.to)));
 }
+
+/**
+ * The earliest day this metric holds a stored value for, whatever range a caller is
+ * looking at, or null when it holds none at all.
+ *
+ * This exists so a reader can tell a boundary from a hole. A selected range that holds
+ * no row for a metric may mean the series began before the range, began after it, or
+ * was never collected; only this read distinguishes the first two, and conflating them
+ * is how a report starts calling an unstarted series a gap. It reads a stored row and
+ * derives no value: the day it returns is one the archive holds.
+ * @param {Database} db
+ * @param {{repositoryId: number, metric: string, granularity: 'day'|'week'}} key
+ * @returns {string|null} ISO `YYYY-MM-DD`, or null when the metric has no stored day.
+ */
+export function firstStoredDay(db, key) {
+  assertRepository(db, key.repositoryId);
+  const row = /** @type {{day?: unknown}|undefined} */ (/** @type {unknown} */ (db.prepare(
+    `SELECT day FROM day_series WHERE repository_id=? AND metric=? AND granularity=? ORDER BY day LIMIT 1`)
+    .get(key.repositoryId, key.metric, key.granularity)));
+  return typeof row?.day === 'string' && row.day !== '' ? row.day : null;
+}

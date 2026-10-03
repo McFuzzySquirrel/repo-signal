@@ -68,6 +68,10 @@ the three human gates a machine cannot pass.
 ```
 
 ```forge-requirement
+{"id":"RS-OPS-FR-05","kind":"requirement","text":"Provide a `report` command that prints a plain-text written summary of what the archive holds, for a maintainer who wants a periodic digest: the most recent run's own state word and counts, one line per enrolled repository with its state word and last successful collection, the per-state roll-up, and for one named repository its recorded coverage per metric with named gap days, its seven-day and week-over-week change, and any recorded backfill refusal. The report derives nothing: every number and every state word it prints is read through the existing health, page-data and insight reads, so it cannot invent a figure the archive does not hold. A day before the first collected day is a boundary and a day inside the covered range is a gap, and the report never names one as the other; a metric with no stored row reports no stored days rather than a zero. It makes no request, reads no credential, prints no token, exits 0 whenever it read the archive successfully whatever the states it reports, and is a written summary rather than an export, publish or share action."}
+```
+
+```forge-requirement
 {"id":"RS-OPS-CON-01","kind":"constraint","text":"No operation, script or document in this feature may create an outbound request other than to api.github.com, and no document may state a test result, an approval or a compliance claim that has not actually been observed."}
 ```
 
@@ -81,6 +85,7 @@ the three human gates a machine cannot pass.
 | RS-OPS-FR-02 | requirement | Must |
 | RS-OPS-FR-03 | requirement | Must |
 | RS-OPS-FR-04 | requirement | Must |
+| RS-OPS-FR-05 | requirement | Must |
 | RS-OPS-CON-01 | constraint | Must |
 
 ---
@@ -101,6 +106,7 @@ state word the dashboard shows, so a symptom and a cause can be matched without 
 | RS-OPS-02 | Scheduling and troubleshooting runbooks exist and are executable | platform-engineer | RS-SUP-02, RS-FND-06 | docs/operations/scheduled-collection.md, docs/operations/troubleshooting.md | schedule entries verified, failure modes matched to state words | Live verification |
 | RS-OPS-03 | README, licence and privacy note state the data's real owner | platform-engineer | RS-FND-01 | README.md, LICENSE, docs/operations/privacy.md, tests/release-contract.test.js | required statements asserted, licence present, no secret committed | CI, live verification |
 | RS-OPS-04 | CI runs the verification pipeline and a release checklist gates a tag | platform-engineer | RS-OPS-01, RS-OPS-03 | .github/workflows/ci.yml, docs/operations/release-checklist.md, tests/ci-contract.test.js | both Node lines, install, typecheck, test asserted from the workflow file | Human gates |
+| RS-OPS-05 | A periodic written summary prints what the archive already holds | platform-engineer | RS-SUP-03, RS-SRV-04, RS-VIZ-01, RS-VIZ-02, RS-VIZ-03 | src/report/format.js, src/commands/report.js, tests/report-command.test.js | boundary and gap told apart, no derived figure, exit 0, no request | Browser print, PDF, export actions |
 | RS-OPS-LIVE-01 | The real GitHub service is exercised with a real token | human reviewer | RS-ENR-02, RS-API-04, RS-BKL-03, RS-COL-04 | docs/reviews/github-live-integration.json | every endpoint, media type and permission checked live | Code changes |
 | RS-OPS-SOAK-01 | Seven consecutive unattended days leave no gap and no manual fix | human reviewer | RS-OPS-02, RS-COL-03, RS-SUP-03 | docs/reviews/collection-soak.json | per-day evidence recorded for seven days | Code changes |
 | RS-OPS-REV-01 | The open-source posture is signed off by a person | human reviewer | RS-OPS-03, RS-OPS-04 | docs/reviews/open-source-posture.json | licence, data statement, release gate confirmed | Code changes |
@@ -201,7 +207,44 @@ state word the dashboard shows, so a symptom and a cause can be matched without 
 }
 ```
 
-### Phase 3: Human gates
+### Phase 3: The written summary
+
+```forge-task
+{
+  "id": "RS-OPS-05",
+  "title": "Print a periodic written summary of what the archive holds",
+  "description": "Add src/report/format.js, which turns the recorded archive state into plain text, and src/commands/report.js, which registers `report` in src/commands/index.js so it is reachable from the composition root. The bare command prints the most recent run's own state word and counts, one line per enrolled repository with its state word, last successful collection and recorded failure streak, and the per-state roll-up. With --repo owner/name it also prints, for that repository, the recorded coverage per metric against the days the range covers, the named gap days inside that range, the days before the first collected day named as a boundary rather than as gaps, the seven-day and week-over-week change, and any recorded backfill refusal. Every value is read through the existing collection health read, the server page-data read and the existing insight modules: this command computes no figure and introduces no state word of its own, so a number it prints is a number the archive holds. It opens no socket, reads no credential and prints no token. It exits 0 whenever it read the archive successfully, whatever states it reports, so a scheduled run never fails because a repository is degraded; an unknown flag and an unenrolled --repo name are usage errors exiting 2.",
+  "ownerAgent": "platform-engineer",
+  "dependencies": ["RS-SUP-03", "RS-SRV-04", "RS-VIZ-01", "RS-VIZ-02", "RS-VIZ-03", "RS-FND-06"],
+  "expectedOutputs": ["src/report/format.js", "src/commands/report.js", "tests/report-command.test.js"],
+  "validationCommands": ["npm run typecheck", "npm test -- tests/report-command.test.js"],
+  "contract": {
+    "version": 2,
+    "kind": "implementation",
+    "requirements": [],
+    "requirementRefs": ["docs/features/operations-and-posture.md#RS-OPS-FR-05"],
+    "acceptanceCriteria": [
+      "The bare command prints the run block, one line per enrolled repository and the roll-up, and exits 0",
+      "A day inside the covered range with no stored row is named as a gap, and a day before the first collected day is named as a boundary; the two are never reported the same way",
+      "A metric with no stored row reports no stored days rather than a zero",
+      "An archive in which every repository is degraded, and a home with nothing enrolled, both exit 0 and report their own roll-up rather than an error",
+      "An unknown flag and a --repo naming a repository that is not enrolled each exit 2 with usage and name the enrolled set",
+      "No socket is opened and no credential is read, asserted with the transport disabled",
+      "The captured stdout contains no token-shaped value and names no credential path",
+      "The printed text contains no score, grade, threshold or verdict word"
+    ],
+    "constraints": [
+      "The report must not compute a figure, a state word or a verdict of its own; it reads them through the existing health, page-data and insight modules",
+      "The report must not open a socket, read the credential file, or perform an export, publish or share action",
+      "Do not add a browser print stylesheet, a PDF writer or any runtime dependency in this task"
+    ],
+    "constraintRefs": ["docs/features/operations-and-posture.md#RS-OPS-CON-01", "docs/PRD.md#RS-SP-08", "docs/PRD.md#RS-SC-01", "docs/PRD.md#RS-SC-02", "docs/PRD.md#RS-TC-04"],
+    "references": ["docs/PRD.md#8. Security and Privacy", "docs/features/dashboard-views.md#RS-UI-FR-01"]
+  }
+}
+```
+
+### Phase 4: Human gates
 
 ```forge-task
 {

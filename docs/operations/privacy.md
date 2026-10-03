@@ -27,6 +27,7 @@ this repository does not contain it yet.
 | What is stored about my repositories? | GitHub's counters, in one SQLite file in my home directory. |
 | Where is my token? | In `credentials.json` in that home, mode `0600`, read only, and never printed. |
 | Is the archive shared? | No. There is no export, publish or share action, and the archive may not be redistributed. See [README.md](../../README.md). |
+| Does `report` send anything? | No. It writes plain text to standard output and nothing else: no upload, no message, no hosted copy, and no file it creates. It is safe to read, and whether you paste it anywhere is your decision. |
 | Is the dashboard reachable from my network? | No. It binds to `127.0.0.1` only and refuses a request from any other address. |
 
 ---

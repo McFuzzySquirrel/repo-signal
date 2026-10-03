@@ -372,6 +372,20 @@ in `src/supervision/health.js` is the one place that decides what state a reposi
 `docs/operations/troubleshooting.md` names the word each failure mode carries there. Reading it does
 not need a schedule, a network connection or a token.
 
+**To read that state as a written summary, run `report`.** It prints the most recent run's state word
+and counts, one line per enrolled repository and the roll-up, and with `--repo owner/name` one
+repository's recorded coverage, its named gap days and its change:
+
+```
+node src/cli.js report
+node src/cli.js report --repo owner/name
+```
+
+It makes no request, reads no credential and creates no file, so it costs nothing to run and is safe
+to redirect into the same log as the collection. It exits `0` whenever it read the archive, whatever
+states it reports: a scheduled `report` is a reading, not an assertion, so it does not fail the run
+because a repository needs attention. Use it as a weekly digest rather than as a monitor.
+
 ---
 
 ## Commands named on this page
@@ -385,6 +399,8 @@ not need a schedule, a network connection or a token.
 | `node src/cli.js config check` | validate them without printing the token |
 | `node src/cli.js db status` | read the database path and the schema versions |
 | `node src/cli.js db verify` | run SQLite's integrity check over the archive |
+| `node src/cli.js report` | print a written summary of what the archive holds |
+| `node src/cli.js report --repo owner/name` | add one repository's coverage, gap days and change |
 
 Exit codes are the same everywhere: `0` succeeded, `1` failed operationally, `2` the command line
 was wrong. `node src/cli.js --help` prints the commands this build registers.

@@ -10,6 +10,7 @@ import { collect } from './collect.js';
 import { configCheck, configInit } from './config.js';
 import { dbBackup, dbMigrate, dbRestore, dbStatus, dbVerify } from './db.js';
 import { discover } from './discover.js';
+import { report } from './report.js';
 import { serve } from './serve.js';
 
 export const EXIT_SUCCESS = 0;
@@ -212,6 +213,11 @@ registerCommand('db restore', {
   summary: 'Load a backup over the archive, re-verify it and print per-table counts.',
   usage: '<path>',
   run: dbRestore,
+});
+registerCommand('report', {
+  summary: 'Print a written summary of what the archive holds, without contacting GitHub.',
+  usage: '[--repo owner/name] [--from YYYY-MM-DD] [--to YYYY-MM-DD]',
+  run: report,
 });
 registerCommand('serve', {
   summary: 'Start the read-only dashboard on 127.0.0.1 and print the URL it is listening on.',
