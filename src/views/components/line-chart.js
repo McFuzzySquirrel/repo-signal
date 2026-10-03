@@ -11,7 +11,7 @@
  * rule it is written around is that **a missing day is a break in the line and a
  * named day in the table.**
  *
- * Five decisions follow from that, and each of them is asserted by a test rather
+ * Six decisions follow from that, and each of them is asserted by a test rather
  * than trusted to review.
  *
  * 1. **One `polyline` per contiguous run of stored days.** Runs are produced by
@@ -50,19 +50,33 @@
  *    `currentColor`, so the stylesheet in `src/ui/theme.css` remains the only place
  *    a colour is declared and a contrast test can see it. Identical input
  *    therefore produces byte-identical markup.
+ * 6. **Provenance is annotation, never geometry.** The provenance read the caller
+ *    supplies decides how a stored day is *labelled*, and never where it is
+ *    plotted: a day recorded as backfilled, and a day that falls before the first
+ *    collected day, are drawn dashed, while a collected day is drawn solid. A run
+ *    splits where that treatment changes, because one `polyline` carries one
+ *    `stroke-dasharray` - so no day before the boundary can end up drawn in the
+ *    collected treatment, and the boundary marker is a vertical rule drawn at the
+ *    first collected day's own x coordinate. A repository the archive records as
+ *    never collected gets the first-connect caption and no marker at all: a marker
+ *    at the window start would claim a collection that never happened.
+ *
+ * The six are the reasons the two treatments differ by dash rather than by
+ * colour: RS-AX-01 requires that no meaning rides on colour alone, and a dash is
+ * also legible in a monochrome print and in a forced-colours mode.
  *
  * There is no script, no animation, no external asset and no charting dependency:
  * the only import is the shared escaping module, because a repository name may
  * contain markup and a chart label is a reader-facing string.
  *
- * **Seam for the provenance task (`RS-VIZ-05`).** `boundaryDay` is accepted and
- * drawn as a labelled tick on the bottom axis, because the bottom axis names the
- * first, last and boundary days. What is deliberately *not* here: the vertical
- * boundary marker, the dashed treatment for backfilled days, the two-entry legend
- * and the first-connect caption. Each of those is annotation rather than geometry,
- * each is asserted by that task's own tests, and a stored day's `source` is carried
- * on the model without changing how it is drawn - so a day is never drawn as if it
- * were collected on the strength of a guess.
+ * The provenance read itself is owned by `src/backfill/provenance.js` and reaches
+ * this module as data through the request, never as an import: the first collected
+ * day comes from the recorded boundary and never from the earliest stored row of any
+ * metric. Two contradictions between that read and the stored rows are refused by
+ * name rather than drawn - a day recorded `collected` before the boundary, and a day
+ * recorded `collected` for a repository the read reports as never collected - because
+ * the archive's own writers cannot produce either, so each is a caller reading the
+ * archive wrongly rather than a fact to render around.
  */
 
 import { escapeAttribute, escapeText } from '../../server/html.js';
@@ -97,6 +111,43 @@ export const GAP_CELL_TEXT = 'No stored value (gap)';
 export const DEFAULT_VALUE_LABEL = 'Stored value';
 
 /**
+ * The two sources the archive's own `day_series` check constraint allows. A third
+ * value is a caller's mistake rather than a source, and is refused by name instead
+ * of being drawn as though it were collected.
+ */
+export const SOURCE_BACKFILL = /** @type {const} */ ('backfill');
+export const SOURCE_COLLECTED = /** @type {const} */ ('collected');
+/**
+ * The dash pattern a backfilled day is drawn with. A dash rather than a colour is
+ * what keeps the two treatments distinguishable in monochrome, in forced-colours
+ * mode and to a reader who cannot separate two hues at all.
+ */
+export const BACKFILL_DASH_PATTERN = '6 4';
+/** What a backfilled day says in the table's provenance column. */
+export const BACKFILL_SOURCE_TEXT = 'Backfilled';
+/** What a collected day says in the table's provenance column. */
+export const COLLECTED_SOURCE_TEXT = 'Collected';
+/** What a day carrying no recorded source says. Never guessed into a source. */
+export const UNRECORDED_SOURCE_TEXT = 'Not recorded';
+/** What a gap row says in the provenance column: a day with no row has no source. */
+export const NO_SOURCE_TEXT = 'No stored day';
+/** Column heading of the provenance column, present only when provenance is known. */
+export const SOURCE_COLUMN_LABEL = 'Source';
+/** The two legend entries, in a fixed order, when the chart carries provenance. */
+export const LEGEND_ENTRIES = Object.freeze([
+  Object.freeze({
+    key: SOURCE_BACKFILL,
+    dashed: true,
+    text: `${BACKFILL_SOURCE_TEXT}: dashed, reconstructed on first connect`,
+  }),
+  Object.freeze({
+    key: SOURCE_COLLECTED,
+    dashed: false,
+    text: `${COLLECTED_SOURCE_TEXT}: solid, read on a collection day`,
+  }),
+]);
+
+/**
  * One stored day of one metric. A day the archive holds nothing for is absent from
  * this array entirely - never present with a zero standing in for it - which is
  * what lets this module tell a quiet day from an unmeasured one.
@@ -104,9 +155,10 @@ export const DEFAULT_VALUE_LABEL = 'Stored value';
  * @typedef {object} ChartObservation
  * @property {string} day UTC calendar day the value was observed on, ISO `YYYY-MM-DD`.
  * @property {number} value The stored value: a count, or a cumulative total.
- * @property {string} [source] `'backfill'` or `'collected'` when the archive
- *   recorded it. Carried on the model for the provenance annotation; it never
- *   changes a coordinate in this task.
+ * @property {'backfill'|'collected'} [source] The archive's own recorded source for
+ *   that day, exactly as `day_series` stores it. A backfilled day is drawn dashed and
+ *   a collected day solid; a day with no recorded source carries no provenance claim
+ *   in either direction.
  */
 
 /**
@@ -125,25 +177,44 @@ export const DEFAULT_VALUE_LABEL = 'Stored value';
 
 /**
  * One contiguous run of stored days: what a single `polyline` draws. A run never
- * contains a missing day, which is the whole point of it.
+ * contains a missing day, which is the whole point of it, and never mixes the two
+ * provenance treatments, because one `polyline` carries one `stroke-dasharray`.
  *
  * @typedef {object} ChartRun
  * @property {number} index 1-based position of the run in the range, oldest first.
  * @property {string} from First day of the run.
  * @property {string} to Last day of the run.
  * @property {number} days Calendar days the run covers.
+ * @property {boolean} dashed Whether the run is drawn with the backfill dash.
+ * @property {boolean} backfilled Whether every stored day of the run is recorded as backfill.
  * @property {ChartPoint[]} points
  */
 
 /**
  * One row of the paired data table: one calendar day, stored or not. `gap` is what
- * the row says in words, so nothing in the table can be read as a zero.
+ * the row says in words, so nothing in the table can be read as a zero, and
+ * `sourceText` is what the provenance column says in words, so the picture's dash
+ * treatment is never the only place a day's provenance exists.
  *
  * @typedef {object} ChartRow
  * @property {string} day
  * @property {number|null} value Stored value, or null for a day the archive holds none.
  * @property {boolean} gap
- * @property {string} text What the cell says.
+ * @property {string} text What the value cell says.
+ * @property {'backfill'|'collected'|null} source The day's recorded source, or null.
+ * @property {boolean} dashed Whether the day is drawn with the backfill dash.
+ * @property {string} sourceText What the provenance cell says.
+ */
+
+/**
+ * The recorded provenance of one repository, as far as this module reads it. The
+ * archive's own read (`readProvenance`) satisfies this shape structurally, which
+ * is how the boundary arrives here as data: this module never opens the archive,
+ * never imports a read and never derives a first collected day from a stored row.
+ *
+ * @typedef {object} ProvenanceRead
+ * @property {'connected'|'not-connected'} state `not-connected` until a collection is stamped.
+ * @property {string|null} firstCollectedDay The recorded boundary, null while not connected.
  */
 
 /**
@@ -168,7 +239,21 @@ export const DEFAULT_VALUE_LABEL = 'Stored value';
  *   nothing is stored, so no coordinate is ever a division by zero.
  * @property {number[]} valueTicks At most {@link MAX_VALUE_TICKS} values, ascending.
  * @property {ChartRow[]} rows One row per calendar day.
- * @property {string|null} boundaryDay Boundary day the caller supplied, or null.
+ * @property {'connected'|'not-connected'|null} provenanceState The recorded state, or
+ *   null when the caller supplied no provenance read at all.
+ * @property {string|null} boundaryDay The boundary in force, or null.
+ * @property {boolean} boundaryInWindow Whether that boundary falls inside the window.
+ * @property {number|null} boundaryX The boundary's own x coordinate, or null.
+ * @property {boolean} provenanceKnown Whether the chart carries provenance to explain,
+ *   which is what puts the legend and the table's provenance column in the output.
+ * @property {string[]} backfilledDays Stored days the archive recorded as backfilled.
+ * @property {string[]} collectedDays Stored days the archive recorded as collected.
+ * @property {string[]} unrecordedSourceDays Stored days carrying no recorded source.
+ * @property {string[]} preBoundaryStoredDays Stored days before the boundary.
+ * @property {typeof LEGEND_ENTRIES[number][]} legendEntries The two legend entries.
+ * @property {string} sourceColumnLabel Heading of the table's provenance column.
+ * @property {string[]} provenanceNotes The sentences stating where collected history
+ *   begins and what the window before it is.
  * @property {boolean} plottable Whether any stored day exists to plot.
  * @property {string} summary The sentences a reader gets in text.
  * @property {string} tableCaption The paired table's caption.
@@ -182,9 +267,12 @@ export const DEFAULT_VALUE_LABEL = 'Stored value';
  * @property {string[]} [calendarDays] The window the chart covers, oldest first,
  *   every day including the unmeasured ones. Omit it only when the stored days
  *   themselves are the window.
- * @property {string} [boundaryDay] First collected day, drawn as a labelled bottom
- *   tick. The marker, legend and caption that give it meaning belong to the
- *   provenance annotation.
+ * @property {ProvenanceRead} [provenance] The archive's recorded provenance for the
+ *   repository. Supplying it turns on the boundary marker, the first-connect caption
+ *   and the legend; a `not-connected` read states that no collection is recorded.
+ * @property {string} [boundaryDay] The first collected day, drawn as a labelled bottom
+ *   tick and as the vertical boundary marker. `provenance` is the read that owns this
+ *   value and the route a page should take; supply either, never two that disagree.
  * @property {string} [valueLabel] Column heading for the value column.
  * @property {string} [id] Element id prefix. Derived from the label when omitted.
  */
@@ -321,6 +409,12 @@ function readObservations(observations) {
     if (byDay.has(observation.day)) {
       throw new TypeError(`Two observations carry the day ${observation.day}; one day has one stored value`);
     }
+    if (observation.source !== undefined && observation.source !== SOURCE_BACKFILL
+      && observation.source !== SOURCE_COLLECTED) {
+      throw new TypeError(`Observation ${observation.day} carries source `
+        + `${JSON.stringify(observation.source)}; the archive records a day as either `
+        + `${SOURCE_BACKFILL} or ${SOURCE_COLLECTED}, and an unknown source is drawn as neither`);
+    }
     byDay.set(observation.day, observation);
   }
   return byDay;
@@ -364,6 +458,55 @@ function readCalendarDays(calendarDays, byDay) {
 }
 
 /**
+ * The provenance the chart annotates from, read off the request and validated
+ * before a single day is looked up.
+ *
+ * The archive's own read owns the boundary, so a record that contradicts itself is
+ * refused by name rather than drawn around: a repository reported `connected` with
+ * no first collected day has no boundary to place, and one reported `not-connected`
+ * while carrying a day would have a marker standing for a collection that no run
+ * recorded. A caller that also names a `boundaryDay` must name the same day, because
+ * two sources disagreeing about where collected history begins is a defect to
+ * report, not a rendering preference to resolve here.
+ *
+ * @param {LineChartRequest} request
+ * @returns {{state: 'connected'|'not-connected'|null, firstCollectedDay: string|null}}
+ */
+function readProvenanceInput(request) {
+  const record = request.provenance;
+  if (record === undefined) {
+    return { state: null, firstCollectedDay: request.boundaryDay ?? null };
+  }
+  if (record === null || typeof record !== 'object' || Array.isArray(record)) {
+    throw new TypeError('A provenance read is a record carrying a state and a first collected day');
+  }
+  if (record.state !== 'connected' && record.state !== 'not-connected') {
+    throw new TypeError('A provenance read reports state "connected" or "not-connected"; '
+      + 'nothing else names a collection boundary');
+  }
+  const firstCollectedDay = record.firstCollectedDay ?? null;
+  if (firstCollectedDay !== null) dayTime(firstCollectedDay, 'first collected day');
+  if (record.state === 'connected' && firstCollectedDay === null) {
+    throw new TypeError('A provenance read reporting connected carries the first collected day; '
+      + 'without one there is no boundary to draw and none is invented');
+  }
+  if (record.state === 'not-connected' && firstCollectedDay !== null) {
+    throw new TypeError(`A provenance read reporting not-connected carries no first collected day, `
+      + `so the boundary on ${firstCollectedDay} cannot be drawn`);
+  }
+  if (request.boundaryDay !== undefined && record.state === 'not-connected') {
+    throw new TypeError('A repository the archive records as never collected has no boundary day; '
+      + 'a marker on such a chart would claim a collection no run recorded');
+  }
+  if (request.boundaryDay !== undefined && firstCollectedDay !== null
+    && request.boundaryDay !== firstCollectedDay) {
+    throw new TypeError(`The supplied boundary day ${request.boundaryDay} and the provenance read's `
+      + `first collected day ${firstCollectedDay} disagree; the recorded read owns the boundary`);
+  }
+  return { state: record.state, firstCollectedDay };
+}
+
+/**
  * Horizontal position of a day in the window. A window of one day is centred rather
  * than divided by `dayCount - 1`, which is the only division by zero this chart
  * could have contained.
@@ -391,25 +534,63 @@ function yFor(value, domainTop) {
 }
 
 /**
+ * How one stored day is labelled, decided before any coordinate is computed. A day
+ * the archive recorded as backfilled is dashed; so is a day that falls before the
+ * recorded first collected day, whatever its own source says, because the boundary
+ * is where collected evidence begins and a day before it was never read by a
+ * collection run.
+ *
+ * Two contradictions are refused rather than drawn, because each would put a
+ * provenance claim on a day the recorded evidence does not support: a day recorded
+ * `collected` before the boundary, and a day recorded `collected` for a repository
+ * the read reports as never collected. The archive's own writers cannot produce
+ * either - the boundary is stamped in the same transaction as the traffic it
+ * describes - so each is a caller reading the archive wrongly.
+ *
+ * @param {string} day
+ * @param {ChartObservation} observation
+ * @param {{state: 'connected'|'not-connected'|null, firstCollectedDay: string|null}} provenance
+ * @returns {{source: 'backfill'|'collected'|null, backfilled: boolean, dashed: boolean}}
+ */
+function readDayProvenance(day, observation, provenance) {
+  const source = observation.source ?? null;
+  const boundaryDay = provenance.firstCollectedDay;
+  const backfilled = source === SOURCE_BACKFILL;
+  if (source === SOURCE_COLLECTED && provenance.state === 'not-connected') {
+    throw new TypeError(`Observation ${day} is recorded as ${SOURCE_COLLECTED} for a repository the `
+      + 'archive records as never collected; the boundary and the stored source cannot disagree');
+  }
+  if (source === SOURCE_COLLECTED && boundaryDay !== null && day < boundaryDay) {
+    throw new TypeError(`Observation ${day} is recorded as ${SOURCE_COLLECTED} but falls before the `
+      + `first collected day ${boundaryDay}; a day before the boundary was never collected`);
+  }
+  return { source, backfilled, dashed: backfilled || (boundaryDay !== null && day < boundaryDay) };
+}
+
+/**
  * Split the window's stored days into contiguous runs. A missing day closes the run
  * that was open, which is the mechanism that keeps a bridged segment out of the
- * output: the next stored day opens a new run instead of extending the old one.
+ * output: the next stored day opens a new run instead of extending the old one. A
+ * change of provenance treatment closes it too, because one `polyline` carries one
+ * `stroke-dasharray`: a run that mixed backfilled and collected days could not be
+ * drawn with the treatment its own days have, so the split is what makes the dashed
+ * days distinguishable rather than a single line wearing the wrong dash.
+ *
+ * Splitting further can never bridge a hole - it can only break a line that was
+ * already continuous - so the rule that a missing day is a break still holds.
  * @param {string[]} calendarDays
  * @param {Map<string, ChartObservation>} byDay
  * @param {number} domainTop
+ * @param {Map<string, {source: 'backfill'|'collected'|null, backfilled: boolean, dashed: boolean}>} provenanceByDay
  * @returns {ChartRun[]}
  */
-function splitRuns(calendarDays, byDay, domainTop) {
-  /** @type {ChartRun[]} */
-  const runs = [];
-  /** @type {ChartRun|null} */
-  let open = null;
+function splitRuns(calendarDays, byDay, domainTop, provenanceByDay) {
+  /** @type {{point: ChartPoint, dashed: boolean, backfilled: boolean}[]} */
+  const stored = [];
   calendarDays.forEach((day, dayIndex) => {
     const observation = byDay.get(day);
-    if (observation === undefined) {
-      open = null;
-      return;
-    }
+    if (observation === undefined) return;
+    const record = provenanceByDay.get(day);
     /** @type {ChartPoint} */
     const point = {
       day,
@@ -419,15 +600,37 @@ function splitRuns(calendarDays, byDay, domainTop) {
       dayIndex,
       source: observation.source,
     };
-    if (open === null) {
-      open = { index: runs.length + 1, from: day, to: day, days: 1, points: [point] };
-      runs.push(open);
-      return;
-    }
-    open.to = day;
-    open.days += 1;
-    open.points.push(point);
+    stored.push({ point, dashed: record?.dashed ?? false, backfilled: record?.backfilled ?? false });
   });
+
+  /** @type {ChartRun[]} */
+  const runs = [];
+  /** @type {ChartRun|null} */
+  let open = null;
+  for (const entry of stored) {
+    const openRun = open;
+    const previous = openRun === null ? undefined : openRun.points[openRun.points.length - 1];
+    const continues = previous !== undefined
+      && entry.point.dayIndex === previous.dayIndex + 1
+      && entry.dashed === openRun?.dashed;
+    if (!continues || openRun === null) {
+      open = {
+        index: runs.length + 1,
+        from: entry.point.day,
+        to: entry.point.day,
+        days: 1,
+        dashed: entry.dashed,
+        backfilled: entry.backfilled,
+        points: [entry.point],
+      };
+      runs.push(open);
+      continue;
+    }
+    openRun.to = entry.point.day;
+    openRun.days += 1;
+    openRun.backfilled = openRun.backfilled && entry.backfilled;
+    openRun.points.push(entry.point);
+  }
   return runs;
 }
 
@@ -504,7 +707,88 @@ function describe(model) {
   if (model.boundaryDay !== null && withinWindow(model, model.boundaryDay)) {
     sentences.push(`First collected day: ${model.boundaryDay}.`);
   }
+  sentences.push(...model.provenanceNotes);
   return sentences.join(' ');
+}
+
+/**
+ * The provenance sentences: where collected history begins, what the window before
+ * that boundary is, and which stored days the archive recorded as backfilled.
+ *
+ * They are stated only when the caller supplied the archive's recorded read. Without
+ * it this module knows no boundary and claims none, because a caption asserting that
+ * a window is "since connection rather than history" is a statement about a
+ * collection that only the read can support.
+ *
+ * Every sentence here is a number, a difference or a statement that something was
+ * not measured. None of them scores the repository, ranks it, sets a threshold or
+ * claims a direction, and none of them says a day before the boundary was measured:
+ * the window before it is described as evidence reconstructed on connect, which is
+ * what it is.
+ * @param {LineChartModel} model
+ * @returns {string[]}
+ */
+function provenanceNotes(model) {
+  if (model.provenanceState === null) return [];
+  const { boundaryDay, storedDays, preBoundaryStoredDays, missingDays } = model;
+  /** @type {string[]} */
+  const notes = [];
+
+  if (boundaryDay === null) {
+    notes.push(
+      'No collection has been recorded for this repository, so there is no first collected day to mark.',
+      'Every stored day here was reconstructed on first connect, so this window is the span since '
+      + 'connection rather than the repository\'s history.',
+    );
+  } else if (model.boundaryInWindow) {
+    notes.push(
+      `The vertical marker sits on ${boundaryDay}, and no stored day before it is drawn as a collected reading.`,
+    );
+    if (preBoundaryStoredDays.length > 0) {
+      const count = preBoundaryStoredDays.length;
+      const span = `${preBoundaryStoredDays[0]} to ${preBoundaryStoredDays[preBoundaryStoredDays.length - 1]}`;
+      const since = `reconstructed on first connect, so the window before ${boundaryDay} is the span `
+        + 'since connection rather than the repository\'s history.';
+      // The backfilled wording is used only when the archive recorded every stored day
+      // before the boundary as a backfill, which is what a first-connect backfill
+      // writes. A day with no recorded source is named as unmeasured rather than
+      // called backfilled: this module does not put a provenance claim in the archive's
+      // mouth, and the table's own column says which days carried a source.
+      notes.push(preBoundaryStoredDays.every((day) => model.backfilledDays.includes(day))
+        ? `The ${count} stored ${countWord(count, 'day', 'days')} from ${span} before ${boundaryDay} `
+          + `${countWord(count, 'is', 'are')} backfilled: ${since}`
+        : `The ${count} stored ${countWord(count, 'day', 'days')} from ${span} ${countWord(count, 'falls', 'fall')} `
+          + `before ${boundaryDay}, the first collected day: ${since}`);
+    } else {
+      notes.push(`No stored day in this window falls before ${boundaryDay}.`);
+    }
+  } else if (boundaryDay > model.rangeTo) {
+    notes.push(
+      `Collected history begins on ${boundaryDay}, after this window of ${model.rangeFrom} to `
+      + `${model.rangeTo}: what this window shows is the span since connection rather than the `
+      + 'repository\'s history.',
+    );
+  } else {
+    notes.push(`Collected history began on ${boundaryDay}, before this window of ${model.rangeFrom} to ${model.rangeTo}.`);
+  }
+
+  // The counts stand in for "which days were backfilled and which were collected" in
+  // the sentences. They are stated only when every stored day carries a recorded
+  // source: counting a day the archive never labelled as either would be inventing a
+  // provenance claim, and the table's own column says "not recorded" for it instead.
+  if (storedDays.length > 0 && model.unrecordedSourceDays.length === 0) {
+    const backfilled = model.backfilledDays.length;
+    const collected = model.collectedDays.length;
+    notes.push(
+      `${backfilled} stored ${countWord(backfilled, 'day', 'days')} ${countWord(backfilled, 'is', 'are')} `
+      + `backfilled and ${collected} ${countWord(collected, 'is', 'are')} collected.`,
+    );
+  }
+
+  if (missingDays.length > 0) {
+    notes.push('A day with no stored value was never measured, and an unmeasured day is not a small number.');
+  }
+  return notes;
 }
 
 /**
@@ -592,36 +876,85 @@ export function buildLineChart(request) {
   const checked = validateRequest(request);
   const byDay = readObservations(checked.observations);
   const calendarDays = readCalendarDays(checked.calendarDays, byDay);
+  const provenance = readProvenanceInput(checked);
+  const boundaryDay = provenance.firstCollectedDay;
 
   /** @type {string[]} */
   const storedDays = [];
   /** @type {string[]} */
   const missingDays = [];
+  /** @type {string[]} */
+  const backfilledDays = [];
+  /** @type {string[]} */
+  const collectedDays = [];
+  /** @type {string[]} */
+  const unrecordedSourceDays = [];
+  /** @type {string[]} */
+  const preBoundaryStoredDays = [];
+  /** @type {Map<string, {source: 'backfill'|'collected'|null, backfilled: boolean, dashed: boolean}>} */
+  const provenanceByDay = new Map();
   let maxValue = 0;
   for (const day of calendarDays) {
     const observation = byDay.get(day);
-    if (observation === undefined) missingDays.push(day);
-    else {
-      storedDays.push(day);
-      if (observation.value > maxValue) maxValue = observation.value;
+    if (observation === undefined) {
+      missingDays.push(day);
+      continue;
     }
+    const record = readDayProvenance(day, observation, provenance);
+    provenanceByDay.set(day, record);
+    storedDays.push(day);
+    if (record.backfilled) backfilledDays.push(day);
+    else if (record.source === SOURCE_COLLECTED) collectedDays.push(day);
+    else unrecordedSourceDays.push(day);
+    if (boundaryDay !== null && day < boundaryDay) preBoundaryStoredDays.push(day);
+    if (observation.value > maxValue) maxValue = observation.value;
   }
 
   // A series of zeros still needs a domain to divide by, so the domain is one
   // rather than the zero that would make every coordinate `NaN`.
   const valueDomainTop = maxValue > 0 ? maxValue : 1;
-  const runs = splitRuns(calendarDays, byDay, valueDomainTop);
+  const runs = splitRuns(calendarDays, byDay, valueDomainTop, provenanceByDay);
+
+  const boundaryIndex = boundaryDay === null ? -1 : calendarDays.indexOf(boundaryDay);
+  const boundaryInWindow = boundaryIndex >= 0;
 
   /** @type {ChartRow[]} */
   const rows = calendarDays.map((day) => {
     const observation = byDay.get(day);
-    if (observation === undefined) return { day, value: null, gap: true, text: GAP_CELL_TEXT };
-    return { day, value: observation.value, gap: false, text: formatValue(observation.value) };
+    if (observation === undefined) {
+      return {
+        day, value: null, gap: true, text: GAP_CELL_TEXT, source: null, dashed: false,
+        sourceText: NO_SOURCE_TEXT,
+      };
+    }
+    const record = provenanceByDay.get(day);
+    const source = record?.source ?? null;
+    /** @type {string} */
+    let sourceText = UNRECORDED_SOURCE_TEXT;
+    if (source === SOURCE_BACKFILL) sourceText = BACKFILL_SOURCE_TEXT;
+    else if (source === SOURCE_COLLECTED) sourceText = COLLECTED_SOURCE_TEXT;
+    return {
+      day,
+      value: observation.value,
+      gap: false,
+      text: formatValue(observation.value),
+      source,
+      dashed: record?.dashed ?? false,
+      sourceText,
+    };
   });
 
   /** @type {ChartPoint[]} */
   const storedPoints = [];
   for (const run of runs) storedPoints.push(...run.points);
+
+  // The chart carries provenance when the caller supplied the archive's recorded
+  // read, when it named a boundary directly, or when the stored days themselves say
+  // which were backfilled. Only then is there something for the legend and the
+  // table's provenance column to describe.
+  const provenanceKnown = provenance.state !== null
+    || boundaryDay !== null
+    || [...byDay.values()].some((observation) => observation.source !== undefined);
 
   /** @type {LineChartModel} */
   const model = {
@@ -640,16 +973,34 @@ export function buildLineChart(request) {
     valueDomainTop,
     valueTicks: valueTicks(maxValue),
     rows,
-    boundaryDay: checked.boundaryDay ?? null,
+    provenanceState: provenance.state,
+    boundaryDay,
+    boundaryInWindow,
+    boundaryX: boundaryInWindow ? xFor(boundaryIndex, calendarDays.length) : null,
+    provenanceKnown,
+    backfilledDays,
+    collectedDays,
+    unrecordedSourceDays,
+    preBoundaryStoredDays,
+    legendEntries: [...LEGEND_ENTRIES],
+    sourceColumnLabel: SOURCE_COLUMN_LABEL,
+    provenanceNotes: [],
     plottable: storedDays.length > 0,
     summary: '',
     tableCaption: '',
   };
+  model.provenanceNotes = provenanceNotes(model);
   model.summary = describe(model);
   model.tableCaption = `${model.label}: stored values by day, ${model.rangeFrom} to ${model.rangeTo}. `
     + `${model.storedDays.length} of ${model.calendarDayCount} ${countWord(model.calendarDayCount, 'day', 'days')} `
     + `${countWord(model.storedDays.length, 'carries', 'carry')} a stored value; every other row is a gap `
     + 'and holds no stored value, not zero.';
+  // The provenance sentences ride in the caption too, because the caption is what a
+  // screen reader reaches through the chart's `aria-describedby`: a legend that only
+  // exists as two dashes would leave the boundary claim in the picture alone.
+  if (model.provenanceNotes.length > 0) {
+    model.tableCaption = `${model.tableCaption} ${model.provenanceNotes.join(' ')}`;
+  }
   return model;
 }
 
@@ -697,9 +1048,31 @@ function renderValueAxis(model) {
 }
 
 /**
+ * The `data-dash` and `data-source` attributes naming how a run is labelled. They
+ * are emitted only when the chart carries provenance, so a chart with nothing to say
+ * about provenance produces the bytes it produced before this annotation existed.
+ * @param {ChartRun} run
+ * @returns {string}
+ */
+function runProvenanceAttributes(run) {
+  const dash = run.dashed ? ' data-dash="dashed"' : '';
+  const source = run.backfilled
+    ? ` data-source="${SOURCE_BACKFILL}"`
+    : run.dashed ? ' data-source="pre-boundary"' : '';
+  return `${dash}${source}`;
+}
+
+/**
  * The plotted series: one `polyline` per run of two or more stored days, and one
  * `circle` per run of exactly one. A run never spans a missing day, so no element
- * in this output bridges a hole.
+ * in this output bridges a hole, and a run never mixes the two treatments, so every
+ * dash on screen belongs to the days that carry it.
+ *
+ * The two treatments differ by dash and by fill rather than by colour: a backfilled
+ * run is dashed and a lone backfilled day is a hollow dashed marker, while a
+ * collected run is solid and a lone collected day is filled. A reader who cannot
+ * separate the two hues - or who sees none at all - still reads the difference, and
+ * the paired table names each day's source in words.
  * @param {LineChartModel} model
  * @returns {string}
  */
@@ -711,19 +1084,73 @@ function renderSeries(model) {
     parts.push(
       `<polyline class="chart-line" data-run="${run.index}" `
       + `data-from="${escapeAttribute(run.from)}" data-to="${escapeAttribute(run.to)}" `
-      + `data-days="${run.days}" data-points="${run.points.length}" points="${points}" `
-      + `fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />`,
+      + `data-days="${run.days}" data-points="${run.points.length}"${runProvenanceAttributes(run)} `
+      + `points="${points}" fill="none" stroke="currentColor" stroke-width="2" `
+      + `stroke-linejoin="round" stroke-linecap="round"`
+      + `${run.dashed ? ` stroke-dasharray="${BACKFILL_DASH_PATTERN}"` : ''} />`,
     );
   }
   for (const run of model.markerRuns) {
     const point = run.points[0];
     parts.push(
       `<circle class="chart-point" data-run="${run.index}" `
-      + `data-day="${escapeAttribute(run.from)}" cx="${point.x}" cy="${point.y}" r="3" `
-      + `fill="currentColor" />`,
+      + `data-day="${escapeAttribute(run.from)}"${runProvenanceAttributes(run)} `
+      + `cx="${point.x}" cy="${point.y}" r="3" `
+      + (run.dashed
+        ? `fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="${BACKFILL_DASH_PATTERN}"`
+        : 'fill="currentColor"')
+      + ' />',
     );
   }
   return parts.join('');
+}
+
+/**
+ * The provenance boundary: a vertical rule at the first collected day's own x
+ * coordinate, drawn after the series so it is visible over the line, and carrying
+ * the day in an attribute so a test can check the position against the archive's own
+ * coordinates rather than against a second copy of them.
+ *
+ * There is no marker at all for a repository the archive records as never collected,
+ * and none when the boundary falls outside the window: a rule at the window start
+ * would stand for a collection no run recorded. The figure's `desc`, its caption and
+ * its table caption all say in words which case this is, so the marker is never the
+ * only place the boundary exists.
+ * @param {LineChartModel} model
+ * @returns {string}
+ */
+function renderBoundary(model) {
+  if (model.boundaryX === null || model.boundaryDay === null) return '';
+  const x = model.boundaryX;
+  const baseY = PLOT_TOP + PLOT_HEIGHT;
+  return `<g class="chart-boundary" data-day="${escapeAttribute(model.boundaryDay)}">`
+    + `<line class="chart-boundary-line" x1="${x}" y1="${PLOT_TOP}" x2="${x}" y2="${baseY}" `
+    + `stroke="currentColor" stroke-width="2" /></g>`;
+}
+
+/**
+ * The two-entry legend, naming backfilled and collected beside a swatch of each
+ * treatment. It appears only when the chart carries provenance and has something to
+ * annotate - a legend beside a figure that was not drawn explains a picture nobody
+ * is looking at - and each entry names its own treatment in words as well as drawing
+ * it, so the distinction never rests on a dash or a hue alone. The swatches are
+ * `aria-hidden` because the text beside them already carries the same statement for
+ * a screen reader.
+ * @param {LineChartModel} model
+ * @returns {string}
+ */
+function renderLegend(model) {
+  if (!model.provenanceKnown || !model.plottable) return '';
+  const entries = model.legendEntries.map((entry) => (
+    `<li class="chart-legend-entry" data-source="${escapeAttribute(entry.key)}">`
+    + '<svg class="chart-legend-swatch" viewBox="0 0 36 12" width="36" height="12" '
+    + `aria-hidden="true" focusable="false">`
+    + `<line class="chart-legend-swatch-line" x1="2" y1="6" x2="34" y2="6" `
+    + `stroke="currentColor" stroke-width="2"`
+    + `${entry.dashed ? ` stroke-dasharray="${BACKFILL_DASH_PATTERN}"` : ''} /></svg>`
+    + `<span class="chart-legend-label">${escapeText(entry.text)}</span></li>`
+  ));
+  return `<ul class="chart-legend" id="${escapeAttribute(`${model.id}-legend`)}">${entries.join('')}</ul>`;
 }
 
 /**
@@ -749,6 +1176,7 @@ export function renderLineChartSvg(model) {
     + `<desc id="${escapeAttribute(descId)}">${escapeText(model.summary)}</desc>`
     + `<g class="chart-axis" aria-hidden="true">${renderValueAxis(model)}</g>`
     + `<g class="chart-series">${renderSeries(model)}</g>`
+    + renderBoundary(model)
     + '</svg>';
 }
 
@@ -756,6 +1184,12 @@ export function renderLineChartSvg(model) {
  * The paired data table: one row per calendar day, so a gap is a named day rather
  * than an omission a screen reader would read as a zero. Reachable from the chart
  * because the `svg` above points its `aria-describedby` at this caption.
+ *
+ * The provenance column is the text half of the dash treatment: every day says in
+ * words whether the archive recorded it as backfilled, as collected, or not at all,
+ * so a reader who never sees the picture is told which days are which. It appears
+ * only when the chart carries provenance to describe, keeping the table's shape
+ * unchanged for a chart that has none.
  * @param {LineChartModel} model
  * @returns {string}
  */
@@ -763,13 +1197,17 @@ export function renderLineChartTable(model) {
   const captionId = `${model.id}-table-caption`;
   const rows = model.rows.map((row) => {
     const className = row.gap ? 'chart-row chart-row-gap' : 'chart-row';
+    const source = model.provenanceKnown ? `<td>${escapeText(row.sourceText)}</td>` : '';
     return `<tr class="${className}"><th scope="row">${escapeText(row.day)}</th>`
-      + `<td>${escapeText(row.text)}</td></tr>`;
+      + `<td>${escapeText(row.text)}</td>${source}</tr>`;
   });
+  const heading = model.provenanceKnown
+    ? `<th scope="col">${escapeText(model.sourceColumnLabel)}</th>`
+    : '';
   return `<table class="chart-table" id="${escapeAttribute(`${model.id}-table`)}">`
     + `<caption id="${escapeAttribute(captionId)}">${escapeText(model.tableCaption)}</caption>`
     + '<thead><tr><th scope="col">Day</th>'
-    + `<th scope="col">${escapeText(model.valueLabel)}</th></tr></thead>`
+    + `<th scope="col">${escapeText(model.valueLabel)}</th>${heading}</tr></thead>`
     + `<tbody>${rows.join('')}</tbody></table>`;
 }
 
@@ -778,6 +1216,10 @@ export function renderLineChartTable(model) {
  *
  * The returned string is escaped HTML built by a pure function: no clock, no I/O,
  * no randomness, and identical input produces identical bytes.
+ *
+ * The order is chart, caption, legend, table: the caption states the numbers and the
+ * boundary in sentences, the legend names the two treatments beside their swatches,
+ * and the table carries every day - stored, backfilled, collected or a gap - as text.
  * @param {LineChartRequest} request
  * @returns {string}
  */
@@ -789,6 +1231,7 @@ export function renderLineChart(request) {
     + svg
     + `<figcaption class="chart-caption" id="${escapeAttribute(`${model.id}-caption`)}">`
     + `${escapeText(model.summary)}</figcaption>`
+    + renderLegend(model)
     + renderLineChartTable(model)
     + '</figure>';
 }

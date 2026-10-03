@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: CHART-AND-INSIGHT-RENDERING-3
 **Status**: In Progress
-**Validation Gaps**: 42 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-03T13:02:40.631Z
+**Validation Gaps**: 44 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-03T13:46:04.207Z
 **Run ID**: 68703c92-c4cf-4b9a-837e-c16d453b3deb
 **Harness**: opencode
 **Execution Mode**: auto
@@ -78,6 +78,8 @@
   - Files: src/insight/changes.js, tests/insight-changes.test.js
 - [x] Phase CHART-AND-INSIGHT-RENDERING-3, Task RS-VIZ-04: Render a metric series as SVG with gaps drawn as breaks (@ui-engineer)
   - Files: src/views/components/line-chart.js, tests/line-chart.test.js
+- [x] Phase CHART-AND-INSIGHT-RENDERING-3, Task RS-VIZ-05: Annotate the chart with the provenance boundary and legend (@ui-engineer)
+  - Files: src/views/components/line-chart.js, tests/provenance.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-01: Create the loopback server with strict response headers (@server-engineer)
   - Files: src/server/server.js, src/server/security.js, tests/server.test.js
 - [x] Phase LOCAL-DASHBOARD-SERVER-1, Task RS-SRV-02: Route the three pages and escape every dynamic value (@server-engineer)
@@ -99,7 +101,6 @@
 - None currently running
 
 ## Remaining
-- [ ] Phase CHART-AND-INSIGHT-RENDERING-3: Phase 3: The chart
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-1: Phase 1: Composition root and the pages
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-2: Phase 2: Accessibility contract and end-to-end verification
 - [ ] Phase DASHBOARD-VIEWS-AND-ACCESSIBILITY-3: Phase 3: Human journey and accessibility review
@@ -136,6 +137,8 @@
 - Task RS-VIZ-00: Tests were run on Node 22.22.2, the version on this host; the Node 24.21.0 line named in the PRD was not available
 - Task RS-VIZ-02: Tests ran on the Node version installed on this host; the Node 24 line named in the PRD was not available
 - Task RS-VIZ-03: Tests were run on the Node version available on this host; the Node 24.12.0+ line named in package.json engines was not checked separately
+- Task RS-VIZ-05: Tests ran on the Node 24.15.0 installed on this host; the 24.12.0+ floor in package.json engines was not separately checked
+- Task RS-VIZ-05: No styling work is included: the legend and boundary classes are emitted with no colour literal, and src/ui/theme.css plus the /assets/theme.css route remain RS-UI-04's to own
 - Task RS-SRV-03: No live GitHub request was made and no real token was used; globalThis.fetch is refused for the whole test file and the module is asserted to contain no fetch call or HTTP import.
 - Task RS-SRV-03: No rendering and no CLI wiring was in scope and none was written, so the claim that the running server cannot disagree with this read is asserted at the module boundary (page data equals the owned reads' output) rather than through a spawned command.
 - Task RS-SRV-03: Nothing in docs/reviews/ was created or claimed, and no review gate was self-served.
