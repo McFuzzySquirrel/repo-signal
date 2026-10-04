@@ -184,18 +184,29 @@ state word and the next command.
 
 ---
 
-## The two runtime commands
+## The registered commands
 
-| Command | What it does |
-|---------|--------------|
+Three of the registered commands are the runtime: `collect`, `serve` and `report`. The other
+eight - `config init`, `config check`, `discover`, `db migrate`, `db status`, `db verify`,
+`db backup` and `db restore` - are setup and maintenance, documented in the runbooks below.
+Every command the registry registers is listed here exactly once, with its role.
+`node src/cli.js --help` is the authority on which of them your build registers; a build
+whose registry does not include `serve` has the collector without the dashboard, and every
+other instruction on this page still applies.
+
+| Command | Role |
+|---------|------|
 | `node src/cli.js collect` | Reads every enrolled repository once and writes the observations into the archive. It runs once and exits; it embeds no timer and no scheduler. |
 | `node src/cli.js serve` | Starts the read-only dashboard on `127.0.0.1`, serving the archive as server-rendered HTML with no client-side JavaScript. |
-
-Everything else in the registry is setup or maintenance: `config init`, `config check`, `discover`,
-`db status`, `db verify`, `db migrate`, `db backup` and `db restore`. They are documented in the
-runbooks below. `node src/cli.js --help` is the authority on which of them your build registers; a
-build whose registry does not include `serve` has the collector without the dashboard, and every
-other instruction on this page still applies.
+| `node src/cli.js report` | Prints a plain-text written summary of what the archive already holds, without contacting GitHub. |
+| `node src/cli.js config init` | Creates the private `config.json` and `credentials.json` templates in the home directory. |
+| `node src/cli.js config check` | Validates the local configuration and credentials without printing the token. |
+| `node src/cli.js discover` | Lists the repositories your token can reach and prints ready-to-paste configuration lines. |
+| `node src/cli.js db migrate` | Applies pending archive migrations forward-only. |
+| `node src/cli.js db status` | Prints the database path and the on-disk schema version beside the code version. |
+| `node src/cli.js db verify` | Runs SQLite integrity_check over the archive and exits non-zero on failure. |
+| `node src/cli.js db backup` | Writes a consistent copy of the archive to a chosen path. |
+| `node src/cli.js db restore` | Loads a backup over the archive, re-verifies it and prints per-table counts. |
 
 Exit codes are the same for every command: `0` succeeded, `1` failed operationally, `2` the command
 line was a usage error.

@@ -312,15 +312,37 @@ test('the README documents a clone-and-run path and introduces no build step', (
   assert.match(flatten(read(README)), /No build step\./);
 });
 
-test('the README names the two runtime commands and every command it names is one this build registers', () => {
-  const commands = section(README, 'The two runtime commands');
+test('the README names every registered command once and states which are runtime', () => {
+  const commands = section(README, 'The registered commands');
   const registered = registeredCommands();
   assert.match(commands, /`node src\/cli\.js collect`/, 'the README does not document the collector');
   assert.match(commands, /`node src\/cli\.js serve`/, 'the README does not document the dashboard command');
+  assert.match(commands, /`node src\/cli\.js report`/, 'the README does not document the report command');
   // The authority for what a build has is the registry, not this page.
   assert.match(commands, /--help` is the authority on which of them your build registers/);
   assert.match(commands, /no timer and no scheduler/);
+  // Three runtime commands: the README says how many, and names exactly those three as runtime.
+  assert.match(commands, /Three of the registered commands are the runtime/);
 
+  // Every command the registry registers is listed exactly once in the inventory,
+  // and every command the README documents is registered - neither side may drift.
+  const inventory = inSection(read(README), 'The registered commands');
+  for (const name of registered) {
+    const occurrences = inventory.split(`node src/cli.js ${name}`).length - 1;
+    assert.equal(occurrences, 1, `the README lists "${name}" ${occurrences} times in the inventory`);
+  }
+  for (const match of inventory.matchAll(/node src\/cli\.js ([a-z][a-z0-9-]*(?: [a-z][a-z0-9-]*)*)/g)) {
+    const words = (match[1] ?? '').split(' ');
+    const name = resolveTyped(words, registered);
+    assert.ok(name !== undefined, `the README names "${match[1] ?? ''}", which resolves to no registered command`);
+  }
+
+  // The collector is the one command the collection story cannot be told without.
+  assert.ok(registered.has('collect'), 'the README documents a collector this build does not register');
+});
+
+test('every command invocation a document spells out is one this build registers', () => {
+  const registered = registeredCommands();
   for (const document of DOCUMENTS) {
     const text = read(document.file);
     const invocations = invocationsIn(text);
@@ -344,9 +366,21 @@ test('the README names the two runtime commands and every command it names is on
       );
     }
   }
-  // The collector is the one command the collection story cannot be told without.
-  assert.ok(registered.has('collect'), 'the README documents a collector this build does not register');
 });
+
+/**
+ * The body of one `##` section of a document, flattened.
+ * @param {string} text
+ * @param {string} heading
+ * @returns {string}
+ */
+function inSection(text, heading) {
+  const marker = `## ${heading}\n`;
+  assert.ok(text.includes(marker), `no "## ${heading}" section`);
+  const body = text.slice(text.indexOf(marker) + marker.length);
+  const next = body.search(/^## /m);
+  return flatten(next === -1 ? body : body.slice(0, next));
+}
 
 test('the README states the honest limits of the archive rather than a summary of it', () => {
   const limits = section(README, 'The honest limits of the archive');

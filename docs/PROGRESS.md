@@ -3,7 +3,7 @@
 ## Current State
 **Phase**: FOUNDATION-AND-RUNTIME-1
 **Status**: In Progress
-**Last Updated**: 2026-10-04T17:41:34.971Z
+**Last Updated**: 2026-10-04T17:44:33.946Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -11,12 +11,13 @@
 ## Completed Tasks
 - [x] Phase FOUNDATION-AND-RUNTIME-1, Task RS-FND-CONTRACT-01: Point every usage-error message at a help flag the command actually accepts (@cli-engineer)
   - Files: src/commands/discover.js, src/commands/report.js, tests/discover-command.test.js, tests/report-command.test.js
+- [x] Phase FOUNDATION-AND-RUNTIME-1, Task RS-FND-CONTRACT-02: Make the README's command inventory agree with the registry (@documentation-engineer)
+  - Files: README.md, tests/release-contract.test.js
 
 ## Current Task
 - None currently running
 
 ## Remaining
-- [ ] Phase FOUNDATION-AND-RUNTIME-1: Phase 1: Contract reconciliation
 - [ ] Phase GITHUB-API-CLIENT-1: Phase 1: Contract reconciliation
 - [ ] Phase ARCHIVE-STORAGE-1: Phase 1: Contract reconciliation
 - [ ] Phase ENROLLMENT-AND-COLLECTION-1: Phase 1: Contract reconciliation
