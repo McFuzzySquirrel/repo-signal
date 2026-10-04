@@ -1,9 +1,9 @@
 # Project Progress
 
 ## Current State
-**Phase**: FIRST-CONNECT-BACKFILL-1
+**Phase**: COLLECTION-SUPERVISION-AND-REPORT-1
 **Status**: In Progress
-**Last Updated**: 2026-10-04T18:42:51.115Z
+**Last Updated**: 2026-10-04T19:02:04.379Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -21,12 +21,13 @@
   - Files: tests/contract-collect.test.js, docs/operations/scheduled-collection.md
 - [x] Phase FIRST-CONNECT-BACKFILL-1, Task RS-BKL-CONTRACT-01: Assert the documented provenance and refusal claims against the modules that keep them (@documentation-engineer)
   - Files: tests/contract-backfill.test.js
+- [x] Phase COLLECTION-SUPERVISION-AND-REPORT-1, Task RS-SUP-CONTRACT-01: Assert the documented report shape and state vocabulary against the formatter and health read (@documentation-engineer)
+  - Files: tests/contract-report.test.js
 
 ## Current Task
 - None currently running
 
 ## Remaining
-- [ ] Phase COLLECTION-SUPERVISION-AND-REPORT-1: Phase 1: Contract reconciliation
 - [ ] Phase CHART-AND-INSIGHT-1: Phase 1: Contract reconciliation
 - [ ] Phase DASHBOARD-SERVER-1: Phase 1: Contract reconciliation
 - [ ] Phase DASHBOARD-VIEWS-1: Phase 1: Contract reconciliation
