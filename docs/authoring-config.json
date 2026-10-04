@@ -1,5 +1,8 @@
 {
   "version": 1,
-  "models": {},
+  "models": {
+    "team": "opencode/space-bunny-free",
+    "skills": "opencode/space-bunny-free"
+  },
   "runner": "opencode"
 }

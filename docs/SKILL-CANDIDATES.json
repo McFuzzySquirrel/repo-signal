@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "candidates": [
+    {
+      "name": "forge-task-implementation",
+      "description": "Executing one RepoSignal forge-task contract end to end: read the version-2 contract block, resolve its requirementRefs and constraintRefs, produce exactly the named expectedOutputs, run the named validationCommands through scripts/run-tests.mjs, report the runtime's forge-result, and stop at a human-review gate instead of self-serving it.",
+      "consumers": [
+        "qa-engineer"
+      ],
+      "action": "reuse",
+      "reason": "The package is present and unmodified at .opencode/skills/forge-task-implementation and commit 94b2047 did not touch it, and every one of the 20 forge-task blocks in docs/features/*.md uses the same contract version 2 shape (requirements, requirementRefs, acceptanceCriteria, constraints, constraintRefs, references) that the package already documents, so nothing needs to be authored and nothing needs extending. The recorded history shows the procedure working rather than asserted: RS-UI-01 through RS-UI-05 were each completed through it with named outputs and named test files instead of restated results. Only qa-engineer is recorded as a consumer because the adopted team holds one task-executing specialist; the other 17 implementation tasks name cli-engineer (6 tasks) and documentation-engineer (11 tasks), neither of which exists under .opencode/agents, and that ownership gap has to be repaired before the remaining consumers can be named."
+    },
+    {
+      "name": "verification-loop",
+      "description": "The RepoSignal verification loop: run suites through scripts/run-tests.mjs so a zero-test selection fails, type-check the JSDoc types with tsc --noEmit, mirror the source layout under tests/, give every run a temporary REPO_SIGNAL_HOME, and prove entry-point behaviour by spawning node src/cli.js rather than importing a module.",
+      "consumers": [
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "All 18 implementation tasks name npm test -- <file> as a validationCommand, and the three rules that make those commands mean anything are project-specific and fragile: RS-NF-05 makes a zero-test selection a failure rather than a pass, RS-C12 makes every documented claim answerable to a named test, and the temporary REPO_SIGNAL_HOME of RS-C08 is what keeps parallel suites from colliding. Each rule is easy to satisfy wrongly - importing src/cli.js bypasses argument parsing, exit codes and path resolution, and a shared home makes a suite pass alone and fail in a full run - and the trap is invisible locally, which is what makes the procedure worth stating once. No suitable package exists in this repository: the package of this name was deleted in 94b2047, so the action is create, not reuse. A prior version exists at 94b2047^ and its reference table already states the RS-C14 floor of 24.12.0 and the import-succeeds-then-connection-fails symptom correctly, so port it and re-check it against tests/run-tests.test.js and .github/workflows/ci.yml, which runs npm ci, npm run typecheck, npm test and node scripts/backup-drill.mjs as RS-NF-06 requires."
+    },
+    {
+      "name": "honest-data-rendering",
+      "description": "The no-fabrication rules for every RepoSignal layer that reads, computes or renders the archive: an unreported day stays a gap and is never zero-filled or carried forward, insufficient data is a first-class result with a named reason, absolute values precede percentages, backfilled and collected days are labelled apart, and no output carries a score, verdict, threshold or unsupported directional claim.",
+      "consumers": [
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "This is the product's central invariant and the widest blast radius in the team: RS-C04 (a missing day is absent, never interpolated), RS-C05 (no score, ranking or verdict, and insufficient volume reported as insufficient) and RS-C13 (a stored day is labelled collected or backfilled) are re-asserted in the acceptance criteria of storage, backfill, collection, insight, chart, page-data and view work, and each violation looks like working code - a substituted zero, a bridged polyline, an interpolated delta, a confidence word. The failure is also silent, because the day-series table and the chart both render without error when a gap becomes a zero. No suitable package exists in this repository: it was deleted in 94b2047, so the action is create. The prior version at 94b2047^ cited the superseded ID vocabulary (RS-DU-02 and RS-HO-01), which no longer resolves; the replacement must cite RS-C04, RS-C05, RS-C13 and PRD section 10, and should also carry the supervision state vocabulary and its precedence order, since a state word is the honest alternative to a verdict and that table currently has no home."
+    },
+    {
+      "name": "token-and-egress-safety",
+      "description": "RepoSignal credential and outbound-request safety: credentials.json read only at exactly mode 0600 from the descriptor that was checked, token-shaped values and bearer headers redacted from every error and log surface, the api.github.com allowlist re-checked on every request with redirects refused, GET-only requests, and the REPO_SIGNAL_ALLOW_LOCAL_TRANSPORT gate that the stub-driven suites depend on.",
+      "consumers": [
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "RS-C02, RS-C07 and RS-SEC-01 through RS-SEC-04 are one coupled boundary rather than four independent rules: the same token is read by the credential store, attached by the transport, and must never reach a log, an error, a row, a page or a test snapshot, and the allowlist is only meaningful because the refusal is tested with the local-transport override absent. The override is the single most reused fragile mechanism in the project - every stub-driven suite depends on it - and scoping it to a spawned child rather than a shared helper is exactly the detail that voids the guarantee when it is got wrong. Feature 11 adds a second entry path for the same secret through a masked terminal prompt (RS-TUI-C02), so the boundary now has two front doors and one place to state it. No suitable package exists in this repository: it was deleted in 94b2047, so the action is create; the prior version at 94b2047^ cites the superseded RS-SC-* identifiers and must be remapped to RS-C02, RS-C07, RS-SEC-03, RS-SEC-04 and docs/operations/privacy.md, with the new prompt surface added to its redaction list."
+    },
+    {
+      "name": "github-rest-contract",
+      "description": "The pinned GitHub REST contract RepoSignal depends on: the 2026-03-10 API version header set, the 14-day traffic window bound, 202 Accepted as retryable only for the statistics endpoints, the weekly stargazer history endpoint with its last-page pagination and UTC-midnight week check, the typed per-endpoint failure taxonomy, and the vendor pages that must be re-read rather than remembered.",
+      "consumers": [
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "PRD section 6.5 lists the nine vendor pages the product depends on and section 6.1 pins the version header to 2026-03-10, which makes this the project's main external drift surface: GitHub can change a payload, a media type or a status code, and no local test can detect that. The repository already carries the evidence that this matters - one vendor change reshaped the product when the stargazer listing was restricted, star history was reconstructed from the weekly endpoint, and PRD section 5 records that as a fact rather than a risk - and RS-TUI-FR-05 extends the surface by routing the setup flow's discovery through the same client and policy. No suitable package exists in this repository: it was deleted in 94b2047, so the action is create. The prior version at 94b2047^ is the right starting point; its vendor-documentation table must be re-verified against the current src/github/* modules rather than trusted, and its unverified-endpoint discipline is what keeps the two human gates (the live integration check and the seven-day soak) from being quietly skipped."
+    },
+    {
+      "name": "archive-storage-discipline",
+      "description": "Writing and migrating the RepoSignal SQLite archive safely: the node:sqlite connection settings including the enableDefensive guard that sets the RS-C14 runtime floor, STRICT tables, WAL and the two side files it adds, forward-only migrations with content checksums, last-write-wins day-series upsert carrying source and collection timestamp, append-only snapshot captures, one transaction per repository, no path that deletes a fact row, and calendarDays for telling a stored zero from a missing day.",
+      "consumers": [
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "The archive is the product - it is the only place day 15 and later can exist - and RS-C10 makes its evidence append-only, so the write shapes are the highest-consequence decisions in the codebase: a densifying upsert silently invents the days the product exists to preserve. RS-C14 makes the enableDefensive guard load-bearing for the runtime floor, the migration runner refuses an applied migration that has gone missing from code, and WAL adds the two side files that RS-STO-CONTRACT-01 exists to document, so the rules are fragile in three separate places at once. No suitable package exists in this repository: it was deleted in 94b2047, so the action is create; the prior version at 94b2047^ already carries the PRAGMA-is-not-a-substitute rule and the fail-closed behaviour, and its write-shape reference is the part to port verbatim because it is what keeps RS-C04 true at the storage layer."
+    },
+    {
+      "name": "cli-command-surface",
+      "description": "Adding and testing a RepoSignal subcommand: register it in the one command registry that generates --help, dispatch and suggestions, honour the 0 success / 1 operational failure / 2 usage error contract with no stack trace, emit one fact per line with no credential material, support the flags the command's plan names, and prove reachability by spawning node src/cli.js rather than importing a module.",
+      "consumers": [
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "One registry with one exit-code and one output contract is shared by every command in the product, and the canonical plan adds to it from two directions at once: RS-FND-CONTRACT-01 repairs the usage-error pointers in discover and report, and feature 11's RS-TUI-02 registers setup with its own --help, its --non-interactive escape hatch and the standard exit codes. The reachability convention is the fragile part - proving a command works by importing its module bypasses argument parsing, exit codes and path resolution and passes locally while the command is unreachable. RS-C09 forbids any exit code outside 0, 1 and 2 and any printed stack trace, so the contract is checkable but only if it is stated once. No suitable package exists in this repository: it was deleted in 94b2047, so the action is create; the prior version at 94b2047^ carries a command inventory that must be regenerated from the registry rather than edited, because PRD open question 9 already records that the README's inventory disagrees with the registry about report."
+    },
+    {
+      "name": "accessible-server-rendered-views",
+      "description": "Building RepoSignal's server-rendered pages, SVG chart and stylesheet to WCAG 2.1 AA: one escaping helper per context, the shared document shell, exactly one main landmark, a skip link first in the tab order, unbroken heading order, a data table paired with every figure, text-first states, and colour tokens declared once with contrast ratios computed by a test.",
+      "consumers": [
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "RS-A11Y-01 through RS-A11Y-05 apply at once to the router's escaping helpers, the shell, the four view modules, the SVG line chart and src/ui/theme.css, so the same structural assertions would otherwise be re-derived in the router, chart, view and integration work, and RS-A11Y-03 is the rule that keeps an absence visible rather than decorative. The fragile part is that each rule is satisfied differently per context - escaping is not one helper but three, and a chart that reads correctly with colour is still inaccessible without its table - and the contrast ratios are computed by tests/contrast.test.js rather than asserted by eye, which is easy to forget when a token changes. No suitable package exists in this repository: it was deleted in 94b2047, so the action is create; the prior version at 94b2047^ cited the superseded RS-AX-01..07 identifiers and must be remapped to the RS-A11Y-* set. The global implement-visual-theme package must not be extended for this: it assumes a React DOM and PixiJS renderer stack and a foreign design system, while this product sends no client-side script and uses system fonts only."
+    },
+    {
+      "name": "documentation-contract-tests",
+      "description": "Writing RepoSignal's public and operator documents so they stay true, with the test that fails when they drift: the README's command inventory against the registry, the documented dashboard claims against the server implementation, the report shape and state vocabulary against the formatter, the provenance and refusal claims against the backfill modules, the request budget against the collector, the storage side files against the home inventory, and no document stating a test result or approval that was not observed.",
+      "consumers": [],
+      "action": "create",
+      "reason": "This is the largest repeated process in the canonical plan: 11 of the 18 implementation tasks are the same artefact - one document claim plus one contract test that fails when the claim drifts - spread across RS-STO-CONTRACT-01, RS-INS-CONTRACT-01, RS-SRV-CONTRACT-01, RS-VWS-CONTRACT-01, RS-COL-CONTRACT-01, RS-BKL-CONTRACT-01, RS-FND-CONTRACT-02, RS-GHC-CONTRACT-01, RS-SUP-CONTRACT-01, RS-TUI-07 and RS-OPS-POST-01. RS-C12 makes this a product constraint rather than a nicety, and the failure mode is specific and expensive: a runbook documenting a command that does not exist, or a README that quietly loses the statement that GitHub's aggregate traffic data may not be redistributed, with every other check still green. The procedure also outlives the code it describes, and the existing suites already show both shapes - tests/release-contract.test.js and tests/ci-contract.test.js, which fails when the release checklist misstates a human gate. No suitable package exists in this repository: it was deleted in 94b2047, so the action is create. consumers is empty because every one of those 11 tasks names documentation-engineer, which the adopted team does not contain; the package should be created once that ownership is repaired rather than attached to an agent that will not use it."
+    },
+    {
+      "name": "interactive-terminal-setup",
+      "description": "Building RepoSignal's interactive setup surface from node:readline and node:tty with no dependency: masked secret entry that restores the terminal in a finally block, numbered single choice, space-toggled multiple selection with all/none/invert, confirmation with an explicit default, streams passed as parameters so tests drive them, a --non-interactive escape hatch that prints the scriptable equivalent, and no partial file left by an interruption at any prompt.",
+      "consumers": [
+        "qa-engineer"
+      ],
+      "action": "create",
+      "reason": "Feature 11 is the only unbuilt feature and the largest task cluster in the plan at 8 forge-task blocks, and its six implementation tasks all depend on rules that are easy to get wrong in ways no existing package covers: RS-TUI-C01 forbids an alternate screen, cursor addressing and any dependency, RS-TUI-C02 makes the masked field the only path for the token, RS-TUI-C04 makes an interrupted run write nothing partial, and RS-TUI-C05 makes colour decorative under NO_COLOR and a dumb terminal. Two failure modes are worth stating once because they are invisible in a passing run - a masked field that leaks on an echo-restore failure, and a prompt whose state is only visible in colour - and qa-engineer's RS-TUI-06 has to assert both from scripted standard input, plus that a non-terminal stdin exits 1 and names the command to run. No suitable package exists: the feature is new (PRD section 13 and feature 11 section 1 record status Not built) and no package of any kind covers an interactive terminal surface. qa-engineer is the only recorded consumer because the five build tasks name cli-engineer, which the adopted team does not contain."
+    },
+    {
+      "name": "human-review-gate-protocol",
+      "description": "How agents treat the human review gates - the open-source posture review and the interactive setup journey - without authoring, editing or self-certifying any of them.",
+      "consumers": [
+        "qa-engineer"
+      ],
+      "action": "omit",
+      "reason": "The responsibility is real but it is already carried by the artefact that would describe it, and a second copy would make self-certification easier to reach for rather than harder. Verified this run by extracting every forge-task block in docs/features/*.md: exactly two carry kind human-review (RS-OPS-REV-01 and RS-TUI-REV-01), neither carries an ownerAgent, and both carry their review file inside the contract (docs/reviews/open-source-posture.json and docs/reviews/setup-terminal-ui.json), which is the prohibition stated in the place the engine already reads. PRD section 13 and PRD open question 5 add that the live integration check and the seven-day soak are deliberately not authored as tasks at all and stay named in docs/operations/release-checklist.md, whose gate table is itself asserted by tests/ci-contract.test.js. The correct home is the immutable task contract, so no package is justified."
+    },
+    {
+      "name": "node-sqlite-upgrade-drill",
+      "description": "Re-verifying the storage layer after a Node major upgrade, given that node:sqlite defensive mode is what sets the supported runtime floor.",
+      "consumers": [],
+      "action": "omit",
+      "reason": "This is a single future event, not a repeated process, and PRD section 16 question 7 fixes the answer for now: keep >=24.12.0 while 24 is an LTS line. The surface a re-check would touch is already exercised on every CI run - the backup drill behind RS-NF-09, the migration runner's checksum refusal, and the connection suite behind tests/migrate.test.js - and the storage layer fails closed rather than degrading when the API is missing, which is recorded guidance inside archive-storage-discipline rather than a separate occasion. consumers is empty because neither owner named by the previous handoff (a storage engineer and a platform engineer) exists in the adopted team. A dedicated package would be scaffolding for an upgrade that has not been planned."
+    }
+  ]
+}
