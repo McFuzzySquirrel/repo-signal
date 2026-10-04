@@ -1,0 +1,1373 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-10-04T17:36:58.879Z",
+  "granularity": "fine",
+  "sourceLayout": "features",
+  "repoRoot": "/home/mcfuzzysquirrel/Projects/testing/repo-signal",
+  "harnessRoot": ".opencode",
+  "prdPath": "/home/mcfuzzysquirrel/Projects/testing/repo-signal/docs/PRD.md",
+  "visionPath": "/home/mcfuzzysquirrel/Projects/testing/repo-signal/docs/PRD.md",
+  "featureOrder": [
+    "Foundation and Runtime",
+    "GitHub API Client",
+    "Archive Storage",
+    "Enrollment and Collection",
+    "First-Connect Backfill",
+    "Collection Supervision and Report",
+    "Chart and Insight",
+    "Dashboard Server",
+    "Dashboard Views",
+    "Operations and Posture",
+    "Setup Terminal UI"
+  ],
+  "progressPath": "/home/mcfuzzysquirrel/Projects/testing/repo-signal/docs/PROGRESS.md",
+  "auditPath": "/home/mcfuzzysquirrel/Projects/testing/repo-signal/docs/EXECUTION-AUDIT.jsonl",
+  "validationCommands": [],
+  "approvalGates": {
+    "preflight": true,
+    "betweenPhases": true
+  },
+  "phases": [
+    {
+      "id": "FOUNDATION-AND-RUNTIME-1",
+      "title": "Phase 1: Contract reconciliation",
+      "feature": "Foundation and Runtime",
+      "description": "```forge-task {   \"id\": \"RS-FND-CONTRACT-01\",",
+      "ownerAgents": [
+        "cli-engineer",
+        "documentation-engineer"
+      ],
+      "dependencies": [],
+      "approvalRequired": false,
+      "tasks": [
+        {
+          "id": "RS-FND-CONTRACT-01",
+          "title": "Point every usage-error message at a help flag the command actually accepts",
+          "description": "Repair the usage-error pointer in `src/commands/discover.js` and `src/commands/report.js`. Both messages currently tell the user to run the command with `--help`, but only `serve` accepts a flag after its name; `discover` and `report` reject `--help` as an unknown flag because the CLI treats flags before the first non-flag token as global only. Replace the pointer with text that names the registry help, `node src/cli.js --help`, and add tests asserting the refusal path for `discover --help` and `report --help` still exits 2 with the corrected wording. Do not change global flag parsing, do not make either command accept a post-name `--help`, and leave every other message alone.",
+          "ownerAgent": "cli-engineer",
+          "dependencies": [],
+          "expectedOutputs": [
+            "src/commands/discover.js",
+            "src/commands/report.js",
+            "tests/discover-command.test.js",
+            "tests/report-command.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/discover-command.test.js tests/report-command.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Assert the usage-error text of discover and report names a help path that works, and that neither command gains a post-name --help flag as a side effect"
+            ],
+            "acceptanceCriteria": [
+              "A test drives `discover --help` and asserts exit code 2 and a message naming node src/cli.js --help",
+              "A test drives `report --help` and asserts the same corrected wording",
+              "tests/discover-command.test.js and tests/report-command.test.js each report more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not alter global flag parsing in src/cli.js",
+              "Do not add a post-name --help handler to either command",
+              "RS-FND-C02: Command resolution takes the longest registered prefix, a usage error exits 2 after printing the message and the full usage to stderr, an operational failure exits 1 with a message and never a stack trace, and a returned exit code outside 0, 1 and 2 is refused by name.",
+              "RS-FND-C01: The command registry accepts a command name of one or two lower-case words, requires a summary and a run function, and refuses a duplicate name rather than letting it shadow the first registration; help text, dispatch and suggestions are all derived from the registry.",
+              "RS-C09: Every command returns 0 on success, 1 on operational failure and 2 on a usage error; no other exit code is produced and no stack trace is printed."
+            ],
+            "references": [
+              "docs/features/foundation-and-runtime.md#4. Command and Output Design",
+              "docs/PRD.md#6.4 Shared Constraints",
+              "docs/features/foundation-and-runtime.md#RS-FND-C02",
+              "docs/features/foundation-and-runtime.md#RS-FND-C01",
+              "docs/PRD.md#RS-C09"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-fnd-contract-01",
+          "inputs": [],
+          "timeoutMs": 2700000
+        },
+        {
+          "id": "RS-FND-CONTRACT-02",
+          "title": "Make the README's command inventory agree with the registry",
+          "description": "The README's table of runtime and setup commands omits `report`, which its own install sequence and every runbook use, and the surrounding prose still frames the product as having exactly two runtime commands. Rewrite that section so every command the registry registers is listed exactly once with its role, state how many are runtime commands, and keep the registry as the stated authority. Extend `tests/release-contract.test.js` to parse `node src/cli.js --help`, compare the registered names against the README, and fail when a registered command is missing from the document or a documented command is not registered. Do not add, remove or rename a command.",
+          "ownerAgent": "documentation-engineer",
+          "dependencies": [
+            "RS-FND-CONTRACT-01"
+          ],
+          "expectedOutputs": [
+            "README.md",
+            "tests/release-contract.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/release-contract.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Assert every command registered by src/commands/index.js is named in the README exactly once and that no README command is unregistered"
+            ],
+            "acceptanceCriteria": [
+              "The README names all eleven registered commands, including report, and states their role",
+              "A release-contract test derives the command list from the registry rather than repeating it by hand",
+              "tests/release-contract.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not change any command's behaviour, flags or exit codes",
+              "Do not remove an existing README claim that a contract test asserts",
+              "RS-FND-C01: The command registry accepts a command name of one or two lower-case words, requires a summary and a run function, and refuses a duplicate name rather than letting it shadow the first registration; help text, dispatch and suggestions are all derived from the registry.",
+              "RS-C12: Every documented claim about the product is asserted by a named test file, so a later edit to prose or code cannot silently break the agreement between them."
+            ],
+            "references": [
+              "docs/features/foundation-and-runtime.md#4. Command and Output Design",
+              "docs/features/foundation-and-runtime.md#6. Implementation Tasks",
+              "docs/features/foundation-and-runtime.md#RS-FND-C01",
+              "docs/PRD.md#RS-C12"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-fnd-contract-02",
+          "inputs": [
+            "work.rs-fnd-contract-01"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "GITHUB-API-CLIENT-1",
+      "title": "Phase 1: Contract reconciliation",
+      "feature": "GitHub API Client",
+      "description": "```forge-task {   \"id\": \"RS-GHC-CONTRACT-01\",",
+      "ownerAgents": [
+        "documentation-engineer"
+      ],
+      "dependencies": [
+        "FOUNDATION-AND-RUNTIME-1"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-GHC-CONTRACT-01",
+          "title": "Document the transport gate and its two environment variables, and assert the contract",
+          "description": "Two environment variables are read by this feature and named in no document: REPO_SIGNAL_GITHUB_BASE_URL, which redirects the client at a stub, and REPO_SIGNAL_ALLOW_LOCAL_TRANSPORT, which opens the allowlist to one loopback origin for tests. Add a section to `docs/operations/privacy.md` that names both, states exactly what each one changes, states that the gate exists for tests and cannot widen the product to any real host, and keeps the existing claim-to-file table accurate. Create `tests/contract-transport.test.js` asserting that the privacy note names both variables, that the only host the note allows is api.github.com, that the sent API version header matches the constant in `src/github/http.js`, and that the loopback gate cannot be enabled for a non-loopback base URL. Do not change transport behaviour, do not widen the allowlist, and do not make either variable settable from `config.json`.",
+          "ownerAgent": "documentation-engineer",
+          "dependencies": [],
+          "expectedOutputs": [
+            "docs/operations/privacy.md",
+            "tests/contract-transport.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/contract-transport.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Assert every environment variable the transport reads is named in the privacy note, with its effect and its test-only scope"
+            ],
+            "acceptanceCriteria": [
+              "The privacy note names REPO_SIGNAL_GITHUB_BASE_URL and REPO_SIGNAL_ALLOW_LOCAL_TRANSPORT and explains that neither can reach a host other than api.github.com",
+              "A test reads the sent API version header constant and asserts it equals the version the privacy note records",
+              "A test proves the loopback gate is refused for a non-loopback base URL",
+              "tests/contract-transport.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not modify src/github/http.js or widen the allowlist",
+              "Do not document a variable the code does not read",
+              "RS-GHC-C01: The transport exposes a single get(endpoint) call, re-evaluates the allowlist against both the base URL and the resolved target on every request, allows https api.github.com with an empty port, and allows a loopback origin only when REPO_SIGNAL_ALLOW_LOCAL_TRANSPORT is set, the base hostname is 127.0.0.1 and the target origin equals the base origin.",
+              "RS-C02: The only outbound host the product may contact is api.github.com, every request is a GET, redirects are refused rather than followed, and the host is re-checked on every request rather than at import.",
+              "RS-C12: Every documented claim about the product is asserted by a named test file, so a later edit to prose or code cannot silently break the agreement between them."
+            ],
+            "references": [
+              "docs/features/github-api-client.md#3. Functional Constraints",
+              "docs/features/github-api-client.md#4. Command and Output Design",
+              "docs/features/github-api-client.md#RS-GHC-C01",
+              "docs/PRD.md#RS-C02",
+              "docs/PRD.md#RS-C12"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-ghc-contract-01",
+          "inputs": [
+            "work.rs-fnd-contract-01",
+            "work.rs-fnd-contract-02"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "ARCHIVE-STORAGE-1",
+      "title": "Phase 1: Contract reconciliation",
+      "feature": "Archive Storage",
+      "description": "```forge-task {   \"id\": \"RS-STO-CONTRACT-01\",",
+      "ownerAgents": [
+        "documentation-engineer"
+      ],
+      "dependencies": [
+        "FOUNDATION-AND-RUNTIME-1"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-STO-CONTRACT-01",
+          "title": "Document the write-ahead side files and assert the home inventory against the schema",
+          "description": "The connection sets journal_mode to wal, so `archive.sqlite3-wal` and `archive.sqlite3-shm` exist beside the archive, but the README's home inventory and the backup runbook both list only three files, and the restore path explicitly deletes the side files. Update the home inventory in `README.md` and in `docs/operations/backup-and-migrate.md` to name the two side files, state that they belong to the open archive rather than to a separate copy, and state that a restore removes them. Create `tests/contract-storage.test.js` asserting that the connection really does set WAL and foreign keys, that every table the schema creates is named in the backup drill's known row counts, and that both documents name the side files. Do not change the schema, the pragmas or the restore implementation, and do not add a prune or vacuum command.",
+          "ownerAgent": "documentation-engineer",
+          "dependencies": [
+            "RS-FND-CONTRACT-02"
+          ],
+          "expectedOutputs": [
+            "README.md",
+            "docs/operations/backup-and-migrate.md",
+            "tests/contract-storage.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/contract-storage.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Assert the documented home inventory names the write-ahead side files the connection creates, and that the documented table list matches the schema"
+            ],
+            "acceptanceCriteria": [
+              "README.md and the backup runbook both name archive.sqlite3-wal and archive.sqlite3-shm and explain that a restore removes them",
+              "A test asserts the connection verifies foreign_keys=1 and journal_mode=wal on open",
+              "A test asserts every table in the schema appears in the backup drill's expected row counts",
+              "tests/contract-storage.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not modify src/db/connection.js or any migration",
+              "Do not introduce a command that deletes or compacts evidence",
+              "RS-STO-C01: Opening the archive fails closed when node:sqlite defensive mode is unavailable, naming the running Node version, and otherwise opens with foreign keys on, extensions off and defensive mode enabled, then reads both pragmas back and refuses to continue unless foreign_keys is 1 and journal_mode is wal.",
+              "RS-STO-C04: A backup is produced through the driver's own backup so write-ahead side files are folded into one self-contained archive, and a restore integrity-checks the source before replacing anything, then re-verifies the restored file and reports per-table row counts.",
+              "RS-C10: Evidence is append-only: deletions are refused by triggers, corrections require the same key and a newer collection time, and history tables reject updates outright.",
+              "RS-C12: Every documented claim about the product is asserted by a named test file, so a later edit to prose or code cannot silently break the agreement between them."
+            ],
+            "references": [
+              "docs/features/archive-storage.md#4. Schema",
+              "docs/features/archive-storage.md#3. Functional Constraints",
+              "docs/features/archive-storage.md#RS-STO-C01",
+              "docs/features/archive-storage.md#RS-STO-C04",
+              "docs/PRD.md#RS-C10",
+              "docs/PRD.md#RS-C12"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-sto-contract-01",
+          "inputs": [
+            "work.rs-fnd-contract-02",
+            "work.rs-fnd-contract-01"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "ENROLLMENT-AND-COLLECTION-1",
+      "title": "Phase 1: Contract reconciliation",
+      "feature": "Enrollment and Collection",
+      "description": "```forge-task {   \"id\": \"RS-COL-CONTRACT-01\",",
+      "ownerAgents": [
+        "documentation-engineer"
+      ],
+      "dependencies": [
+        "FOUNDATION-AND-RUNTIME-1",
+        "GITHUB-API-CLIENT-1",
+        "ARCHIVE-STORAGE-1"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-COL-CONTRACT-01",
+          "title": "Assert the documented request budget and collection line vocabulary against the code",
+          "description": "The scheduled-collection runbook states the per-repository request budget, the backfill floor and the fact that a retried statistics answer is one counted request, and the troubleshooting runbook names the state words a collection line can carry. None of those numbers is tied to the code that produces them. Create `tests/contract-collect.test.js` that imports the budget constants from `src/collect/run.js` and asserts the numbers the runbooks print, that the per-repository line states named in the documents are exactly the outcome states the run produces, and that the documented budget equals one identity plus four traffic requests with the backfill floor added exactly once. Extend `docs/operations/scheduled-collection.md` with the one sentence that names where each number comes from. Do not change the budget, the plan or the line format, and do not add a request to any collection path.",
+          "ownerAgent": "documentation-engineer",
+          "dependencies": [],
+          "expectedOutputs": [
+            "tests/contract-collect.test.js",
+            "docs/operations/scheduled-collection.md"
+          ],
+          "validationCommands": [
+            "npm test -- tests/contract-collect.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Assert the request budget, the backfill floor and the outcome-state vocabulary the documents publish are the values the collector produces"
+            ],
+            "acceptanceCriteria": [
+              "A test imports the budget constants and compares them with the figures printed in the scheduled-collection runbook",
+              "A test asserts the documented outcome states equal the states a run can return",
+              "A test asserts an unavailable repository is planned at zero requests",
+              "tests/contract-collect.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not change any request the collector makes or the format of a collection line",
+              "Do not soften a documented number to match the code; a mismatch is the finding",
+              "RS-COL-C03: Collection reads one repository identity request plus four traffic requests, adding a backfill floor of at least three requests only when the identity has no completed backfill and the star history has not already been refused; a repository recorded unavailable is skipped at zero requests.",
+              "RS-COL-C04: Repositories are collected sequentially and each one is written in a single transaction that stores the confirmed identity, the returned traffic days, the star level observed that day, the snapshot captures and the success record; a repository that fails is recorded as evidence and never throws out of the run.",
+              "RS-C12: Every documented claim about the product is asserted by a named test file, so a later edit to prose or code cannot silently break the agreement between them."
+            ],
+            "references": [
+              "docs/features/enrollment-and-collection.md#4. Command and Output Design",
+              "docs/features/enrollment-and-collection.md#3. Functional Constraints",
+              "docs/features/enrollment-and-collection.md#RS-COL-C03",
+              "docs/features/enrollment-and-collection.md#RS-COL-C04",
+              "docs/PRD.md#RS-C12"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-col-contract-01",
+          "inputs": [
+            "work.rs-fnd-contract-01",
+            "work.rs-fnd-contract-02",
+            "work.rs-ghc-contract-01",
+            "work.rs-sto-contract-01"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "FIRST-CONNECT-BACKFILL-1",
+      "title": "Phase 1: Contract reconciliation",
+      "feature": "First-Connect Backfill",
+      "description": "```forge-task {   \"id\": \"RS-BKL-CONTRACT-01\",",
+      "ownerAgents": [
+        "documentation-engineer"
+      ],
+      "dependencies": [
+        "GITHUB-API-CLIENT-1",
+        "ARCHIVE-STORAGE-1",
+        "ENROLLMENT-AND-COLLECTION-1"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-BKL-CONTRACT-01",
+          "title": "Assert the documented provenance and refusal claims against the modules that keep them",
+          "description": "The README and the runbooks state that backfilled days are labelled rather than collected, that the boundary is stamped once, and that a refused star history is recorded and reported rather than re-requested. No test asserts those sentences against the code that implements them. Create `tests/contract-backfill.test.js` asserting that the backfill modules write only source backfill rows, that the completed-backfill records the runbooks mention are exactly the rows the provenance read counts, that the refusal columns on a repository keep the first reason and are consulted by the plan so a refused history costs no request on a later run, and that the boundary stamp is written by a single conditional insert. Do not change any reconstruction rule, do not relabel a stored row, and do not make a refused backfill retryable.",
+          "ownerAgent": "documentation-engineer",
+          "dependencies": [],
+          "expectedOutputs": [
+            "tests/contract-backfill.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/contract-backfill.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Assert the documented provenance, boundary and single-refusal claims hold against the modules that implement them"
+            ],
+            "acceptanceCriteria": [
+              "A test proves the reconstruction modules write source backfill and never source collected",
+              "A test proves a refused history keeps its first reason and is not requested again by a later plan",
+              "A test proves the boundary stamp is a single conditional insert that a second run cannot move",
+              "tests/contract-backfill.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not modify src/backfill/* or the refusal columns",
+              "Do not convert a backfilled row into a collected one",
+              "RS-BKL-C04: A refused backfill is recorded on the repository with the first reason and the first refusal time, is never requested again, keeps the traffic half of the collection running, and is reported on every collection line as a star-history absence rather than left as a gap that would read as a zero.",
+              "RS-BKL-C05: The first collected day is stamped exactly once by a conditional insert, so a later run cannot move the provenance boundary, and the provenance read reports whether the repository is connected, when collection began and which backfills completed, without counting the boundary stamp as a backfill.",
+              "RS-C04: A day GitHub did not report is stored as absent: never written as zero, never interpolated, never carried forward from the previous day, and never filled from another metric or repository.",
+              "RS-C13: A stored day is labelled collected or backfilled, the first collected day is stamped exactly once, and the chart draws the provenance boundary only where the archive supports it.",
+              "RS-C12: Every documented claim about the product is asserted by a named test file, so a later edit to prose or code cannot silently break the agreement between them."
+            ],
+            "references": [
+              "docs/features/first-connect-backfill.md#4. Data Shape",
+              "docs/features/first-connect-backfill.md#3. Functional Constraints",
+              "docs/features/first-connect-backfill.md#RS-BKL-C04",
+              "docs/features/first-connect-backfill.md#RS-BKL-C05",
+              "docs/PRD.md#RS-C04",
+              "docs/PRD.md#RS-C13",
+              "docs/PRD.md#RS-C12"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-bkl-contract-01",
+          "inputs": [
+            "work.rs-ghc-contract-01",
+            "work.rs-sto-contract-01",
+            "work.rs-col-contract-01"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "COLLECTION-SUPERVISION-AND-REPORT-1",
+      "title": "Phase 1: Contract reconciliation",
+      "feature": "Collection Supervision and Report",
+      "description": "```forge-task {   \"id\": \"RS-SUP-CONTRACT-01\",",
+      "ownerAgents": [
+        "documentation-engineer"
+      ],
+      "dependencies": [
+        "ARCHIVE-STORAGE-1",
+        "ENROLLMENT-AND-COLLECTION-1"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-SUP-CONTRACT-01",
+          "title": "Assert the documented report shape and state vocabulary against the formatter and health read",
+          "description": "The README and the runbooks describe what `report` prints, the state words it can print, and the cap on named gap days, and the dashboard's health page promises the same vocabulary. Those descriptions are not tied to `src/report/format.js` or `src/supervision/health.js`. Create `tests/contract-report.test.js` asserting that every state word the troubleshooting runbook names is one the health read can return, that the run and repository word lists match the constants, that the named-gap cap the documents state equals the formatter's, that the boundary block has a wording for each of its four boundary situations and none for an absent boundary, and that a report which read the archive exits 0 whatever states it printed. Do not change the formatter, the state vocabulary or the exit code, and do not rename a state word that a runbook or a view already prints.",
+          "ownerAgent": "documentation-engineer",
+          "dependencies": [],
+          "expectedOutputs": [
+            "tests/contract-report.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/contract-report.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Assert the documented report output shape and state vocabulary match the formatter and the health read"
+            ],
+            "acceptanceCriteria": [
+              "A test asserts every state word named in the troubleshooting runbook is a word the health read can return",
+              "A test asserts the named-gap cap in the documents equals the formatter constant",
+              "A test asserts a report that read the archive exits 0 while printing a degraded repository",
+              "tests/contract-report.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not modify src/report/format.js or src/supervision/health.js",
+              "Do not add a state word to one place and not the other",
+              "RS-SUP-C04: Repository health is a closed vocabulary of healthy, never-collected, degraded, needs-re-authentication, stalled, unavailable and unreadable, resolved by a fixed precedence, with stalled meaning a last success more than 26 hours old and unreadable meaning a recorded time the build cannot parse; every state carries a reason that begins with the state phrase.",
+              "RS-SUP-C05: The report command contacts no host, reads no credential, exits 0 whenever it read the archive whatever states it reports, and prints the run state, the roll-up, one line per enrolled repository and, for one repository, its coverage per series, its named gap days, its star-history refusal, its recorded boundary and its change blocks.",
+              "RS-SUP-C06: Named gap days are capped at ten per series with the remainder counted, absolute values are always printed beside a percentage, and a week-granularity series is described in weeks rather than days.",
+              "RS-C12: Every documented claim about the product is asserted by a named test file, so a later edit to prose or code cannot silently break the agreement between them.",
+              "RS-C09: Every command returns 0 on success, 1 on operational failure and 2 on a usage error; no other exit code is produced and no stack trace is printed."
+            ],
+            "references": [
+              "docs/features/supervision-and-report.md#4. Command and Output Design",
+              "docs/features/supervision-and-report.md#3. Functional Constraints",
+              "docs/features/supervision-and-report.md#RS-SUP-C04",
+              "docs/features/supervision-and-report.md#RS-SUP-C05",
+              "docs/features/supervision-and-report.md#RS-SUP-C06",
+              "docs/PRD.md#RS-C12",
+              "docs/PRD.md#RS-C09"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-sup-contract-01",
+          "inputs": [
+            "work.rs-sto-contract-01",
+            "work.rs-col-contract-01"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "CHART-AND-INSIGHT-1",
+      "title": "Phase 1: Contract reconciliation",
+      "feature": "Chart and Insight",
+      "description": "```forge-task {   \"id\": \"RS-INS-CONTRACT-01\",",
+      "ownerAgents": [
+        "documentation-engineer"
+      ],
+      "dependencies": [
+        "ARCHIVE-STORAGE-1"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-INS-CONTRACT-01",
+          "title": "Assert the thresholds in section 9 and the code's citations of this document",
+          "description": "Two source files cite this document for their defaults: `src/insight/divergence.js` cites section 9 for the fourteen-collected-day floor and `src/insight/changes.js` cites it for the twenty-entry cap, and `src/views/components/line-chart.js` is held to the same caps. Nothing checks that the citation still resolves or that the numbers still match. Create `tests/contract-insight.test.js` asserting that every constant listed in section 9 equals the value the corresponding module exports, that this document still carries a section 9 and still states both cited numbers, and that the chart's own caps for named gap days, value ticks and day labels match section 9. Where a mismatch is found, correct this document rather than the constant, unless the constant is demonstrably wrong, in which case report it instead of quietly moving either. Do not change a threshold, a rounding rule or a refusal.",
+          "ownerAgent": "documentation-engineer",
+          "dependencies": [],
+          "expectedOutputs": [
+            "tests/contract-insight.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/contract-insight.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Assert every threshold in section 9 equals the exported constant, and that the two source citations of this document still resolve to it"
+            ],
+            "acceptanceCriteria": [
+              "A test imports MINIMUM_COLLECTED_DAYS and MAX_CHANGE_ENTRIES and compares them with the table in section 9",
+              "A test fails when this document loses its section 9 or either cited number",
+              "A test compares the chart caps with section 9",
+              "tests/contract-insight.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not change a threshold, a cap or a rounding rule to make a test pass",
+              "Do not delete a section a source file cites",
+              "RS-INS-C04: The stars-versus-clones reading counts a day as collected only when both metrics are present on it, sums the stored daily unique-cloner counts and says so, takes the star level from the last collected day, and below its floor returns insufficient with no stars, ratio or percentage field present at all.",
+              "RS-INS-C05: The change list walks stored rows per metric, comparing each stored day with the previous stored day, emitting nothing for an unchanged day while still counting the comparison, ordering entries by absolute change, capping the list and reporting how many entries were omitted.",
+              "RS-INS-C06: The chart draws one polyline per contiguous run of at least two stored days and one point for a lone day, closes a run at a missing day and at a change of dash treatment, uses currentColor only, and refuses by name a day recorded collected before the boundary, a day recorded collected for a repository that was never connected, and a boundary that disagrees with the provenance read it was given.",
+              "RS-C05: The product produces no score, ranking, verdict, anomaly claim or firing threshold; absolute values sit beside percentages and an insufficient volume is reported as insufficient.",
+              "RS-C12: Every documented claim about the product is asserted by a named test file, so a later edit to prose or code cannot silently break the agreement between them."
+            ],
+            "references": [
+              "docs/features/chart-and-insight.md#9. Sufficiency Thresholds and Caps",
+              "docs/features/chart-and-insight.md#4. Chart and Table Design",
+              "docs/features/chart-and-insight.md#RS-INS-C04",
+              "docs/features/chart-and-insight.md#RS-INS-C05",
+              "docs/features/chart-and-insight.md#RS-INS-C06",
+              "docs/PRD.md#RS-C05",
+              "docs/PRD.md#RS-C12"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-ins-contract-01",
+          "inputs": [
+            "work.rs-sto-contract-01"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "DASHBOARD-SERVER-1",
+      "title": "Phase 1: Contract reconciliation",
+      "feature": "Dashboard Server",
+      "description": "```forge-task {   \"id\": \"RS-SRV-CONTRACT-01\",",
+      "ownerAgents": [
+        "documentation-engineer"
+      ],
+      "dependencies": [
+        "FOUNDATION-AND-RUNTIME-1",
+        "ARCHIVE-STORAGE-1",
+        "COLLECTION-SUPERVISION-AND-REPORT-1"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-SRV-CONTRACT-01",
+          "title": "Assert the documented dashboard claims against the server implementation",
+          "description": "The README and the privacy note promise that the dashboard is loopback-only, unauthenticated, serves no remote asset, runs no client-side script and sends four specific headers, and the health runbook names the state words the page prints. Create `tests/contract-server.test.js` asserting those claims against `src/server/security.js`, `src/server/server.js`, `src/server/views/index.js` and `src/server/router.js`: the four headers and their values on every response, the absence of any remote host in the served markup and stylesheet, the loopback bind and the refusal of a non-loopback peer, the GET and HEAD method set, and that every state word the health page can print is one the health read can return. Where the documentation and the code disagree, fix the document and record the disagreement in the task notes. Do not change the bind address, the header set, the routing table or the state vocabulary.",
+          "ownerAgent": "documentation-engineer",
+          "dependencies": [],
+          "expectedOutputs": [
+            "tests/contract-server.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/contract-server.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Assert the documented dashboard security and accessibility claims hold against the server, its headers and its routes"
+            ],
+            "acceptanceCriteria": [
+              "A test asserts the exact four security headers and their values on a served response",
+              "A test fails if any served page or the stylesheet references a remote host or a script",
+              "A test asserts a non-loopback peer is refused and only GET and HEAD are accepted",
+              "tests/contract-server.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not weaken, remove or add a response header",
+              "Do not make the server reachable from a routable interface",
+              "RS-SRV-C01: The server binds to 127.0.0.1 on an ephemeral port, destroys any socket whose peer is not loopback, answers only GET and HEAD, rejects an over-long URL with 414 and any other method with 405 and an Allow header, and answers HEAD with the GET headers and no body.",
+              "RS-SRV-C02: Every response carries a default-src none content security policy with script-src none, style-src and img-src limited to self, no base-uri, no form-action, no frame-ancestors, plus no-store caching, a no-referrer policy, nosniff and an explicit UTF-8 HTML content type; a view that throws produces a generic 500 page with no message, stack or forwarded header, logged locally with redaction.",
+              "RS-SRV-C04: The view registry mounts pages, paths and assets from three tables, answers its own routes in front of the router without extending the router's route table, defaults the window to the last fourteen days ending today, keeps a bound the URL carried, and refuses an inverted result in words rather than silently swapping the bounds.",
+              "RS-C11: The dashboard binds to 127.0.0.1 only, answers GET and HEAD only, sends no client-side JavaScript, and sets a default-src none content security policy with no-store caching on every response.",
+              "RS-C03: No telemetry, analytics, crash or error reporting, update check, remote font, remote image, CDN or other remote asset exists in any build path.",
+              "RS-C12: Every documented claim about the product is asserted by a named test file, so a later edit to prose or code cannot silently break the agreement between them."
+            ],
+            "references": [
+              "docs/features/dashboard-server.md#4. Command and Output Design",
+              "docs/features/dashboard-server.md#3. Functional Constraints",
+              "docs/features/dashboard-server.md#RS-SRV-C01",
+              "docs/features/dashboard-server.md#RS-SRV-C02",
+              "docs/features/dashboard-server.md#RS-SRV-C04",
+              "docs/PRD.md#RS-C11",
+              "docs/PRD.md#RS-C03",
+              "docs/PRD.md#RS-C12"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-srv-contract-01",
+          "inputs": [
+            "work.rs-fnd-contract-01",
+            "work.rs-fnd-contract-02",
+            "work.rs-sto-contract-01",
+            "work.rs-sup-contract-01"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "DASHBOARD-VIEWS-1",
+      "title": "Phase 1: Contract reconciliation",
+      "feature": "Dashboard Views",
+      "description": "```forge-task {   \"id\": \"RS-VWS-CONTRACT-01\",",
+      "ownerAgents": [
+        "documentation-engineer"
+      ],
+      "dependencies": [
+        "DASHBOARD-SERVER-1",
+        "CHART-AND-INSIGHT-1",
+        "ARCHIVE-STORAGE-1"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-VWS-CONTRACT-01",
+          "title": "Assert the section 4 order, the citation of it, and the printed gap wording",
+          "description": "`src/server/views/repo-detail.js` cites section 4 of this document as the authority for the order in which the detail page renders its sections, and the README promises that gaps are named rather than drawn as zeros. Create `tests/contract-views.test.js` asserting that the order listed in section 4 equals the exported detail section order, that this document still carries a section 4 and still lists all nine sections in that order, that the gap and empty-state sentences the pages print match the wording this document and the README publish, and that every state word a view can render is also a word the health read can return. Where the page and the document disagree, fix the document and note the disagreement; do not reorder a page to satisfy the test without also changing section 4 and the code comment that cites it. Do not change the section order, the rendered wording or the state vocabulary.",
+          "ownerAgent": "documentation-engineer",
+          "dependencies": [],
+          "expectedOutputs": [
+            "tests/contract-views.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/contract-views.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Assert the documented detail section order equals the rendered order, and that the gap and empty-state wording matches what the pages print"
+            ],
+            "acceptanceCriteria": [
+              "A test compares the nine sections in section 4 with the exported detail section order",
+              "A test fails when this document loses its section 4 or a section",
+              "A test asserts the gap sentence and the no-stored-value sentence the pages print are the documented ones",
+              "tests/contract-views.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not change the detail section order, the chart set or the rendered wording",
+              "Do not remove the comment in src/server/views/repo-detail.js that cites this document",
+              "RS-VWS-C03: An absent day prints as a named gap with the count and the sentence that those days are unmeasured rather than zero, an absent series prints that there is no stored value in the range, and a repository with nothing stored prints an empty state in words rather than an empty table.",
+              "RS-VWS-C02: State travels as a word as well as a class and a data attribute: every state is rendered as a state word with its reason beside it, and no meaning is carried by colour alone.",
+              "RS-C12: Every documented claim about the product is asserted by a named test file, so a later edit to prose or code cannot silently break the agreement between them."
+            ],
+            "references": [
+              "docs/features/dashboard-views.md#4. Page and Section Design",
+              "docs/features/dashboard-views.md#3. Functional Constraints",
+              "docs/features/dashboard-views.md#RS-VWS-C03",
+              "docs/features/dashboard-views.md#RS-VWS-C02",
+              "docs/PRD.md#RS-C12"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-vws-contract-01",
+          "inputs": [
+            "work.rs-srv-contract-01",
+            "work.rs-ins-contract-01",
+            "work.rs-sto-contract-01"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "OPERATIONS-AND-POSTURE-1",
+      "title": "Phase 1: Posture review",
+      "feature": "Operations and Posture",
+      "description": "```forge-task {   \"id\": \"RS-OPS-POST-01\",",
+      "ownerAgents": [
+        "documentation-engineer"
+      ],
+      "dependencies": [
+        "FOUNDATION-AND-RUNTIME-1",
+        "ARCHIVE-STORAGE-1",
+        "DASHBOARD-VIEWS-1"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-OPS-POST-01",
+          "title": "Assemble the open-source posture dossier a human reviewer can actually read",
+          "description": "The README states the project is MIT licensed, that GitHub aggregate traffic data may not be redistributed, that one read-only fine-grained token is the only secret, and that nothing leaves the machine but read requests to one host. No single document gathers those four positions with their sources, and the README says the review artefact that confirms them is missing. Create `docs/reviews/open-source-posture-dossier.md` that states each of the four positions in the reviewer's own words, names the file and heading each one currently lives in, names the test that asserts it, and marks each position confirmed-by-documentation or contested. Create `tests/posture-dossier.test.js` asserting that every file and heading the dossier cites exists, that every test it names exists, and that the four positions are all present. Do not decide any of the four positions, do not soften the redistribution statement, do not add legal advice, and do not create the review artefact itself.",
+          "ownerAgent": "documentation-engineer",
+          "dependencies": [
+            "RS-GHC-CONTRACT-01"
+          ],
+          "expectedOutputs": [
+            "docs/reviews/open-source-posture-dossier.md",
+            "tests/posture-dossier.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/posture-dossier.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Assert every position the dossier cites is present in this repository, at the heading it names, with the test that asserts it",
+              "RS-OPS-FR-02: Before that review runs, a dossier states each of the four positions, names the file and heading each one lives in, names the test that asserts it, and marks it confirmed by documentation or contested, so the reviewer reads gathered evidence rather than hunting for it."
+            ],
+            "acceptanceCriteria": [
+              "The dossier covers the licence, the data statement, the token description and the privacy note, each with a file and heading",
+              "A test fails when a cited heading or cited test file does not exist",
+              "The dossier marks each position confirmed or contested without resolving it",
+              "tests/posture-dossier.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not create docs/reviews/open-source-posture.json; that file is written by a person",
+              "Do not weaken, reinterpret or paraphrase the redistribution statement into something narrower",
+              "RS-OPS-C04: The product performs no export, publish, share or upload action of any kind, offers no archive download, and states in its own words that GitHub aggregate traffic data may not be redistributed; a personal backup is a copy rather than a redistribution.",
+              "RS-C06: GitHub aggregate traffic data may not be redistributed: no command exports, publishes or shares an archive, and the dashboard offers no download of one."
+            ],
+            "references": [
+              "docs/features/operations-and-posture.md#4. Runbooks and Gates",
+              "docs/operations/release-checklist.md",
+              "docs/features/operations-and-posture.md#RS-OPS-FR-02",
+              "docs/features/operations-and-posture.md#RS-OPS-C04",
+              "docs/PRD.md#RS-C06"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-ops-post-01",
+          "inputs": [
+            "work.rs-ghc-contract-01",
+            "work.rs-fnd-contract-01",
+            "work.rs-fnd-contract-02",
+            "work.rs-sto-contract-01",
+            "work.rs-vws-contract-01"
+          ],
+          "timeoutMs": 2700000
+        },
+        {
+          "id": "RS-OPS-REV-01",
+          "title": "Human review of the open-source posture",
+          "description": "A person reviews the four positions in the dossier and records the decision in docs/reviews/open-source-posture.json. The reviewer reads the project as a new reader would, starting at the README, and checks each of the dossier's four positions against the file it names: the MIT licence text, the redistribution statement for GitHub aggregate traffic data, the token description including that it is read-only and never printed, and the privacy note including that one host is the only outbound destination. For each position the reviewer records a decision, the reason, and whether the statement as written is accurate. The reviewer's notes must state what they read and what they checked, and must record any position they could not confirm. This is a judgement about posture, licence and data handling: no agent may write or approve this file, and the reviewer must not treat a passing test suite as evidence for any of the four positions.",
+          "dependencies": [
+            "RS-OPS-POST-01"
+          ],
+          "expectedOutputs": [],
+          "validationCommands": [],
+          "contract": {
+            "version": 1,
+            "kind": "human-review",
+            "requirements": [
+              "A named human reviewer records a decision for the licence, the data statement, the token description and the privacy note, with the reason and what was checked for each",
+              "RS-OPS-FR-01: A named human reviewer records a decision for the open-source posture: the MIT licence, the statement that GitHub aggregate traffic data may not be redistributed, the read-only token description and the privacy note, with the reason and the evidence read for each position, in a review file no agent authors."
+            ],
+            "acceptanceCriteria": [
+              "The reviewer has read the README as a new reader and checked each of the four positions against the file the dossier names",
+              "The review file records a decision, a reason and the evidence read for each of the four positions",
+              "The review file states plainly which positions, if any, could not be confirmed",
+              "The notes name the exercise rather than asserting a general impression"
+            ],
+            "constraints": [
+              "No agent authors or approves this review",
+              "A passing test suite is not evidence for any of the four positions",
+              "RS-OPS-C04: The product performs no export, publish, share or upload action of any kind, offers no archive download, and states in its own words that GitHub aggregate traffic data may not be redistributed; a personal backup is a copy rather than a redistribution."
+            ],
+            "references": [
+              "README.md",
+              "LICENSE",
+              "docs/operations/privacy.md",
+              "docs/operations/release-checklist.md",
+              "docs/features/operations-and-posture.md#4. Runbooks and Gates",
+              "docs/features/operations-and-posture.md#RS-OPS-FR-01",
+              "docs/features/operations-and-posture.md#RS-OPS-C04"
+            ],
+            "reviewFile": "docs/reviews/open-source-posture.json"
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-ops-rev-01",
+          "inputs": [
+            "work.rs-ops-post-01",
+            "work.rs-fnd-contract-01",
+            "work.rs-fnd-contract-02",
+            "work.rs-sto-contract-01",
+            "work.rs-vws-contract-01"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "SETUP-TERMINAL-UI-1",
+      "title": "Phase 1: Prompt primitives",
+      "feature": "Setup Terminal UI",
+      "description": "```forge-task {   \"id\": \"RS-TUI-01\",",
+      "ownerAgents": [
+        "cli-engineer"
+      ],
+      "dependencies": [
+        "FOUNDATION-AND-RUNTIME-1",
+        "ENROLLMENT-AND-COLLECTION-1",
+        "COLLECTION-SUPERVISION-AND-REPORT-1"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-TUI-01",
+          "title": "Build the line-oriented prompt primitives",
+          "description": "Create `src/tui/prompts.js` exporting the prompt primitives the flow is built from: a masked secret field that disables terminal echo through node:tty and restores it in a finally block, a numbered single choice, a space-toggled multiple selection that also accepts `a`, `n` and `i` and returns the chosen indices in ascending order, a yes or no confirmation with an explicit default and an empty answer taking that default, and a free-text field with a caller-supplied validator returning either the trimmed value or a refusal naming what was expected. Every prompt must state its options as plain text, accept `q` to cancel, work with colour disabled, and take its input and output streams as parameters so a test can drive it. Do not build a full-screen mode, do not use cursor addressing or an alternate screen, do not add a third-party dependency, and do not prompt for a value the caller will not use.",
+          "ownerAgent": "cli-engineer",
+          "dependencies": [],
+          "expectedOutputs": [
+            "src/tui/prompts.js",
+            "tests/tui-prompts.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/tui-prompts.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Every prompt states its options in text, reads one line at a time, supports cancellation, and returns a typed result or a named refusal",
+              "RS-TUI-FR-02: Reusable line-oriented prompt primitives are provided: a masked secret entry that writes no characters to the terminal, a numbered single choice, a space-toggled multiple selection supporting select-all, select-none and invert, a yes or no confirmation with an explicit default, and a free-text field with validation. Each prompt states its options in plain text, reads from standard input, and returns a typed result or a refusal naming what was expected."
+            ],
+            "acceptanceCriteria": [
+              "A test drives the masked field and asserts the typed characters are absent from everything the prompt writes",
+              "A test asserts a terminal echo failure is cleaned up in a finally block",
+              "A test asserts the multiple selection returns ascending indices and supports all, none and invert",
+              "A test asserts the confirmation default applies to an empty answer and to a q answer",
+              "A test asserts every prompt works with colour disabled and writes no escape sequence",
+              "tests/tui-prompts.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Use node:readline and node:tty only; add no dependency and no build step",
+              "Do not use an alternate screen, cursor addressing or mouse reporting",
+              "Restore terminal echo and raw mode on every exit path including interruption",
+              "RS-TUI-C01: The surface is built from node:readline and node:tty with no third-party dependency, no full-screen alternate-screen mode and no cursor addressing, so that it keeps the clone-and-go promise and stays legible to a screen reader.",
+              "RS-TUI-C05: Colour carries no meaning: every prompt, state and selection is expressed in words, and a colour is only ever a decoration that disappears under NO_COLOR or a dumb terminal."
+            ],
+            "references": [
+              "docs/features/setup-terminal-ui.md#4. Interaction Design",
+              "docs/features/setup-terminal-ui.md#3. Functional Requirements",
+              "docs/features/setup-terminal-ui.md#RS-TUI-FR-02",
+              "docs/features/setup-terminal-ui.md#RS-TUI-C01",
+              "docs/features/setup-terminal-ui.md#RS-TUI-C05"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-tui-01",
+          "inputs": [
+            "work.rs-fnd-contract-01",
+            "work.rs-fnd-contract-02",
+            "work.rs-col-contract-01",
+            "work.rs-sup-contract-01"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "SETUP-TERMINAL-UI-2",
+      "title": "Phase 2: First-run flow, configuration manager and run actions",
+      "feature": "Setup Terminal UI",
+      "description": "```forge-task {   \"id\": \"RS-TUI-03\",",
+      "ownerAgents": [
+        "cli-engineer"
+      ],
+      "dependencies": [
+        "SETUP-TERMINAL-UI-1"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-TUI-03",
+          "title": "Build the first-run setup flow",
+          "description": "Create `src/tui/setup-wizard.js` implementing the first-run sequence: report the resolved home and whether a configuration exists, offer to write both templates through the existing configuration initialiser, ask for the token through the masked field and name the Administration repository permission in the prompt, run discovery through the existing client and policy, present the returned repositories as a multiple selection, refuse an empty selection, ask for the collection hour, save the configuration through the existing schema and loader, run the existing configuration check, and offer the first collection. Every value the flow collects must reach the product through an existing module; the wizard must not parse JSON, resolve a path, validate a token shape or call GitHub itself. Do not implement the configuration manager, the run actions or the command registration.",
+          "ownerAgent": "cli-engineer",
+          "dependencies": [
+            "RS-TUI-01"
+          ],
+          "expectedOutputs": [
+            "src/tui/setup-wizard.js",
+            "tests/tui-setup-wizard.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/tui-setup-wizard.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "A first run takes an empty home to a saved, checked configuration using only the existing initialiser, schema, loader, credential writer, discovery client and collection run",
+              "RS-TUI-FR-03: The first-run flow detects an existing home before writing anything, offers to write both templates at mode 0600, asks for the token with the masked field and explains the Administration repository permission in the prompt itself, runs discovery through the existing client, turns the returned repositories into a numbered multiple selection with select-all and none, optionally sets the collection hour, writes the configuration through the existing schema, runs the existing configuration check, and offers a first collection that reports the same lines and summary the command prints."
+            ],
+            "acceptanceCriteria": [
+              "A test drives the whole first run with scripted answers and asserts the written configuration parses through the existing loader",
+              "A test asserts an empty selection is refused and nothing is written",
+              "A test asserts the token reaches the credential file at mode 0600 and never appears in any captured output",
+              "A test asserts an existing home is detected before any write and that both templates are preflighted together",
+              "A test asserts the offered first collection produces the same summary line the collect command prints for the same home",
+              "tests/tui-setup-wizard.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Reuse the existing modules; do not reimplement validation, path resolution, discovery or collection",
+              "Never print, log or echo the token",
+              "RS-TUI-C02: The token is entered through the masked field, never echoed, never printed, never written to a log, and stored only by the existing credential writer at mode 0600; no prompt result may ever be passed to an output function.",
+              "RS-TUI-C03: The flow reuses the existing home resolution, configuration schema and loader, credential loader and writer, discovery client, collection run, report formatter and health read; it does not reimplement validation, path resolution, transport, redaction or state vocabulary.",
+              "RS-C07: Exactly one credential is held, in credentials.json at mode 0600, read-only, never printed on any surface, redacted from every error, with no environment-variable fallback and no automatic repair of the file mode."
+            ],
+            "references": [
+              "docs/features/setup-terminal-ui.md#4. Interaction Design",
+              "docs/features/setup-terminal-ui.md#3. Functional Requirements",
+              "docs/features/setup-terminal-ui.md#RS-TUI-FR-03",
+              "docs/features/setup-terminal-ui.md#RS-TUI-C02",
+              "docs/features/setup-terminal-ui.md#RS-TUI-C03",
+              "docs/PRD.md#RS-C07"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-tui-03",
+          "inputs": [
+            "work.rs-tui-01"
+          ],
+          "timeoutMs": 2700000
+        },
+        {
+          "id": "RS-TUI-04",
+          "title": "Build the configuration manager",
+          "description": "Create `src/tui/config-manager.js` implementing the returning-visit menu: show the current enrolled set with each repository's enabled flag, the deny list and the collection hour; add or remove an enrollment from the discovery list, toggle a repository off without removing it, add or remove a deny entry, change the collection hour, and refresh the discovery list. Each edit is applied to the loaded configuration and saved whole through the existing schema and loader, so an invalid configuration cannot be written, and an interrupted run leaves the previous file untouched. Removing a repository that is also denied is impossible because the deny list is shown as part of the edit. Do not implement the first-run flow, the run actions or the command registration.",
+          "ownerAgent": "cli-engineer",
+          "dependencies": [
+            "RS-TUI-01"
+          ],
+          "expectedOutputs": [
+            "src/tui/config-manager.js",
+            "tests/tui-config-manager.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/tui-config-manager.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "A returning visit can change the enrolled set, the deny list, the collection hour and per-repository flags, with every change saved through the existing schema and loader",
+              "RS-TUI-FR-04: Re-entering the flow opens a configuration manager that shows the current enrolled set, deny list, collection hour and per-repository flags, and can add or remove an enrollment, toggle a repository off without removing it, add or remove a deny entry, change the collection hour, and refresh the discovery list; every change is written through the existing schema and loader so an invalid configuration is impossible to save."
+            ],
+            "acceptanceCriteria": [
+              "A test adds and removes an enrollment and asserts the saved file parses through the existing loader",
+              "A test toggles a repository off and asserts it stays enrolled with its flag false",
+              "A test refuses enrolling a repository the deny list names, in either case",
+              "A test asserts an interrupted edit leaves the previous configuration byte-identical",
+              "tests/tui-config-manager.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Never write a configuration that the existing loader would reject",
+              "Do not remove a repository from enrollment when the request was to disable it",
+              "RS-TUI-C03: The flow reuses the existing home resolution, configuration schema and loader, credential loader and writer, discovery client, collection run, report formatter and health read; it does not reimplement validation, path resolution, transport, redaction or state vocabulary.",
+              "RS-TUI-C04: An interrupted run writes nothing partial: each file is written whole through a temporary file and a rename, the credential write uses the existing refusing writer, and an enrolment is either saved in full or not at all."
+            ],
+            "references": [
+              "docs/features/setup-terminal-ui.md#4. Interaction Design",
+              "docs/features/setup-terminal-ui.md#3. Functional Requirements",
+              "docs/features/setup-terminal-ui.md#RS-TUI-FR-04",
+              "docs/features/setup-terminal-ui.md#RS-TUI-C03",
+              "docs/features/setup-terminal-ui.md#RS-TUI-C04"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-tui-04",
+          "inputs": [
+            "work.rs-tui-01"
+          ],
+          "timeoutMs": 2700000
+        },
+        {
+          "id": "RS-TUI-05",
+          "title": "Build the run-actions menu",
+          "description": "Create `src/tui/run-actions.js` offering collect now, print the report, print the health summary and start the dashboard, each by invoking the existing command module through the same context object the CLI builds, so the request budget, the host allowlist, token redaction, state words and exit codes are identical to running the command directly. Starting the dashboard must report the address the server printed and must not block the flow in a way that hides it, and must offer a way back to the menu. A failed action must return to the menu with the command's own message rather than ending the session. Do not reimplement collection, reporting or serving, and do not add a request of any kind.",
+          "ownerAgent": "cli-engineer",
+          "dependencies": [
+            "RS-TUI-01"
+          ],
+          "expectedOutputs": [
+            "src/tui/run-actions.js",
+            "tests/tui-run-actions.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/tui-run-actions.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Each run action delegates to the existing command module, so its requests, state words, redaction and exit code are the command's own",
+              "RS-TUI-FR-05: A run-actions menu can collect now, print the report, print the health summary, and start the dashboard, each by invoking the existing command module rather than reimplementing it, so the request budget, the host allowlist, token redaction, the state words and the exit codes are identical to running the command directly."
+            ],
+            "acceptanceCriteria": [
+              "A test asserts the collect action prints the same summary the collect command prints for the same home",
+              "A test asserts a failing action returns to the menu with the command's own message and does not end the session",
+              "A test asserts starting the dashboard prints the address the server reported",
+              "A test asserts no action performs a request the command it delegates to does not already perform",
+              "tests/tui-run-actions.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not reimplement collection, reporting or serving",
+              "Do not bypass the credential loader or the transport allowlist",
+              "RS-TUI-C03: The flow reuses the existing home resolution, configuration schema and loader, credential loader and writer, discovery client, collection run, report formatter and health read; it does not reimplement validation, path resolution, transport, redaction or state vocabulary.",
+              "RS-C02: The only outbound host the product may contact is api.github.com, every request is a GET, redirects are refused rather than followed, and the host is re-checked on every request rather than at import."
+            ],
+            "references": [
+              "docs/features/setup-terminal-ui.md#4. Interaction Design",
+              "docs/features/setup-terminal-ui.md#3. Functional Requirements",
+              "docs/PRD.md#7. Non-Functional Requirements",
+              "docs/features/setup-terminal-ui.md#RS-TUI-FR-05",
+              "docs/features/setup-terminal-ui.md#RS-TUI-C03",
+              "docs/PRD.md#RS-C02"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-tui-05",
+          "inputs": [
+            "work.rs-tui-01"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "SETUP-TERMINAL-UI-3",
+      "title": "Phase 3: Registration, mounting and composition root",
+      "feature": "Setup Terminal UI",
+      "description": "```forge-task {   \"id\": \"RS-TUI-02\",",
+      "ownerAgents": [
+        "cli-engineer"
+      ],
+      "dependencies": [
+        "SETUP-TERMINAL-UI-2"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-TUI-02",
+          "title": "Register the setup command and mount the flow in the command registry",
+          "description": "Create `src/commands/setup.js` and register it in `src/commands/index.js` as the entry point a user reaches: accept no positional arguments, accept `--help` to print the flow steps and exit 0, accept `--non-interactive` to print the scriptable equivalent of every step and exit 0 without reading or writing any file, and refuse any other argument as a usage error. The command must choose the first-run flow or the configuration manager by looking at the resolved home rather than by a flag, delegate the run actions to the menu, detect a non-terminal standard input and exit 1 naming the command to run instead, and return the standard exit codes. This is the composition root that mounts the flow, so it must be reachable from `node src/cli.js` and appear in the generated command list. Do not change any existing command, flag or exit code, and do not change the global flag rules.",
+          "ownerAgent": "cli-engineer",
+          "dependencies": [
+            "RS-TUI-03",
+            "RS-TUI-04",
+            "RS-TUI-05"
+          ],
+          "expectedOutputs": [
+            "src/commands/setup.js",
+            "src/commands/index.js",
+            "tests/tui-setup-command.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/tui-setup-command.test.js",
+            "npm test -- tests/cli.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "`node src/cli.js setup` is registered, reachable, and its help, non-interactive output, refusals and exit codes follow the command contract",
+              "RS-TUI-FR-01: A `setup` command is registered in the command registry and reachable as `node src/cli.js setup`, accepts `--help` to print its own steps and exits 0, accepts `--non-interactive` to print the scriptable equivalent of every step and exit 0 without touching a file, and returns the standard 0, 1 or 2 exit codes. It must appear in the generated command list like every other command."
+            ],
+            "acceptanceCriteria": [
+              "A test spawns the real CLI and asserts `setup` appears in the generated command list with a summary",
+              "A test spawns the real CLI and asserts `setup --help` prints the flow steps and exits 0",
+              "A test spawns the real CLI and asserts `setup --non-interactive` prints the scriptable equivalent, writes nothing and exits 0",
+              "A test spawns the real CLI with a non-terminal standard input and asserts exit 1 with the command to run named",
+              "A test asserts an unknown argument to setup exits 2 with the usage",
+              "tests/tui-setup-command.test.js and tests/cli.test.js each report more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not change an existing command, flag, exit code or the global flag rules",
+              "Do not register the command anywhere other than the command registry",
+              "RS-TUI-C03: The flow reuses the existing home resolution, configuration schema and loader, credential loader and writer, discovery client, collection run, report formatter and health read; it does not reimplement validation, path resolution, transport, redaction or state vocabulary.",
+              "RS-C09: Every command returns 0 on success, 1 on operational failure and 2 on a usage error; no other exit code is produced and no stack trace is printed."
+            ],
+            "references": [
+              "docs/features/setup-terminal-ui.md#4. Interaction Design",
+              "docs/features/setup-terminal-ui.md#3. Functional Requirements",
+              "docs/features/setup-terminal-ui.md#RS-TUI-FR-01",
+              "docs/features/setup-terminal-ui.md#RS-TUI-C03",
+              "docs/PRD.md#RS-C09"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-tui-02",
+          "inputs": [
+            "work.rs-tui-03",
+            "work.rs-tui-04",
+            "work.rs-tui-05"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "SETUP-TERMINAL-UI-4",
+      "title": "Phase 4: Terminal accessibility, compatibility and documentation",
+      "feature": "Setup Terminal UI",
+      "description": "```forge-task {   \"id\": \"RS-TUI-06\",",
+      "ownerAgents": [
+        "qa-engineer",
+        "documentation-engineer"
+      ],
+      "dependencies": [
+        "SETUP-TERMINAL-UI-3"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-TUI-06",
+          "title": "Prove the surface is keyboard-only, colour-free, non-terminal safe and interruptible",
+          "description": "Create `tests/tui-accessibility.test.js` and `tests/integration/tui-setup-e2e.test.js`. The unit test drives every prompt and the whole first run with standard input only, asserting that each prompt is answerable by typing a line, that `q` cancels a step, that colour disabled and a dumb terminal produce output with no escape sequence, that no step requires a pointer, that a non-terminal standard input exits 1 naming the command to run, and that interrupting at each of the first three steps leaves no partial configuration and no credential file. The integration test spawns the real `node src/cli.js setup` with scripted answers against the loopback GitHub stub and asserts the flow completes, the configuration it wrote loads through the existing loader, and the repository it selected is the one enrolled. Do not change the prompts to pass a test: an interaction that cannot be driven from a pipe is the finding, and must be reported rather than patched.",
+          "ownerAgent": "qa-engineer",
+          "dependencies": [
+            "RS-TUI-02"
+          ],
+          "expectedOutputs": [
+            "tests/tui-accessibility.test.js",
+            "tests/integration/tui-setup-e2e.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/tui-accessibility.test.js",
+            "npm test -- tests/integration/tui-setup-e2e.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "Every prompt and the whole flow are answerable from standard input alone, with no pointer, no colour meaning and no partial write on interruption",
+              "RS-TUI-FR-06: The surface is operable without a pointer and without colour, degrades to plain text when NO_COLOR is set or TERM is dumb, prints the same instructions and exits 1 with a next command when standard input is not a terminal, restores the terminal mode and leaves no partially written file when the run is interrupted at any prompt, and its tests drive the real command through standard input."
+            ],
+            "acceptanceCriteria": [
+              "A test completes the first run by writing answers to standard input and asserts the saved configuration",
+              "A test runs the flow with NO_COLOR set and TERM=dumb and asserts the output contains no escape sequence",
+              "A test asserts each of the first three steps can be interrupted and leaves no partial file",
+              "A test asserts a non-terminal standard input exits 1 and names the command to run",
+              "tests/tui-accessibility.test.js and tests/integration/tui-setup-e2e.test.js each report more than zero executed tests"
+            ],
+            "constraints": [
+              "Drive the real command through a pipe; do not import internals to avoid the terminal",
+              "Report an interaction that cannot be driven from a pipe instead of changing it",
+              "RS-TUI-C01: The surface is built from node:readline and node:tty with no third-party dependency, no full-screen alternate-screen mode and no cursor addressing, so that it keeps the clone-and-go promise and stays legible to a screen reader.",
+              "RS-TUI-C05: Colour carries no meaning: every prompt, state and selection is expressed in words, and a colour is only ever a decoration that disappears under NO_COLOR or a dumb terminal."
+            ],
+            "references": [
+              "docs/features/setup-terminal-ui.md#5. Testing Strategy",
+              "docs/features/setup-terminal-ui.md#3. Functional Requirements",
+              "docs/PRD.md#9. Accessibility",
+              "docs/features/setup-terminal-ui.md#RS-TUI-FR-06",
+              "docs/features/setup-terminal-ui.md#RS-TUI-C01",
+              "docs/features/setup-terminal-ui.md#RS-TUI-C05"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-tui-06",
+          "inputs": [
+            "work.rs-tui-02"
+          ],
+          "timeoutMs": 2700000
+        },
+        {
+          "id": "RS-TUI-07",
+          "title": "Document the setup command and assert it is registered and documented",
+          "description": "Add the command to the README as the guided alternative to the six-command sequence, stating what it writes, that the token is entered masked and never echoed, that `--non-interactive` prints the scriptable equivalent, and that every existing command still works exactly as documented. Extend the scheduled-collection runbook to say that the flow can set the collection hour but does not install a schedule, and that the operating system still owns the schedule. Create `tests/contract-setup-command.test.js` asserting the command is registered in the registry, named in the README, and that the README still documents the six-command sequence it replaced nothing of. Do not remove or reorder any existing README claim, and do not describe behaviour the command does not have.",
+          "ownerAgent": "documentation-engineer",
+          "dependencies": [
+            "RS-TUI-02"
+          ],
+          "expectedOutputs": [
+            "README.md",
+            "docs/operations/scheduled-collection.md",
+            "tests/contract-setup-command.test.js"
+          ],
+          "validationCommands": [
+            "npm test -- tests/contract-setup-command.test.js"
+          ],
+          "contract": {
+            "version": 1,
+            "kind": "implementation",
+            "requirements": [
+              "The command is documented with what it writes, the token handling and the non-interactive escape, and a contract test ties the document to the registry",
+              "RS-TUI-FR-07: The README and the scheduled-collection runbook document the command, what it writes, that the token is never echoed, and that `--non-interactive` prints the scriptable equivalent; a contract test asserts the command is registered and named in the documentation, and a human review records the journey."
+            ],
+            "acceptanceCriteria": [
+              "The README names the command, the masked token entry and the non-interactive flag",
+              "The scheduled-collection runbook states that the flow sets the hour but installs no schedule",
+              "A test asserts the registered command list and the README agree",
+              "tests/contract-setup-command.test.js reports more than zero executed tests"
+            ],
+            "constraints": [
+              "Do not remove an existing README or runbook claim a contract test asserts",
+              "Do not claim a behaviour the command does not have",
+              "RS-C12: Every documented claim about the product is asserted by a named test file, so a later edit to prose or code cannot silently break the agreement between them."
+            ],
+            "references": [
+              "docs/features/setup-terminal-ui.md#4. Interaction Design",
+              "docs/features/setup-terminal-ui.md#3. Functional Requirements",
+              "docs/features/setup-terminal-ui.md#RS-TUI-FR-07",
+              "docs/PRD.md#RS-C12"
+            ]
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-tui-07",
+          "inputs": [
+            "work.rs-tui-02"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    },
+    {
+      "id": "SETUP-TERMINAL-UI-5",
+      "title": "Phase 5: Human review of the journey",
+      "feature": "Setup Terminal UI",
+      "description": "```forge-task {   \"id\": \"RS-TUI-REV-01\",",
+      "ownerAgents": [],
+      "dependencies": [
+        "SETUP-TERMINAL-UI-4"
+      ],
+      "approvalRequired": true,
+      "tasks": [
+        {
+          "id": "RS-TUI-REV-01",
+          "title": "Human review of the interactive setup journey",
+          "description": "A person runs the interactive flow themselves, from an empty temporary home on the same machine a maintainer uses. The reviewer must type a token into the masked field and confirm nothing appeared on screen, select repositories from the discovery list with the keyboard alone, save the configuration, run the offered first collection, change the configuration on a second visit, and start the dashboard from the run menu, recording the address it printed. The reviewer then answers the questions a new user asks: is it clear what will be written, can the whole flow be done without a mouse, is the refusal behaviour obvious, and does anything read as though the product has decided something. The notes must state what was exercised, including which steps were interrupted and what was left behind. No agent authors or approves this review, and a passing test suite is not evidence that the journey works.",
+          "dependencies": [
+            "RS-TUI-01",
+            "RS-TUI-02",
+            "RS-TUI-03",
+            "RS-TUI-04",
+            "RS-TUI-05",
+            "RS-TUI-06",
+            "RS-TUI-07"
+          ],
+          "expectedOutputs": [],
+          "validationCommands": [],
+          "contract": {
+            "version": 1,
+            "kind": "human-review",
+            "requirements": [
+              "A named reviewer completed the first-run journey and a returning visit on the running command, and recorded what was exercised and what each refusal looks like",
+              "RS-TUI-FR-07: The README and the scheduled-collection runbook document the command, what it writes, that the token is never echoed, and that `--non-interactive` prints the scriptable equivalent; a contract test asserts the command is registered and named in the documentation, and a human review records the journey."
+            ],
+            "acceptanceCriteria": [
+              "The reviewer completed the primary user journey against the running command, typing the token, selecting repositories, saving, collecting and starting the dashboard",
+              "The review file states which steps were interrupted and what was left on disk afterwards",
+              "The review file records an answer on keyboard-only operability, the clarity of what will be written, and whether any screen reads as a verdict",
+              "The review notes name the exercise rather than asserting a general impression"
+            ],
+            "constraints": [
+              "No agent authors or approves this review",
+              "A passing test suite is not evidence that the journey is usable",
+              "RS-TUI-C01: The surface is built from node:readline and node:tty with no third-party dependency, no full-screen alternate-screen mode and no cursor addressing, so that it keeps the clone-and-go promise and stays legible to a screen reader.",
+              "RS-TUI-C05: Colour carries no meaning: every prompt, state and selection is expressed in words, and a colour is only ever a decoration that disappears under NO_COLOR or a dumb terminal."
+            ],
+            "references": [
+              "docs/features/setup-terminal-ui.md#4. Interaction Design",
+              "docs/features/setup-terminal-ui.md#5. Testing Strategy",
+              "docs/features/setup-terminal-ui.md#7. Acceptance Criteria",
+              "docs/PRD.md#9. Accessibility",
+              "docs/features/setup-terminal-ui.md#RS-TUI-FR-07",
+              "docs/features/setup-terminal-ui.md#RS-TUI-C01",
+              "docs/features/setup-terminal-ui.md#RS-TUI-C05"
+            ],
+            "reviewFile": "docs/reviews/setup-terminal-ui.json"
+          },
+          "requiredCapabilities": [
+            "repository-tools"
+          ],
+          "approvalRequired": false,
+          "sourceLines": [],
+          "produces": "work.rs-tui-rev-01",
+          "inputs": [
+            "work.rs-tui-01",
+            "work.rs-tui-02",
+            "work.rs-tui-03",
+            "work.rs-tui-04",
+            "work.rs-tui-05",
+            "work.rs-tui-06",
+            "work.rs-tui-07"
+          ],
+          "timeoutMs": 2700000
+        }
+      ]
+    }
+  ],
+  "warnings": [],
+  "responsibilityMatrixPath": "/home/mcfuzzysquirrel/Projects/testing/repo-signal/docs/agent-responsibility-matrix.md"
+}

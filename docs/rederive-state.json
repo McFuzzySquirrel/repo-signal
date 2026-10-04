@@ -2,7 +2,7 @@
   "version": 1,
   "runId": "ca705004-0788-47e1-bc3c-948f256c816c",
   "startedAt": "2026-10-04T17:17:37.754Z",
-  "updatedAt": "2026-10-04T17:20:55.945Z",
+  "updatedAt": "2026-10-04T17:36:58.913Z",
   "steps": [
     {
       "id": "team",
@@ -17,13 +17,16 @@
       "label": "Project skills",
       "status": "complete",
       "startedAt": "2026-10-04T17:20:55.945Z",
-      "message": "Nine packages reconciled against the repaired team; two refusal counts corrected.",
-      "finishedAt": "2026-10-04T17:36:00.392Z"
+      "message": "Project skills regenerated.",
+      "finishedAt": "2026-10-04T17:36:57.588Z"
     },
     {
       "id": "manifest",
       "label": "Execution manifest",
-      "status": "pending"
+      "status": "complete",
+      "startedAt": "2026-10-04T17:36:57.589Z",
+      "message": "Execution manifest recompiled.",
+      "finishedAt": "2026-10-04T17:36:58.913Z"
     }
   ]
 }

@@ -48,11 +48,11 @@ export function parseReportArgs(args) {
     const arg = /** @type {string} */ (args[index]);
     if (arg !== '--repo' && arg !== '--from' && arg !== '--to') {
       throw new UsageError(redact(
-        `report does not know "${arg}"; run node src/cli.js report --help for its flags`));
+        `report does not know "${arg}"; run node src/cli.js --help for its flags`));
     }
     const value = args[index + 1];
     if (value === undefined || value.startsWith('--')) {
-      throw new UsageError(redact(`${arg} needs a value; run node src/cli.js report --help for its flags`));
+      throw new UsageError(redact(`${arg} needs a value; run node src/cli.js --help for its flags`));
     }
     const seen = values.get(arg) ?? [];
     seen.push(value);
@@ -69,7 +69,7 @@ export function parseReportArgs(args) {
   options.to = values.get('--to')?.[0] ?? null;
   if (options.repo !== null && options.repo.split('/').length !== 2) {
     throw new UsageError(redact(
-      `--repo needs one owner/name pair; got "${options.repo}". Run node src/cli.js report --help for its flags`));
+      `--repo needs one owner/name pair; got "${options.repo}". Run node src/cli.js --help for its flags`));
   }
   for (const flag of ['--from', '--to']) {
     const value = flag === '--from' ? options.from : options.to;

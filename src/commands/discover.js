@@ -59,7 +59,7 @@ export async function discover(context) {
   const flags = new Set();
   for (const arg of context.args) {
     if (arg === '--json' || arg === '--include-organizations') flags.add(arg);
-    else throw new UsageError(redact(`discover does not know "${arg}"; run node src/cli.js discover --help for its flags`));
+    else throw new UsageError(redact(`discover does not know "${arg}"; run node src/cli.js --help for its flags`));
   }
   const asJson = flags.has('--json');
   const includeOrganizations = flags.has('--include-organizations');

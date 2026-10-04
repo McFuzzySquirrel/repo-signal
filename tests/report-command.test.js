@@ -220,6 +220,18 @@ test('the default range spans the fourteen days ending today', async (t) => {
   assert.equal(span, 14, 'the default window is the span of GitHub own traffic window');
 });
 
+test('report --help is refused and points at the registry help', async (t) => {
+  const f = await archive(t);
+
+  const result = await f.run(['report', '--help']);
+
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /node src\/cli\.js --help/);
+  assert.ok(!result.stderr.includes('report --help'),
+    'the message no longer names the invocation it rejects');
+  assertNoCredentialMaterial(result, 'report --help');
+});
+
 test('an archive in which nothing is healthy still exits 0', async (t) => {
   const f = await archive(t, { lastSuccessAt: '2026-09-01T00:00:00.000Z' });
 

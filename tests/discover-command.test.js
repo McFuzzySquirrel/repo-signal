@@ -127,6 +127,16 @@ test('discover --include-organizations is passed through to the listing request'
   assert.equal(readFileSync(f.configPath, 'utf8'), f.configText);
 });
 
+test('discover --help is refused and points at the registry help', async (t) => {
+  const f = await fixture(t);
+  const result = await f.run(['discover', '--help']);
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /node src\/cli\.js --help/);
+  assert.ok(!result.stderr.includes('discover --help'),
+    'the message no longer names the invocation it rejects');
+  assert.equal(readFileSync(f.configPath, 'utf8'), f.configText);
+});
+
 test('discover is a usage error for unknown flags and reaches no host without the gate', async (t) => {
   const f = await fixture(t);
   const unknown = await f.run(['discover', '--bogus']);
