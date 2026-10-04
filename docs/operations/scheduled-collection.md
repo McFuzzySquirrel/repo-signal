@@ -96,6 +96,12 @@ per repository per year** at one run a day. The quiet-hours budget the project c
 **5,000** requests per repository per year, so a daily run sits comfortably inside it with room for
 a first-connect backfill and for a catch-up run or two.
 
+Every figure above is a constant the collector exports from `src/collect/run.js`: the resolution step
+is `RESOLUTION_REQUESTS_PER_REPOSITORY`, the four traffic endpoints are `TRAFFIC_REQUESTS_PER_REPOSITORY`,
+the backfill floor is `BACKFILL_REQUESTS_FLOOR`, the per-run total is the first two added, and the
+yearly figure is that total times one run a day for a leap year, which `tests/contract-collect.test.js`
+recomputes from those constants.
+
 Three honest qualifications:
 
 - **The first connect costs more.** The backfill's own count is a floor over an unknown number of

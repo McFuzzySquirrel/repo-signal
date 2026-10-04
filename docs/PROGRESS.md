@@ -1,9 +1,9 @@
 # Project Progress
 
 ## Current State
-**Phase**: ARCHIVE-STORAGE-1
+**Phase**: ENROLLMENT-AND-COLLECTION-1
 **Status**: In Progress
-**Last Updated**: 2026-10-04T18:00:34.544Z
+**Last Updated**: 2026-10-04T18:25:03.012Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -17,12 +17,13 @@
   - Files: docs/operations/privacy.md, tests/contract-transport.test.js
 - [x] Phase ARCHIVE-STORAGE-1, Task RS-STO-CONTRACT-01: Document the write-ahead side files and assert the home inventory against the schema (@documentation-engineer)
   - Files: README.md, docs/operations/backup-and-migrate.md, tests/contract-storage.test.js
+- [x] Phase ENROLLMENT-AND-COLLECTION-1, Task RS-COL-CONTRACT-01: Assert the documented request budget and collection line vocabulary against the code (@documentation-engineer)
+  - Files: tests/contract-collect.test.js, docs/operations/scheduled-collection.md
 
 ## Current Task
 - None currently running
 
 ## Remaining
-- [ ] Phase ENROLLMENT-AND-COLLECTION-1: Phase 1: Contract reconciliation
 - [ ] Phase FIRST-CONNECT-BACKFILL-1: Phase 1: Contract reconciliation
 - [ ] Phase COLLECTION-SUPERVISION-AND-REPORT-1: Phase 1: Contract reconciliation
 - [ ] Phase CHART-AND-INSIGHT-1: Phase 1: Contract reconciliation
