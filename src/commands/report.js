@@ -8,7 +8,7 @@ import { readRepositoryPage } from '../server/repo-data.js';
 import { sevenDayDelta, weekOverWeekDelta } from '../insight/deltas.js';
 import { resolveHomePaths } from '../paths.js';
 import {
-  changeBlock, coverageLine, header, refusalLine, repositoryLines, runBlock, summaryBlock,
+  boundaryBlock, changeBlock, coverageLine, header, refusalLine, repositoryLines, runBlock, summaryBlock,
 } from '../report/format.js';
 import { EXIT_OPERATIONAL_FAILURE, EXIT_SUCCESS, UsageError } from './index.js';
 
@@ -158,6 +158,9 @@ export async function report(context) {
           })));
         }
         for (const line of refusalLine(page.repository?.backfillRefusedReason ?? null)) {
+          context.print(clean(line));
+        }
+        for (const line of boundaryBlock(page.provenance?.firstCollectedDay ?? null, from, to)) {
           context.print(clean(line));
         }
         context.print(clean(''));

@@ -12,6 +12,7 @@
 | RS-BKL-FR-01 | This feature | owns |
 | RS-BKL-FR-02 | This feature | owns |
 | RS-BKL-FR-03 | This feature | owns |
+| RS-BKL-FR-04 | This feature | owns |
 | RS-BKL-CON-01 | This feature | owns |
 | RS-BKL-ST-01 | This feature | owns |
 | RS-BKL-ST-02 | This feature | owns |
@@ -62,6 +63,10 @@ where collected data begins.
 {"id":"RS-BKL-CON-01","kind":"constraint","text":"Backfill never fabricates acquisition data. Clones, views, referrers and popular paths are not backfilled in any form, and no day between the first star and today is filled with a zero, a carry-forward or an estimate."}
 ```
 
+```forge-requirement
+{"id":"RS-BKL-FR-04","kind":"requirement","text":"Store the star level a collection already observes. Every collection resolves the repository through the GitHub client, which reads the repository's stargazer count, and that count is currently discarded; write it as a cumulative stars day fact for the collection's own UTC day with source collected, inside the same per-repository transaction as the traffic facts, so a star level can never commit without the traffic it was collected alongside and a rollback loses both. No additional request is made. A collected level replaces a reconstructed one for the same day under the archive's existing last-write-wins rule, a repeated collection on the same day leaves one row, and a level lower than the one stored is a real observation and is written rather than suppressed. The result is a star series that is continuous from the first collection onward instead of holding a row only on the days a star arrived, which is what lets a stars-versus-cloner reading pair its two series. The rows the backfill reconstructed before collection are left in place, and each day's provenance continues to be recorded through the existing source column rather than a new one."}
+```
+
 ### 3.1 Priority Index
 
 | ID | Kind | Priority |
@@ -71,6 +76,7 @@ where collected data begins.
 | RS-BKL-FR-01 | requirement | Must |
 | RS-BKL-FR-02 | requirement | Must |
 | RS-BKL-FR-03 | requirement | Must |
+| RS-BKL-FR-04 | requirement | Must |
 | RS-BKL-CON-01 | constraint | Must |
 
 ---
@@ -90,6 +96,7 @@ a first-connect label stating that the window before that line is "since connect
 | RS-BKL-01 | Star history becomes cumulative day rows marked as backfill | github-integration-engineer | RS-API-04, RS-DB-03 | src/backfill/stars.js, tests/backfill-stars.test.js | cumulative curve, idempotent rerun, no invented leading days, sparse input | Development activity, provenance |
 | RS-BKL-02 | A year of weekly development activity is stored as week rows | github-integration-engineer | RS-API-04, RS-DB-03 | src/backfill/development.js, tests/backfill-development.test.js | week granularity, short window flagged, 202 handled upstream | Star history, collection runs |
 | RS-BKL-03 | Provenance answers where collected history begins | github-integration-engineer | RS-BKL-01, RS-BKL-02 | src/backfill/provenance.js, tests/provenance.test.js | first collected day, not-connected state, backfill record | Dashboard rendering |
+| RS-BKL-04 | The star level a collection already fetched becomes a daily observation | collector-engineer | RS-BKL-01, RS-BKL-03, RS-COL-01, RS-API-04 | src/collect/lifecycle.js, src/collect/run.js, tests/collect-command.test.js | row written in the traffic transaction, idempotent per day, lower level stored | Request count, summary line, schema |
 
 ---
 
@@ -161,6 +168,42 @@ a first-connect label stating that the window before that line is "since connect
     "constraints": ["Provenance records facts only; it renders nothing and imports no view module", "Do not infer a first collected day from the earliest stored row of any metric"],
     "constraintRefs": ["docs/features/first-connect-backfill.md#RS-BKL-CON-01", "docs/PRD.md#RS-DU-02", "docs/PRD.md#RS-TC-02"],
     "references": ["docs/PRD.md#10. System States / Lifecycle"]
+  }
+}
+```
+
+### Phase 3: The observed star level
+
+```forge-task
+{
+  "id": "RS-BKL-04",
+  "title": "Store the star level each collection already observes",
+  "description": "The GitHub repository client reads stargazers_count on every resolve and src/collect/lifecycle.js discards it, so a collection throws away a cumulative star level it has already paid for. Widen RemoteRepository to carry that count, validated as a non-negative safe integer the way the client already validates it, and pass it through confirmRepository. Write it in src/collect/run.js as a stars day fact for the collection's own UTC day with source collected, inside the same transaction body that already calls recordIdentity, writeTrafficDays and writeSnapshotCaptures, so a star level can never commit without the traffic facts it was collected alongside and a rollback loses both. Make no additional request. A collected level must replace a reconstructed one for the same day under the existing last-write-wins upsert, a repeated collection on the same day must leave one row, and a level lower than the stored one must be written rather than suppressed, because a level that fell is a real observation. The rows the backfill reconstructed before collection are left untouched, and the collected summary line keeps counting traffic rows only so its counts do not change meaning. Note in src/insight/divergence.js that the stored star level is a snapshot taken at collection time while the traffic figures cover the whole day, so the ratio the reading reports is not strictly co-temporal.",
+  "ownerAgent": "collector-engineer",
+  "dependencies": ["RS-BKL-01", "RS-BKL-03", "RS-COL-01", "RS-API-04"],
+  "expectedOutputs": ["src/collect/lifecycle.js", "src/collect/run.js", "src/insight/divergence.js", "tests/collect-command.test.js"],
+  "validationCommands": ["npm run typecheck", "npm test -- tests/collect-command.test.js"],
+  "contract": {
+    "version": 2,
+    "kind": "implementation",
+    "requirements": [],
+    "requirementRefs": ["docs/features/first-connect-backfill.md#RS-BKL-FR-04", "docs/features/chart-and-insight.md#RS-VIZ-FR-04"],
+    "acceptanceCriteria": [
+      "A collection writes a stars day fact for its own UTC day carrying the count the repository response held, with source collected and the collection timestamp",
+      "That row is written in the same transaction as the traffic facts: a run that fails to write its traffic leaves no star row either",
+      "A second collection on the same day leaves one stars row rather than adding another",
+      "A count lower than the stored one for the same day is written, and the row still holds the lower value",
+      "A stars row the backfill wrote for an earlier day is left exactly as it was",
+      "The request count of a collection is unchanged by this write",
+      "The collected summary line still reports the same written, revised and unchanged counts as before"
+    ],
+    "constraints": [
+      "Make no additional request and add no runtime dependency",
+      "Add no migration and no new column: provenance stays in the existing source column",
+      "Do not change what the summary line counts"
+    ],
+    "constraintRefs": ["docs/features/first-connect-backfill.md#RS-BKL-CON-01", "docs/PRD.md#RS-SC-01", "docs/PRD.md#RS-SC-02", "docs/PRD.md#RS-TC-04"],
+    "references": ["docs/PRD.md#8. Security and Privacy", "docs/features/chart-and-insight.md#RS-VIZ-FR-05"]
   }
 }
 ```

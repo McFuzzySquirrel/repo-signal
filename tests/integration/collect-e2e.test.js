@@ -537,11 +537,11 @@ test('two runs over the same window leave every day row in place and double the 
     assert.equal(count(db, 'repositories'), 2);
     for (const repo of enrolled) {
       const id = repositoryId(db, repo);
-      const collected = count(db, 'day_series', `WHERE repository_id=${id} AND source='collected'`);
+      const collected = count(db, 'day_series', `WHERE repository_id=${id} AND source='collected' AND metric<>'stars'`);
       assert.equal(collected, WINDOW.length * TRAFFIC_METRICS.length,
         `${repo}: expected ${WINDOW.length} returned days x ${TRAFFIC_METRICS.length} traffic metrics = ` +
         `${WINDOW.length * TRAFFIC_METRICS.length} day rows, found ${collected}`);
-      assert.deepEqual(collectedDays(db, id), WINDOW,
+      assert.deepEqual(collectedDays(db, id, 'clones'), WINDOW,
         `${repo}: the stored days must be exactly the days GitHub returned, with no day added and none dropped`);
       assert.deepEqual(collectedDays(db, id, 'unique-visitors'), WINDOW,
         `${repo}: every traffic metric key covers the same returned window`);
@@ -602,7 +602,7 @@ test('two runs over the same window leave every day row in place and double the 
   f.archive((db) => {
     assert.equal(count(db, 'day_series'), before.days,
       `the second run over the same window must leave the day-row count at ${before.days}, found ${count(db, 'day_series')}`);
-    assert.equal(count(db, 'day_series', "WHERE source='collected'"), 2 * WINDOW.length * TRAFFIC_METRICS.length);
+    assert.equal(count(db, 'day_series', "WHERE source='collected' AND metric<>'stars'"), 2 * WINDOW.length * TRAFFIC_METRICS.length);
     assert.equal(count(db, 'snapshots'), before.snapshots * 2,
       `two runs must append two captures, so ${before.snapshots * 2} rows were expected and ${count(db, 'snapshots')} were found`);
     assert.equal(count(db, 'backfill_records'), 4, 'the first-connect backfill is a connect step and did not run again');
@@ -610,9 +610,9 @@ test('two runs over the same window leave every day row in place and double the 
     for (const [index, repo] of enrolled.entries()) {
       const id = repositoryId(db, repo);
       assert.equal(count(db, 'day_series', `WHERE repository_id=${id}`),
-        WINDOW.length * TRAFFIC_METRICS.length + 6,
-        `${repo}: no day row was added, removed or renumbered`);
-      assert.deepEqual(collectedDays(db, id), WINDOW, `${repo}: the same keys, under the same identity`);
+        WINDOW.length * TRAFFIC_METRICS.length + 6 + 1,
+        `${repo}: no day row was added, removed or renumbered, and the observed star level is still one`);
+      assert.deepEqual(collectedDays(db, id, 'clones'), WINDOW, `${repo}: the same keys, under the same identity`);
       assert.equal(dayValue(db, id, 'clones', FIRST_DAY), servedClones(repo, FIRST_DAY, 5),
         `${repo}: the same key was corrected in place with the value the second run returned`);
       // Two captures, side by side, each naming the run that observed it.
@@ -670,10 +670,10 @@ test('a day the stub never returns stays absent, and appears only once GitHub re
       `the day ${hole} was never returned, so no row exists for it: not a zero, not a carried-forward value`);
     assert.equal(count(db, 'day_series', `WHERE repository_id=${id} AND day='${hole}' AND value=0`), 0,
       'an unobserved day is never written as a zero');
-    assert.equal(count(db, 'day_series', `WHERE repository_id=${id} AND source='collected'`),
+    assert.equal(count(db, 'day_series', `WHERE repository_id=${id} AND source='collected' AND metric<>'stars'`),
       returned.length * TRAFFIC_METRICS.length,
       `the first run wrote one row per returned day: ${returned.length} days were served`);
-    assert.deepEqual(collectedDays(db, id), returned,
+    assert.deepEqual(collectedDays(db, id, 'clones'), returned,
       'the stored days are exactly the days GitHub returned, with the hole left as a gap');
     // Neither neighbour was interpolated, padded or carried forward to cover the gap.
     assert.equal(dayValue(db, id, 'clones', WINDOW[4]), servedClones(repo, WINDOW[4], 0, returned));
@@ -690,10 +690,10 @@ test('a day the stub never returns stays absent, and appears only once GitHub re
   assert.equal(second.status, 0, second.stderr);
   f.archive((db) => {
     const id = repositoryId(db, repo);
-    assert.deepEqual(collectedDays(db, id), WINDOW, 'the newly returned day fills the gap by being observed, not by being invented');
+    assert.deepEqual(collectedDays(db, id, 'clones'), WINDOW, 'the newly returned day fills the gap by being observed, not by being invented');
     assert.equal(dayValue(db, id, 'clones', hole), servedClones(repo, hole, 0),
       'the gap holds the value GitHub returned for it, not a value carried from a neighbouring day');
-    assert.equal(count(db, 'day_series', `WHERE repository_id=${id} AND source='collected'`),
+    assert.equal(count(db, 'day_series', `WHERE repository_id=${id} AND source='collected' AND metric<>'stars'`),
       WINDOW.length * TRAFFIC_METRICS.length);
     assert.equal(count(db, 'repositories'), 1);
     // The boundary still belongs to the run that first collected data: filling the
@@ -749,7 +749,7 @@ test('a statistics endpoint answering 202 then 200 is retried, stored as data, a
       FROM backfill_records WHERE kind<>'first-collected' ORDER BY kind`).all()), [
       { kind: 'development', windowFrom: '2026-09-14', windowTo: '2026-09-21', truncated: 1 },
     ], 'the development record names the window the 200 actually returned');
-    assert.equal(count(db, 'day_series', "WHERE source='collected'"), WINDOW.length * TRAFFIC_METRICS.length,
+    assert.equal(count(db, 'day_series', "WHERE source='collected' AND metric<>'stars'"), WINDOW.length * TRAFFIC_METRICS.length,
       'the traffic window was still collected in full');
     assert.equal(count(db, 'repository_errors'), 0, 'a retried statistics 202 records no failure evidence');
 
@@ -809,7 +809,7 @@ test('a run mixing a failing and a succeeding repository records a complete run 
     assert.equal(count(db, 'runs'), 1, 'one run row covers the whole run, not one per repository');
 
     const collected = repositoryId(db, healthy);
-    assert.equal(count(db, 'day_series', `WHERE repository_id=${collected} AND source='collected'`),
+    assert.equal(count(db, 'day_series', `WHERE repository_id=${collected} AND source='collected' AND metric<>'stars'`),
       WINDOW.length * TRAFFIC_METRICS.length, 'the succeeding repository kept every day it returned');
     assert.equal(count(db, 'snapshots', `WHERE repository_id=${collected}`), SNAPSHOT_ROWS_PER_RUN);
     assert.deepEqual(captures(db, collected), [{ runId, collectedAt: run.startedAt }]);
@@ -864,12 +864,12 @@ test('a run over six repositories stays inside the sixty-second budget and store
 
   f.archive((db) => {
     assert.equal(count(db, 'repositories'), 6);
-    assert.equal(count(db, 'day_series', "WHERE source='collected'"), 6 * WINDOW.length * TRAFFIC_METRICS.length,
+    assert.equal(count(db, 'day_series', "WHERE source='collected' AND metric<>'stars'"), 6 * WINDOW.length * TRAFFIC_METRICS.length,
       'each of the six repositories stored one row per returned day per traffic metric');
     assert.equal(count(db, 'snapshots'), 6 * SNAPSHOT_ROWS_PER_RUN, 'each repository appended its own capture');
     assert.equal(count(db, 'backfill_records', "WHERE kind='first-collected'"), 6);
     // Each repository stored the window and the values its own endpoints returned.
-    assert.deepEqual(collectedDays(db, repositoryId(db, enrolled[0])), WINDOW);
+    assert.deepEqual(collectedDays(db, repositoryId(db, enrolled[0]), 'clones'), WINDOW);
     const firstDayClones = enrolled.map((repo) => dayValue(db, repositoryId(db, repo), 'clones', FIRST_DAY));
     assert.deepEqual(firstDayClones, enrolled.map((repo) => servedClones(repo, FIRST_DAY, 0)),
       'every repository stored the counts its own endpoint returned');

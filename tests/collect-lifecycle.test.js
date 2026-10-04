@@ -83,7 +83,9 @@ function fakeRepoClient(record) {
 }
 
 /**
- * The record GitHub serves for a repository, as the repository client returns it.
+ * The record GitHub serves for a repository, as the repository client returns it. The
+ * client spreads the vendor payload through and adds the plain counts beside it, so
+ * both spellings are present here exactly as they are in production.
  * @param {string} owner
  * @param {string} name
  * @returns {Record<string, unknown>}
@@ -92,6 +94,7 @@ function remoteRecord(owner, name) {
   return {
     id: 4242, name, full_name: `${owner}/${name}`, owner: { login: owner, type: 'User' },
     stargazers_count: 3, forks_count: 1, watchers_count: 3,
+    stars: 3, forks: 1, watchers: 3,
   };
 }
 
@@ -386,7 +389,8 @@ test('a run mixing a healthy and a vanished repository collects the healthy one 
     ]);
     assert.equal(rows(db, 'day_series', 'WHERE repository_id=2'), before.days,
       'marking a repository unavailable deletes none of its history');
-    assert.equal(rows(db, 'day_series', "WHERE repository_id=1 AND source='collected'"), 56);
+    assert.equal(rows(db, 'day_series', "WHERE repository_id=1 AND source='collected' AND metric<>'stars'"), 56,
+      'the traffic facts are stored, and the observed star level is not one of them');
     assert.equal(rows(db, 'snapshots', 'WHERE repository_id=2'), before.snapshots,
       'a repository that vanished wrote no capture in the run that marked it');
     // The run closed over both repositories, one collected and one marked.

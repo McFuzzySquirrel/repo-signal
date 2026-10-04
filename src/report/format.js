@@ -188,6 +188,31 @@ export function refusalLine(reason) {
 }
 
 /**
+ * Where collected history begins, as the archive's own provenance read records it.
+ *
+ * This is the same boundary the chart draws its vertical rule on, read from the same
+ * record rather than recomputed from stored sources, so the report and the chart
+ * cannot name two different days. A repository the archive records as never
+ * collected has no boundary, and none is printed: there is nothing to place.
+ * @param {string|null} firstCollectedDay The recorded boundary, or null.
+ * @param {string} from
+ * @param {string} to
+ * @returns {string[]}
+ */
+export function boundaryBlock(firstCollectedDay, from, to) {
+  if (typeof firstCollectedDay !== 'string' || firstCollectedDay === '') {
+    return ['  provenance: no collected history recorded yet, so every stored day here was reconstructed'];
+  }
+  if (firstCollectedDay > to) {
+    return [`  provenance: collected from ${firstCollectedDay}, after this window of ${from} to ${to}`];
+  }
+  if (firstCollectedDay < from) {
+    return [`  provenance: collected from ${firstCollectedDay}, before this window of ${from} to ${to}`];
+  }
+  return [`  provenance: reconstructed before ${firstCollectedDay}, collected from ${firstCollectedDay}`];
+}
+
+/**
  * Days named in full up to the cap, then counted. A long hole is summarised rather
  * than printed as a wall of dates, and the count is the honest total.
  * @param {string[]} days

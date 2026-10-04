@@ -38,6 +38,8 @@ const SNAPSHOT_ROWS = REFERRERS.length + POPULAR_PATHS.length;
 // Clones and unique cloners, views and unique visitors: four metric keys a day.
 const TRAFFIC_ROWS = WINDOW_DAYS * 4;
 const BACKFILL_ROWS = 6;
+// One row per collected repository: the star level the resolve response already carried.
+const STAR_LEVEL_ROWS = 1;
 
 const STAR_HISTORY = starHistory(3);
 const WEEK_STARTS = ['2026-09-14T00:00:00Z', '2026-09-21T00:00:00Z'].map((week) => Date.parse(week) / 1000);
@@ -235,7 +237,7 @@ test('--repo collects only that repository, exits 0 and prints the run it wrote'
       'SELECT id, owner, name, lifecycle, enrolled FROM repositories ORDER BY id').all()), [
       { id: 1, owner: 'owner', name: 'alpha', lifecycle: 'active', enrolled: 1 },
     ]);
-    assert.equal(rows(db, 'day_series', "WHERE source='collected'"), TRAFFIC_ROWS);
+    assert.equal(rows(db, 'day_series', "WHERE source='collected' AND metric<>'stars'"), TRAFFIC_ROWS);
     assert.equal(rows(db, 'day_series', "WHERE source='backfill'"), BACKFILL_ROWS);
     assert.equal(rows(db, 'snapshots'), SNAPSHOT_ROWS);
     assert.equal(rows(db, 'snapshots', `WHERE run_id='${runId}'`), SNAPSHOT_ROWS);
@@ -276,8 +278,12 @@ test('a stargazer listing GitHub refuses costs the star history, not the traffic
     // Traffic is real: the day rows the traffic endpoints served are stored.
     assert.equal(rows(db, 'day_series', `WHERE metric='views' AND repository_id=1`), WINDOW_DAYS,
       'the collected views are stored despite the refused backfill');
-    assert.equal(rows(db, 'day_series', `WHERE metric='stars'`), 0,
-      'no star row is invented from a listing that was never read');
+    assert.equal(rows(db, 'day_series', `WHERE metric='stars' AND source='backfill'`), 0,
+      'no star history is invented from a listing that was never read');
+    // The collection observed a level on its own, which is a reading rather than a
+    // reconstruction, so it is stored even though the backfill was refused.
+    assert.equal(rows(db, 'day_series', `WHERE metric='stars' AND source='collected'`), STAR_LEVEL_ROWS * 2,
+      'each repository stored the star level its own resolve response carried');
     // The refusal is recorded against the repository, with the reason.
     const stored = /** @type {{at: unknown, reason: unknown}} */ (
       /** @type {unknown} */ (db.prepare('SELECT backfill_refused_at AS at, backfill_refused_reason AS reason ' +
@@ -317,9 +323,76 @@ test('a recorded stargazer refusal is not asked again, and is still reported', a
   );
 
   f.archive((db) => {
-    assert.equal(rows(db, 'day_series', `WHERE metric='stars'`), 0);
+    // Two collections on one UTC day, one repository: a single row. The day key is
+    // (repository, metric, granularity, day), so the second collection replaced the
+    // first rather than adding a row beside it.
+    assert.equal(rows(db, 'day_series', `WHERE metric='stars' AND source='backfill'`), 0);
+    assert.equal(rows(db, 'day_series', `WHERE metric='stars' AND source='collected'`), 1,
+      'two collections on the same day left one observed star level, not two');
     assert.equal(rows(db, 'backfill_records', `WHERE kind='stars'`), 0);
   });
+});
+
+test('the star level the resolve response carried is stored, and a lower one is still an observation', async (t) => {
+  const f = await createCollectHome(t, { enrolled: ['owner/alpha'] });
+  scriptResolution(f.stub);
+  scriptTraffic(f.stub);
+  scriptBackfill(f.stub);
+
+  const firstRun = await f.run(['collect']);
+  assert.equal(firstRun.status, 0, firstRun.stderr);
+  const first = f.archive((db) => db.prepare(
+    "SELECT day, value, source, collected_at AS collectedAt FROM day_series WHERE metric='stars' AND source='collected'").all());
+  assert.equal(first.length, 1, 'one observed level from one collection');
+  assert.equal(Number(first[0]?.value), 3, 'it is the stargazer_count the response carried');
+  assert.equal(first[0]?.source, 'collected');
+  // The backfill reconstructed two star days; the observed level is a separate row
+  // for the collection's own day, and the reconstructed rows are untouched.
+  const reconstructed = f.archive((db) => db.prepare(
+    "SELECT day, value FROM day_series WHERE metric='stars' AND source='backfill' ORDER BY day").all());
+  assert.deepEqual(reconstructed.map((row) => Number(row.value)), [2, 3],
+    'the two reconstructed star levels are still exactly as the backfill wrote them');
+
+  // A later collection on another day, observing fewer stars: a repository can lose
+  // them, and that is a reading rather than a correction to suppress.
+  scriptResolution(f.stub);
+  f.stub.route('GET /repos/:owner/:name', () => ({
+    json: repositoryRecord('owner', 'alpha', { stargazers_count: 1 }),
+  }));
+  const secondRun = await f.run(['collect']);
+  assert.equal(secondRun.status, 0, secondRun.stderr);
+  const levels = f.archive((db) => db.prepare(
+    "SELECT value FROM day_series WHERE metric='stars' AND source='collected' ORDER BY day").all());
+  assert.ok(levels.length >= 1, 'the observed levels are still there');
+  assert.ok(levels.some((row) => Number(row.value) === 1),
+    'a star level lower than before was written rather than suppressed');
+});
+
+test('the observed star level costs no request and leaves the summary line unchanged', async (t) => {
+  const f = await createCollectHome(t, { enrolled: ['owner/alpha'] });
+  scriptResolution(f.stub);
+  scriptTraffic(f.stub);
+  scriptBackfill(f.stub);
+
+  const first = await f.run(['collect']);
+  assert.equal(first.status, 0, first.stderr);
+  // A first connect: identity, the star history, two statistics and four traffic.
+  assert.equal(f.stub.requests().length, 8, 'the first connect made its eight requests');
+
+  const before = f.stub.requests().length;
+  const result = await f.run(['collect']);
+  assert.equal(result.status, 0, result.stderr);
+  // A steady-state run is identity plus the four traffic endpoints. Storing the level
+  // the identity response already carried adds no request to that count.
+  assert.equal(f.stub.requests().length - before, 5,
+    'the observed star level cost no request: the steady-state run is still five');
+  const printed = lines(result.stdout);
+  assert.match(printed[0], /^owner\/alpha ok 14 days written \d+ revised \d+ unchanged \d+ snapshots \d+ backfill skipped$/,
+    'the summary line keeps reporting traffic counts, and reports no backfill on a second run');
+  const [, written, revised, unchanged] = /^owner\/alpha ok 14 days written (\d+) revised (\d+) unchanged (\d+) /
+    .exec(printed[0]) ?? [];
+  assert.equal(Number(written) + Number(revised) + Number(unchanged), TRAFFIC_ROWS,
+    'the traffic rows are counted as they were before the star level existed, and the star row is not among them');
 });
 
 test('one failing repository does not stop the others, and the run record is still complete', async (t) => {
@@ -354,9 +427,9 @@ test('one failing repository does not stop the others, and the run record is sti
 
     const alpha = /** @type {{id: number}} */ (db.prepare(`SELECT id FROM repositories WHERE name='alpha'`).get());
     const beta = /** @type {{id: number}} */ (db.prepare(`SELECT id FROM repositories WHERE name='beta'`).get());
-    assert.equal(rows(db, 'day_series', `WHERE repository_id=${alpha.id} AND source='collected'`), TRAFFIC_ROWS);
+    assert.equal(rows(db, 'day_series', `WHERE repository_id=${alpha.id} AND source='collected' AND metric<>'stars'`), TRAFFIC_ROWS);
     assert.equal(rows(db, 'snapshots', `WHERE repository_id=${alpha.id}`), SNAPSHOT_ROWS);
-    assert.equal(rows(db, 'day_series', `WHERE repository_id=${beta.id} AND source='collected'`), 0,
+    assert.equal(rows(db, 'day_series', `WHERE repository_id=${beta.id} AND source='collected' AND metric<>'stars'`), 0,
       'a repository whose traffic failed stores no collected fact');
     assert.equal(rows(db, 'snapshots', `WHERE repository_id=${beta.id}`), 0);
     assert.equal(rows(db, 'backfill_records', `WHERE repository_id=${beta.id} AND kind='first-collected'`), 0,
@@ -391,7 +464,15 @@ test('a repository with no backfill record is backfilled and collected in one ru
       { metric: 'stars', granularity: 'day', value: 2 },
       { metric: 'stars', granularity: 'day', value: 3 },
     ]);
-    assert.equal(rows(db, 'day_series', `WHERE repository_id=${id} AND metric='stars' AND source='collected'`), 0);
+    // The backfill reconstructed two star days; separately, the collection observed the
+    // level its own resolve response carried and stored that for its own day.
+    const observed = db.prepare(`SELECT value, source, collected_at AS collectedAt FROM day_series
+      WHERE repository_id=? AND metric='stars' AND source='collected'`).all(id);
+    assert.equal(observed.length, STAR_LEVEL_ROWS, 'one observed level, written once');
+    assert.equal(Number(observed[0]?.value), 3, 'it is the count the repository response carried');
+    const runStartedAt = db.prepare('SELECT started_at AS t FROM runs').get()?.t;
+    assert.equal(observed[0]?.collectedAt, runStartedAt,
+      'the level carries the run own collection time, so the instant it was taken is recorded');
     // The backfill records the window it actually observed, and the provenance
     // boundary is the first day collected data exists.
     assert.deepEqual(plain(db.prepare(`SELECT kind, window_from AS windowFrom, truncated FROM backfill_records
@@ -399,7 +480,7 @@ test('a repository with no backfill record is backfilled and collected in one ru
       { kind: 'development', windowFrom: '2026-09-14', truncated: 1 },
       { kind: 'first-collected', windowFrom: FIRST_DAY, truncated: 0 },
     ]);
-    assert.equal(rows(db, 'day_series', `WHERE repository_id=${id} AND source='collected'`), TRAFFIC_ROWS);
+    assert.equal(rows(db, 'day_series', `WHERE repository_id=${id} AND source='collected' AND metric<>'stars'`), TRAFFIC_ROWS);
   });
 });
 
@@ -417,7 +498,8 @@ test('a second run skips the backfill, revises the same days in place and append
     collectedAt: String(db.prepare(
       `SELECT max(collected_at) AS t FROM day_series WHERE source='collected'`).get()?.t),
   }));
-  assert.equal(before.rows, TRAFFIC_ROWS + BACKFILL_ROWS, 'the first run stored both kinds of evidence');
+  assert.equal(before.rows, TRAFFIC_ROWS + BACKFILL_ROWS + STAR_LEVEL_ROWS,
+    'the first run stored traffic, the backfill and one observed star level');
 
   // GitHub re-serves the same rolling window with revised counts.
   scriptTraffic(f.stub, { offset: 7 });

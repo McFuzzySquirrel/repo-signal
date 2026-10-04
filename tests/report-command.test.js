@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { stampFirstCollected } from '../src/backfill/provenance.js';
 import { markBackfillRefused } from '../src/collect/lifecycle.js';
 import { upsertDayFact } from '../src/db/day-series-repo.js';
 import { openArchive, upsertRepository, withTransaction } from '../src/db/ops-repo.js';
@@ -152,6 +153,42 @@ test('a recorded backfill refusal is named so the absence it explains is not rea
 
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, new RegExp(`^ {2}star history: absent . ${REFUSAL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'm'));
+});
+
+test('the report names the recorded boundary, from the provenance read and not from the sources', async (t) => {
+  const f = await archive(t);
+  // Stamp the boundary the way a completed collection does, then read it back.
+  f.archive((db) => stampFirstCollected(db, 1, { day: '2026-09-25', collectedAt: AT }));
+
+  const inside = await f.run(['report', '--repo', REPO, '--from', '2026-09-19', '--to', END]);
+  assert.equal(inside.status, 0, inside.stderr);
+  assert.ok(inside.stdout.includes('provenance: reconstructed before 2026-09-25, collected from 2026-09-25'),
+    `the recorded boundary is named, not recomputed from stored sources; got ${JSON.stringify(inside.stdout.split('coverage:')[1] ?? '')}`);
+
+  // The same recorded day, seen from a window that ends before it and from one that
+  // starts after it: the wording follows the window, the day never changes.
+  const after = await f.run(['report', '--repo', REPO, '--from', '2026-09-26', '--to', '2026-09-28']);
+  assert.ok(after.stdout.includes('collected from 2026-09-25, before this window of 2026-09-26 to 2026-09-28'),
+    'a boundary before the window says so');
+  const ended = await f.run(['report', '--repo', REPO, '--from', '2026-09-01', '--to', '2026-09-20']);
+  assert.ok(ended.stdout.includes('collected from 2026-09-25, after this window of 2026-09-01 to 2026-09-20'),
+    'a boundary after the window says so');
+});
+
+test('a repository the archive records as never collected has no boundary and none is invented', async (t) => {
+  const f = await archive(t);
+  f.archive((db) => {
+    // Clear the collected success so the provenance read reports not-connected.
+    db.prepare('UPDATE repositories SET last_success_at=NULL').run();
+    db.prepare('DELETE FROM backfill_records').run();
+  });
+
+  const result = await f.run(['report', '--repo', REPO, '--from', '2026-09-19', '--to', END]);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /^ {2}provenance: no collected history recorded yet/m);
+  assert.equal(/provenance:.*\d{4}-\d{2}-\d{2}\b/.test(result.stdout.split('provenance:')[1] ?? ''), false,
+    'no boundary day is printed for a repository the archive records as never collected');
 });
 
 test('the change block prints the sentences the insight modules composed', async (t) => {

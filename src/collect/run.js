@@ -1,9 +1,10 @@
 import { backfillDevelopment } from '../backfill/development.js';
 import { readProvenance, stampFirstCollected } from '../backfill/provenance.js';
-import { backfillStars } from '../backfill/stars.js';
+import { STARS_GRANULARITY, STARS_METRIC, backfillStars } from '../backfill/stars.js';
 import { redact } from '../credentials/redact.js';
+import { upsertDayFact } from '../db/day-series-repo.js';
 import {
-  getRepository, listEnrolledRepositories, upsertRepository, withTransaction,
+  assertTimestamp, getRepository, listEnrolledRepositories, upsertRepository, withTransaction,
 } from '../db/ops-repo.js';
 import { resolveEnrollment } from '../enrollment/resolve.js';
 import { createRepoClient } from '../github/repo-client.js';
@@ -408,6 +409,41 @@ async function runFirstConnectBackfill({ db, repositoryId, repo, clients, collec
 }
 
 /**
+ * Store the star level this collection observed, as a cumulative day fact for the
+ * collection's own UTC day.
+ *
+ * Every collection already resolves the repository, and that response carries the
+ * stargazer count, so this costs no request: it records a level the run had already
+ * paid for instead of discarding it. The value is the count as of collection time, so
+ * the row is an observation at that instant rather than the day's closing figure -
+ * which is why `collected_at` is written with it and why the divergence reading's
+ * docstring calls the two series not strictly co-temporal.
+ *
+ * It is written here, inside the transaction that also writes the traffic facts, so a
+ * star level can never commit without the traffic it was collected alongside. A level
+ * lower than the stored one is written: a repository can lose stars, and a falling
+ * level is a real observation rather than a correction to suppress.
+ * @param {object} options
+ * @param {Database} options.db
+ * @param {number} options.repositoryId
+ * @param {number} options.stars The stargazer count the repository response carried.
+ * @param {string} options.collectedAt canonical UTC ISO timestamp for this write
+ * @returns {void}
+ */
+function writeStarLevel({ db, repositoryId, stars, collectedAt }) {
+  assertTimestamp(collectedAt);
+  upsertDayFact(db, {
+    repositoryId,
+    metric: STARS_METRIC,
+    granularity: STARS_GRANULARITY,
+    day: collectedAt.slice(0, 10),
+    value: stars,
+    source: 'collected',
+    collectedAt,
+  });
+}
+
+/**
  * Register the repository this run collects, reusing the stored identity when
  * the archive has one and allocating a fresh one on first connect.
  * @param {object} options
@@ -495,6 +531,7 @@ async function collectRepository({ db, planned, runId, clients, collectedAt, sec
     written = withTransaction(db, () => {
       const change = recordIdentity({ db, repositoryId: id, remote, collectedAt });
       const traffic = writeTrafficDays({ db, repositoryId: id, clones, views, collectedAt });
+      writeStarLevel({ db, repositoryId: id, stars: remote.stars, collectedAt });
       const snapshots = writeSnapshotCaptures({ db, repositoryId: id, runId, referrers, popularPaths, collectedAt });
       const stamp = stampFirstCollected(db, id, {
         day: firstCollectedDay(clones, views, collectedAt), collectedAt,

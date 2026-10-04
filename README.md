@@ -129,7 +129,8 @@ node src/cli.js report
 6. **`report`** prints a plain-text written summary of what the archive already holds: the most recent
    run's state word and counts, one line per enrolled repository, and the roll-up. Add
    `--repo owner/name` for one repository's recorded coverage per metric, its named gap days, and its
-   seven-day and week-over-week change. It contacts no host, reads no credential, and exits `0`
+   seven-day and week-over-week change. Each block names the recorded boundary, so reconstructed days
+   are never mistaken for observed ones. It contacts no host, reads no credential, and exits `0`
    whenever it read the archive, so a scheduled run never fails because a repository needs attention.
 
 Editing the templates: `config.json` takes `enrolled` (the repositories you chose, as `owner/name`),
@@ -160,6 +161,13 @@ RepoSignal needs exactly one credential, and it is used for reads only.
   and it needs no special scope. If GitHub ever refuses the history too, the tool records that, says
   so on every collection line (`stars-history absent ...`) rather than leaving a gap to be read as a
   zero, and collects traffic as normal.
+- **From your first collection onward, the star level is recorded every day.** Resolving a repository
+  already returns its stargazer count, and every collection now stores it as an observation for that
+  day, at no extra request. So the star series is continuous from the start rather than holding a row
+  only on the days a star arrived - which is what lets the stars-versus-cloner reading have both
+  numbers to compare. It needs fourteen collected days before that reading has enough to work with,
+  and it is not retroactive: the days before your first collection are reconstructed history or
+  nothing at all.
 - **It lives in `credentials.json` in the home directory with mode `0600`, exactly.** The tool
   refuses to read the file at any other mode - `0644` and `0666` are both refused with the mode it
   observed named in the message - and it never repairs the mode for you.

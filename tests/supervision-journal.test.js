@@ -346,9 +346,9 @@ test('a run where one repository fails still collects the others and closes a co
   // The failing repository produced no fact, and recorded the failure as evidence.
   const alpha = repositoryIdOf(db, 'alpha');
   const beta = repositoryIdOf(db, 'beta');
-  assert.equal(rows(db, 'day_series', `WHERE repository_id=${alpha} AND source='collected'`),
+  assert.equal(rows(db, 'day_series', `WHERE repository_id=${alpha} AND source='collected' AND metric<>'stars'`),
     TRAFFIC_ROWS_PER_REPOSITORY);
-  assert.equal(rows(db, 'day_series', `WHERE repository_id=${beta} AND source='collected'`), 0);
+  assert.equal(rows(db, 'day_series', `WHERE repository_id=${beta} AND source='collected' AND metric<>'stars'`), 0);
   assert.equal(getRepository(db, alpha).lastSuccessAt, entry?.startedAt, 'a collected repository recorded its success');
   assert.equal(getRepository(db, beta).lastSuccessAt, null, 'a repository that failed recorded no success');
   assert.equal(getRepository(db, beta).consecutiveFailures, 1);

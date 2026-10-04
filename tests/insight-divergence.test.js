@@ -704,3 +704,36 @@ test('the module reads no clock, imports nothing and holds no mutable module sta
   assert.ok(!/\bMath\.random\b/.test(moduleSource), 'identical input must produce identical output');
   assert.ok(!/\bprocess\./.test(moduleSource), 'the module reads no environment, so no run can depend on one');
 });
+
+test('a star level stored on every collected day is what lets the two series pair', () => {
+  // The reason the collection now stores the star level it already observed. A star
+  // series holding a row only on the days a star arrived cannot supply a row for a
+  // collected day that saw none, so every such day is a missing day and the reading
+  // is permanently short of evidence however long the archive is collected.
+  const range = { from: '2026-03-01', to: '2026-03-14' };
+  const clonerDays = Array.from({ length: MINIMUM_COLLECTED_DAYS }, (_, index) =>
+    `2026-03-${String(index + 1).padStart(2, '0')}`);
+  const cloners = clonerDays.map((day) => ({ day, value: 10 }));
+
+  // Before: the star series carries a row only where a star arrived.
+  const sparseStars = [{ day: '2026-03-01', value: 8000 }];
+  const sparse = starsVersusClonesDivergence({ uniqueCloners: cloners, stars: sparseStars, range });
+  assert.equal(sparse.status, DIVERGENCE_INSUFFICIENT,
+    'a star row on one day of fourteen leaves the reading short of evidence');
+
+  // After: a collection stores the level it observed on each day it collects.
+  const dailyStars = clonerDays.map((day) => ({ day, value: 8000 }));
+  const dense = starsVersusClonesDivergence({ uniqueCloners: cloners, stars: dailyStars, range });
+  assert.equal(dense.status, DIVERGENCE_SUFFICIENT,
+    'a level on every collected day is what the reading needs, and no request was added to obtain it');
+  assert.equal(dense.stars, 8000);
+  assert.equal(dense.starsDay, '2026-03-14');
+});
+
+test('the two series are documented as not strictly co-temporal', () => {
+  // The star level is a snapshot taken when the collection ran; the cloner counts are
+  // whole days. The reading reports the two numbers it was given without pretending
+  // they were taken at the same moment, and the module says so where a reader lands.
+  assert.match(moduleSource, /not strictly co-temporal/,
+    'the caveat belongs in the module a reader of the ratio will reach');
+});

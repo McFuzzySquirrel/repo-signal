@@ -40,6 +40,9 @@ export class LifecycleContractError extends Error {
  * @property {string} owner Owner login GitHub returned for this repository.
  * @property {string} name Repository name GitHub returned.
  * @property {string} repo `owner/name` as GitHub spells it now.
+ * @property {number} stars The stargazer count this very response carried. The
+ *   collection already paid for this request, so the level is carried rather than
+ *   discarded; it is an observation at collection time, not a day's closing count.
  *
  * GitHub's own numeric repository id is deliberately not adopted here. The
  * archive's identity is the row every stored fact already references, so
@@ -124,7 +127,15 @@ export async function confirmRepository({ repo, repoClient }) {
       'Check the repository response contract: name must be the repository name GitHub serves it under',
     );
   }
-  return { owner: owner.login, name, repo: pair(owner.login, name) };
+  // The count came back on this same response, so a value that is not a count makes
+  // the identity record unusable as an observation and is refused rather than dropped.
+  const { stars } = record;
+  if (typeof stars !== 'number' || !Number.isSafeInteger(stars) || stars < 0) {
+    throw new LifecycleContractError(
+      'Check the repository response contract: stargazers_count must be a non-negative whole number',
+    );
+  }
+  return { owner: owner.login, name, repo: pair(owner.login, name), stars };
 }
 
 /**

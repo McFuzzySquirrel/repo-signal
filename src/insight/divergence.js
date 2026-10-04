@@ -108,6 +108,14 @@ export const LARGER_EQUAL = /** @type {const} */ ('equal');
  * A day with no stored value is absent from the array entirely; it is never present with a zero
  * standing in for it.
  *
+ * **The two series are not strictly co-temporal, and this reading does not pretend they are.** A
+ * stored star level is the count as of the moment the collection ran, while the unique-cloner count
+ * for that day is the whole day as GitHub serves it. So the ratio this module reports compares a
+ * day's cloners against a star level taken partway through that day. The archive records the instant
+ * alongside every row, so the observation is honest; the ratio is a reading of two observations that
+ * were taken at different moments, and it is reported as the difference and the ratio of those two
+ * numbers rather than as a per-day rate.
+ *
  * @typedef {object} Observation
  * @property {string} day UTC calendar day the value was observed on, ISO `YYYY-MM-DD`.
  * @property {number} value The stored count. A day with no stored value is absent from the array
