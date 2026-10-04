@@ -4,7 +4,7 @@
 **Phase**: SETUP-TERMINAL-UI-2
 **Status**: In Progress
 **Validation Gaps**: 1 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-04T20:49:52.140Z
+**Last Updated**: 2026-10-04T21:12:40.303Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -30,6 +30,8 @@
   - Files: tests/contract-server.test.js
 - [x] Phase DASHBOARD-VIEWS-1, Task RS-VWS-CONTRACT-01: Assert the section 4 order, the citation of it, and the printed gap wording (@documentation-engineer)
   - Files: tests/contract-views.test.js
+- [x] Phase OPERATIONS-AND-POSTURE-1, Task RS-OPS-POST-01: Assemble the open-source posture dossier a human reviewer can actually read (@documentation-engineer)
+  - Files: docs/reviews/open-source-posture-dossier.md, tests/posture-dossier.test.js
 - [x] Phase SETUP-TERMINAL-UI-1, Task RS-TUI-01: Build the line-oriented prompt primitives (@cli-engineer)
   - Files: src/tui/prompts.js, tests/tui-prompts.test.js
 - [x] Phase SETUP-TERMINAL-UI-2, Task RS-TUI-03: Build the first-run setup flow (@cli-engineer)
@@ -38,7 +40,8 @@
   - Files: src/tui/config-manager.js, tests/tui-config-manager.test.js
 
 ## Current Task
-- None currently running
+- [ ] Phase SETUP-TERMINAL-UI-2, Task RS-TUI-05: Build the run-actions menu (@cli-engineer)
+  - Status: In progress
 
 ## Remaining
 - [ ] Phase OPERATIONS-AND-POSTURE-1: Phase 1: Posture review
