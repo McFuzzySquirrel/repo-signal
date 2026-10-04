@@ -65,9 +65,10 @@ edit:
 
 ## Migration runner refusals
 
-The runner refuses, by name: an async `up` function, a thenable result, a duplicate version, a checksum
-mismatch, an applied migration missing from code, and a pending migration behind the on-disk version.
-All of them are checked before any write, so a refused run leaves the archive exactly as it was.
+The runner refuses, by name: a filename that is not `NNN-description.js` with a positive version, an
+async `up` function, a thenable result, a duplicate version, a checksum mismatch, an applied migration
+missing from code, and a pending migration behind the on-disk version. All of them are checked before any
+write, so a refused run leaves the archive exactly as it was.
 
 ## Backup and restore
 

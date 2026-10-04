@@ -28,11 +28,14 @@ selection.
 
 ### Step 2: Read the selection count, not only the exit code
 
-The wrapper reports five distinct refusals, and each one is a failure the operator has to see rather
+The wrapper reports seven distinct refusals, and each one is a failure the operator has to see rather
 than a green run:
 
 - a named path that does not resolve;
 - zero files matching the Node test patterns;
+- a runner that could not be started at all, which names the operating-system code and the `node` it
+  tried to spawn;
+- a runner that was killed by a signal before it reported a summary;
 - a run whose TAP counters never printed, so no result can be trusted;
 - a run that selected zero tests from files that did resolve;
 - a file that reported only itself, meaning it declares no test.

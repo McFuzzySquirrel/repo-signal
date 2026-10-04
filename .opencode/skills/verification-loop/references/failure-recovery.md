@@ -4,7 +4,9 @@
 |---------|-------|-----|
 | `tests: cannot use <path>` and exit 1 | The named path does not resolve from the repository root | Pass a path relative to the repository root, and check it exists |
 | `tests: no tests were selected by <paths>` and exit 1 | The path holds no file matching the Node test patterns | Name the file with a `.test.js` suffix, or name the directory that holds the tests |
-| `tests: ... reported no test summary` and exit 1 | The runner was killed or printed no TAP counters | Run the same command by hand to read the runner error above the wrapper's message |
+| `tests: the test runner could not be started (<code>)` and exit 1 | `spawn` itself failed, so no test ran at all | Check `node -v` and that the path to the interpreter is executable; the message names the code and the `node` the wrapper tried to spawn |
+| `tests: the test runner was killed by signal <signal>` and exit 1 | The runner was terminated before it reported a summary, so nothing can be concluded from the run | Read what the runner printed above the wrapper's message; an out-of-memory kill looks exactly like this |
+| `tests: ... reported no test summary` and exit 1 | The runner exited without printing TAP counters, or printed a partial line | Run the same command by hand to read the runner error above the wrapper's message |
 | `tests: the test runner selected 0 tests` and exit 1 | The file resolved but declares no test | Add the test; an empty file is a failure by `RS-NF-05`, not a pass |
 | `tests: <file> reported only itself` and exit 1 | The file resolved and the runner counted the file as one passing subtest, so the counters alone let an empty file through | Add the test the file is supposed to declare |
 | `SQLITE_CANTOPEN`, or a database in an unexpected state | The test inherited a real or shared home | Set `REPO_SIGNAL_HOME` to a fresh temporary directory per test |

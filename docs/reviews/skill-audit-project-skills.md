@@ -76,7 +76,7 @@ The rubric cannot see whether a skill is true. Each of these was checked against
 
 | Claim the skill makes | Where it was checked |
 |-----------------------|---------------------|
-| `npm test` runs the wrapper that fails on a zero-test selection, and names five distinct refusals | `scripts/run-tests.mjs`, one refusal per early return |
+| `npm test` runs the wrapper that fails on a zero-test selection, and refuses a green run in seven named ways | `scripts/run-tests.mjs`, one refusal message per `return 1`. The count was five when this table was written and was corrected to seven in the reconciliation run |
 | The pipeline runs a clean install, type check, suite and backup drill on the floor and the current LTS line | `.github/workflows/ci.yml` |
 | The Node floor is 24.12.0 and the archive fails closed without the defensive option | `src/db/connection.js` names the running version and the floor |
 | Repository state words and their fixed precedence | `src/supervision/health.js` and PRD section 10 |
@@ -102,6 +102,12 @@ The rubric cannot see whether a skill is true. Each of these was checked against
   exercised by an agent running a task against it.
 - `forge-task-implementation` was recorded as `reuse`. That name resolves outside this stage, so it was
   not audited as a changed file and its absence from a project-local package is not a failure.
-- Two handoff candidates carry an empty consumer list because the tasks that name them belong to agents
-  the adopted team does not contain. The packages were still authored, because the responsibility is
-  real; whether an agent will use them is a team question, not a skills question.
+- Two handoff candidates carried an empty consumer list when this run began, because the tasks that name
+  them belonged to agents the adopted team did not contain. The team stage has since repaired the
+  ownership, and the handoff now names `cli-engineer` and `documentation-engineer` as consumers
+  everywhere they own tasks; `documentation-contract-tests` no longer has an empty list. The packages
+  were authored anyway, because the responsibility is real and is written agent-neutral.
+
+A later reconciliation run against the repaired team adopted all nine packages, corrected two refusal
+counts in them, and re-ran the gate. Its evidence is
+`docs/reviews/skill-audit-project-skills-reconciliation.md`.

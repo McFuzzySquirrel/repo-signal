@@ -47,10 +47,11 @@ validate every recorded checksum before any write, and apply the pending version
 transaction after re-inspecting under the writer lock. Each applied version records the SHA-256 of its
 own complete source text, so re-running performs no write.
 
-The runner refuses six things by name: an async `up` function, a thenable result, a duplicate version, a
-checksum mismatch, an applied migration that has gone missing from code, and a pending migration behind
-the on-disk version. If a schema change is needed after a migration has been applied anywhere, then add
-the next migration. Editing an applied migration turns every later run into a checksum abort.
+The runner refuses seven things by name: a migration filename that is not `NNN-description.js` with a
+positive version, an async `up` function, a thenable result, a duplicate version, a checksum mismatch,
+an applied migration that has gone missing from code, and a pending migration behind the on-disk version.
+If a schema change is needed after a migration has been applied anywhere, then add the next migration.
+Editing an applied migration turns every later run into a checksum abort.
 
 ### Step 3: Write days through the upsert with provenance
 

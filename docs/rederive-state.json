@@ -2,19 +2,23 @@
   "version": 1,
   "runId": "ca705004-0788-47e1-bc3c-948f256c816c",
   "startedAt": "2026-10-04T17:17:37.754Z",
-  "updatedAt": "2026-10-04T17:17:37.755Z",
+  "updatedAt": "2026-10-04T17:20:55.945Z",
   "steps": [
     {
       "id": "team",
       "label": "Agent team",
-      "status": "running",
+      "status": "complete",
       "startedAt": "2026-10-04T17:17:37.755Z",
-      "message": "Regenerating the agent team from the PRD…"
+      "message": "Agent team regenerated.",
+      "finishedAt": "2026-10-04T17:20:55.945Z"
     },
     {
       "id": "skills",
       "label": "Project skills",
-      "status": "pending"
+      "status": "complete",
+      "startedAt": "2026-10-04T17:20:55.945Z",
+      "message": "Nine packages reconciled against the repaired team; two refusal counts corrected.",
+      "finishedAt": "2026-10-04T17:36:00.392Z"
     },
     {
       "id": "manifest",
