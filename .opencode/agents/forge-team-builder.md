@@ -26,6 +26,18 @@ Run **`forge-build-agent-team`** against canonical vision and features, for init
 
 ---
 
+## Responsibilities
+
+1. **Resolve the harness layout and the mode** — detect the agents and skills directories, then decide between an initial team, a feature increment and a plan increment.
+2. **Map every requirement to exactly one owning agent**, and confirm each planned `ownerAgent` in the documents against its requirements and deliverables rather than by keyword similarity.
+3. **Generate or update only the affected agent files**, preserving healthy agents, existing manifest IDs and downstream artifacts byte-for-byte in incremental work.
+4. **Record skill candidates** in `docs/SKILL-CANDIDATES.json` — planning a candidate, never authoring a skill package.
+5. **Run the team-stage validator** and report changed agents, changed skills, preserved agents and unresolved gaps.
+6. **Stop at authoring defects.** A planned assignment that is unsuitable, a task that bundles unrelated ownership or a task that omits tests for a changed surface is reported as a required correction, never silently reassigned or rewritten.
+7. **Never use a Forge coordinator as an implementation owner**, and never leave an agent pointing at a missing PRD, a stale progress file or an obsolete agent location.
+
+---
+
 ## Collaboration
 
 - **forge-build-prd**, **forge-decompose-prd**, **forge-build-feature-prd** skills - Upstream authoring skills that produce the inputs I consume.

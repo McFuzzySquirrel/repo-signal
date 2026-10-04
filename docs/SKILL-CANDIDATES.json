@@ -5,15 +5,19 @@
       "name": "forge-task-implementation",
       "description": "Executing one RepoSignal forge-task contract end to end: read the version-2 contract block, resolve its requirementRefs and constraintRefs, produce exactly the named expectedOutputs, run the named validationCommands through scripts/run-tests.mjs, report the runtime's forge-result, and stop at a human-review gate instead of self-serving it.",
       "consumers": [
+        "cli-engineer",
+        "documentation-engineer",
         "qa-engineer"
       ],
       "action": "reuse",
-      "reason": "The package is present and unmodified at .opencode/skills/forge-task-implementation and commit 94b2047 did not touch it, and every one of the 20 forge-task blocks in docs/features/*.md uses the same contract version 2 shape (requirements, requirementRefs, acceptanceCriteria, constraints, constraintRefs, references) that the package already documents, so nothing needs to be authored and nothing needs extending. The recorded history shows the procedure working rather than asserted: RS-UI-01 through RS-UI-05 were each completed through it with named outputs and named test files instead of restated results. Only qa-engineer is recorded as a consumer because the adopted team holds one task-executing specialist; the other 17 implementation tasks name cli-engineer (6 tasks) and documentation-engineer (11 tasks), neither of which exists under .opencode/agents, and that ownership gap has to be repaired before the remaining consumers can be named."
+      "reason": "The package is present and unmodified at .opencode/skills/forge-task-implementation and commit 94b2047 did not touch it, and every one of the 20 forge-task blocks in docs/features/*.md uses the same contract version 2 shape (requirements, requirementRefs, acceptanceCriteria, constraints, constraintRefs, references) that the package already documents, so nothing needs to be authored and nothing needs extending. The recorded history shows the procedure working rather than asserted: RS-UI-01 through RS-UI-05 were each completed through it with named outputs and named test files instead of restated results. All three task-executing specialists are recorded as consumers because the ownership gap this candidate waited on is closed: the adopted team now contains cli-engineer (6 tasks), documentation-engineer (11 tasks) and qa-engineer (1 task), which together account for all 18 implementation tasks in docs/features/*.md, and every remaining task names an agent that exists under .opencode/agents."
     },
     {
       "name": "verification-loop",
       "description": "The RepoSignal verification loop: run suites through scripts/run-tests.mjs so a zero-test selection fails, type-check the JSDoc types with tsc --noEmit, mirror the source layout under tests/, give every run a temporary REPO_SIGNAL_HOME, and prove entry-point behaviour by spawning node src/cli.js rather than importing a module.",
       "consumers": [
+        "cli-engineer",
+        "documentation-engineer",
         "qa-engineer"
       ],
       "action": "create",
@@ -23,6 +27,7 @@
       "name": "honest-data-rendering",
       "description": "The no-fabrication rules for every RepoSignal layer that reads, computes or renders the archive: an unreported day stays a gap and is never zero-filled or carried forward, insufficient data is a first-class result with a named reason, absolute values precede percentages, backfilled and collected days are labelled apart, and no output carries a score, verdict, threshold or unsupported directional claim.",
       "consumers": [
+        "documentation-engineer",
         "qa-engineer"
       ],
       "action": "create",
@@ -32,6 +37,8 @@
       "name": "token-and-egress-safety",
       "description": "RepoSignal credential and outbound-request safety: credentials.json read only at exactly mode 0600 from the descriptor that was checked, token-shaped values and bearer headers redacted from every error and log surface, the api.github.com allowlist re-checked on every request with redirects refused, GET-only requests, and the REPO_SIGNAL_ALLOW_LOCAL_TRANSPORT gate that the stub-driven suites depend on.",
       "consumers": [
+        "cli-engineer",
+        "documentation-engineer",
         "qa-engineer"
       ],
       "action": "create",
@@ -41,6 +48,8 @@
       "name": "github-rest-contract",
       "description": "The pinned GitHub REST contract RepoSignal depends on: the 2026-03-10 API version header set, the 14-day traffic window bound, 202 Accepted as retryable only for the statistics endpoints, the weekly stargazer history endpoint with its last-page pagination and UTC-midnight week check, the typed per-endpoint failure taxonomy, and the vendor pages that must be re-read rather than remembered.",
       "consumers": [
+        "cli-engineer",
+        "documentation-engineer",
         "qa-engineer"
       ],
       "action": "create",
@@ -50,6 +59,7 @@
       "name": "archive-storage-discipline",
       "description": "Writing and migrating the RepoSignal SQLite archive safely: the node:sqlite connection settings including the enableDefensive guard that sets the RS-C14 runtime floor, STRICT tables, WAL and the two side files it adds, forward-only migrations with content checksums, last-write-wins day-series upsert carrying source and collection timestamp, append-only snapshot captures, one transaction per repository, no path that deletes a fact row, and calendarDays for telling a stored zero from a missing day.",
       "consumers": [
+        "documentation-engineer",
         "qa-engineer"
       ],
       "action": "create",
@@ -59,6 +69,8 @@
       "name": "cli-command-surface",
       "description": "Adding and testing a RepoSignal subcommand: register it in the one command registry that generates --help, dispatch and suggestions, honour the 0 success / 1 operational failure / 2 usage error contract with no stack trace, emit one fact per line with no credential material, support the flags the command's plan names, and prove reachability by spawning node src/cli.js rather than importing a module.",
       "consumers": [
+        "cli-engineer",
+        "documentation-engineer",
         "qa-engineer"
       ],
       "action": "create",
@@ -68,6 +80,7 @@
       "name": "accessible-server-rendered-views",
       "description": "Building RepoSignal's server-rendered pages, SVG chart and stylesheet to WCAG 2.1 AA: one escaping helper per context, the shared document shell, exactly one main landmark, a skip link first in the tab order, unbroken heading order, a data table paired with every figure, text-first states, and colour tokens declared once with contrast ratios computed by a test.",
       "consumers": [
+        "documentation-engineer",
         "qa-engineer"
       ],
       "action": "create",
@@ -76,18 +89,21 @@
     {
       "name": "documentation-contract-tests",
       "description": "Writing RepoSignal's public and operator documents so they stay true, with the test that fails when they drift: the README's command inventory against the registry, the documented dashboard claims against the server implementation, the report shape and state vocabulary against the formatter, the provenance and refusal claims against the backfill modules, the request budget against the collector, the storage side files against the home inventory, and no document stating a test result or approval that was not observed.",
-      "consumers": [],
+      "consumers": [
+        "documentation-engineer"
+      ],
       "action": "create",
-      "reason": "This is the largest repeated process in the canonical plan: 11 of the 18 implementation tasks are the same artefact - one document claim plus one contract test that fails when the claim drifts - spread across RS-STO-CONTRACT-01, RS-INS-CONTRACT-01, RS-SRV-CONTRACT-01, RS-VWS-CONTRACT-01, RS-COL-CONTRACT-01, RS-BKL-CONTRACT-01, RS-FND-CONTRACT-02, RS-GHC-CONTRACT-01, RS-SUP-CONTRACT-01, RS-TUI-07 and RS-OPS-POST-01. RS-C12 makes this a product constraint rather than a nicety, and the failure mode is specific and expensive: a runbook documenting a command that does not exist, or a README that quietly loses the statement that GitHub's aggregate traffic data may not be redistributed, with every other check still green. The procedure also outlives the code it describes, and the existing suites already show both shapes - tests/release-contract.test.js and tests/ci-contract.test.js, which fails when the release checklist misstates a human gate. No suitable package exists in this repository: it was deleted in 94b2047, so the action is create. consumers is empty because every one of those 11 tasks names documentation-engineer, which the adopted team does not contain; the package should be created once that ownership is repaired rather than attached to an agent that will not use it."
+      "reason": "This is the largest repeated process in the canonical plan: 11 of the 18 implementation tasks are the same artefact - one document claim plus one contract test that fails when the claim drifts - spread across RS-STO-CONTRACT-01, RS-INS-CONTRACT-01, RS-SRV-CONTRACT-01, RS-VWS-CONTRACT-01, RS-COL-CONTRACT-01, RS-BKL-CONTRACT-01, RS-FND-CONTRACT-02, RS-GHC-CONTRACT-01, RS-SUP-CONTRACT-01, RS-TUI-07 and RS-OPS-POST-01. RS-C12 makes this a product constraint rather than a nicety, and the failure mode is specific and expensive: a runbook documenting a command that does not exist, or a README that quietly loses the statement that GitHub's aggregate traffic data may not be redistributed, with every other check still green. The procedure also outlives the code it describes, and the existing suites already show both shapes - tests/release-contract.test.js and tests/ci-contract.test.js, which fails when the release checklist misstates a human gate. No suitable package exists in this repository: it was deleted in 94b2047, so the action is create. documentation-engineer is the one consumer because every one of those 11 tasks names it and that agent now exists under .opencode/agents, so the package has the owner it was written for; the empty consumers list was a placeholder for the repair that has now been made."
     },
     {
       "name": "interactive-terminal-setup",
       "description": "Building RepoSignal's interactive setup surface from node:readline and node:tty with no dependency: masked secret entry that restores the terminal in a finally block, numbered single choice, space-toggled multiple selection with all/none/invert, confirmation with an explicit default, streams passed as parameters so tests drive them, a --non-interactive escape hatch that prints the scriptable equivalent, and no partial file left by an interruption at any prompt.",
       "consumers": [
+        "cli-engineer",
         "qa-engineer"
       ],
       "action": "create",
-      "reason": "Feature 11 is the only unbuilt feature and the largest task cluster in the plan at 8 forge-task blocks, and its six implementation tasks all depend on rules that are easy to get wrong in ways no existing package covers: RS-TUI-C01 forbids an alternate screen, cursor addressing and any dependency, RS-TUI-C02 makes the masked field the only path for the token, RS-TUI-C04 makes an interrupted run write nothing partial, and RS-TUI-C05 makes colour decorative under NO_COLOR and a dumb terminal. Two failure modes are worth stating once because they are invisible in a passing run - a masked field that leaks on an echo-restore failure, and a prompt whose state is only visible in colour - and qa-engineer's RS-TUI-06 has to assert both from scripted standard input, plus that a non-terminal stdin exits 1 and names the command to run. No suitable package exists: the feature is new (PRD section 13 and feature 11 section 1 record status Not built) and no package of any kind covers an interactive terminal surface. qa-engineer is the only recorded consumer because the five build tasks name cli-engineer, which the adopted team does not contain."
+      "reason": "Feature 11 is the only unbuilt feature and the largest task cluster in the plan at 8 forge-task blocks, and its six implementation tasks all depend on rules that are easy to get wrong in ways no existing package covers: RS-TUI-C01 forbids an alternate screen, cursor addressing and any dependency, RS-TUI-C02 makes the masked field the only path for the token, RS-TUI-C04 makes an interrupted run write nothing partial, and RS-TUI-C05 makes colour decorative under NO_COLOR and a dumb terminal. Two failure modes are worth stating once because they are invisible in a passing run - a masked field that leaks on an echo-restore failure, and a prompt whose state is only visible in colour - and qa-engineer's RS-TUI-06 has to assert both from scripted standard input, plus that a non-terminal stdin exits 1 and names the command to run. No suitable package exists: the feature is new (PRD section 13 and feature 11 section 1 record status Not built) and no package of any kind covers an interactive terminal surface. cli-engineer is a consumer because the five build tasks name it and that agent now exists under .opencode/agents, and qa-engineer is a consumer because RS-TUI-06 names it; between them they own all six implementation tasks of this feature."
     },
     {
       "name": "human-review-gate-protocol",
