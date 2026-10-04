@@ -1,9 +1,9 @@
 # Project Progress
 
 ## Current State
-**Phase**: COLLECTION-SUPERVISION-AND-REPORT-1
+**Phase**: SETUP-TERMINAL-UI-1
 **Status**: In Progress
-**Last Updated**: 2026-10-04T19:02:04.379Z
+**Last Updated**: 2026-10-04T19:21:55.646Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -23,12 +23,14 @@
   - Files: tests/contract-backfill.test.js
 - [x] Phase COLLECTION-SUPERVISION-AND-REPORT-1, Task RS-SUP-CONTRACT-01: Assert the documented report shape and state vocabulary against the formatter and health read (@documentation-engineer)
   - Files: tests/contract-report.test.js
+- [x] Phase CHART-AND-INSIGHT-1, Task RS-INS-CONTRACT-01: Assert the thresholds in section 9 and the code's citations of this document (@documentation-engineer)
+  - Files: tests/contract-insight.test.js, docs/features/chart-and-insight.md
 
 ## Current Task
-- None currently running
+- [ ] Phase SETUP-TERMINAL-UI-1, Task RS-TUI-01: Build the line-oriented prompt primitives (@cli-engineer)
+  - Status: In progress
 
 ## Remaining
-- [ ] Phase CHART-AND-INSIGHT-1: Phase 1: Contract reconciliation
 - [ ] Phase DASHBOARD-SERVER-1: Phase 1: Contract reconciliation
 - [ ] Phase DASHBOARD-VIEWS-1: Phase 1: Contract reconciliation
 - [ ] Phase OPERATIONS-AND-POSTURE-1: Phase 1: Posture review

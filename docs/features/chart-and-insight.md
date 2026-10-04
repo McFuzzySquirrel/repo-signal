@@ -33,7 +33,8 @@ provenance boundary as a rule.
 **As-built status:** Built, covered by `tests/insight-deltas.test.js`,
 `tests/insight-divergence.test.js`, `tests/insight-changes.test.js`, `tests/line-chart.test.js` and
 the chart-pairing assertions in `tests/views/a11y.test.js`. The thresholds in section 9 are cited by
-the code itself, and nothing checks that the citation still resolves.
+the code itself, and `tests/contract-insight.test.js` checks that each citation still resolves to this
+section and that every number this section publishes is the one the module exporting it implements.
 
 ---
 
