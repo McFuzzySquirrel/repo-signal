@@ -65,7 +65,7 @@ and statistics endpoints.
 ```
 
 ```forge-requirement
-{"id":"RS-API-FR-04","kind":"requirement","text":"Provide a repository client for the repository record and its releases, a stargazer client that requests the star-timestamp media type and follows pages until the last page, and a statistics client for weekly participation and commit activity that surfaces 202 as a retryable outcome rather than as data."}
+{"id":"RS-API-FR-04","kind":"requirement","text":"Provide a repository client for the repository record and its releases, a star-history client that reads the weekly star history and follows pages until the last page, and a statistics client for weekly participation and commit activity that surfaces 202 as a retryable outcome rather than as data. The history is read rather than the stargazer listing because GitHub limited that listing to admins and collaborators in July 2026 while the history endpoint answers an ordinary token; the history carries per-day counts, so it reconstructs the same cumulative series without enumerating a single user."}
 ```
 
 ```forge-requirement
@@ -183,7 +183,7 @@ the run.
 {
   "id": "RS-API-04",
   "title": "Add the repository, stargazer and statistics clients",
-  "description": "Implement src/github/repo-client.js for the repository record and its releases, src/github/stars-client.js for the stargazer list requested with the star-timestamp media type, and src/github/stats-client.js for weekly participation and commit activity. The stargazer client must follow pages until the response advertises no next page and hand each page to a caller-supplied callback so a multi-thousand-star repository is never buffered whole. The statistics client must return a retryable outcome for 202 and data for 200, and must expose that a repository with no statistics yet is a normal state rather than an error. The tests cover pagination across three pages, the media type sent, the 202 then 200 sequence, and the field mapping of participation and commit activity.",
+  "description": "Implement src/github/repo-client.js for the repository record and its releases, src/github/stars-client.js for the weekly star history at /stargazers/history, and src/github/stats-client.js for weekly participation and commit activity. The star-history client must follow pages until the response advertises no next page and hand each page to a caller-supplied callback, must refuse a week whose total disagrees with the sum of its own days rather than reconciling it, and must report a series cut short by the vendor page cap as truncated rather than as a whole history. The statistics client must return a retryable outcome for 202 and data for 200, and must expose that a repository with no statistics yet is a normal state rather than an error. The tests cover pagination across three pages, the endpoint and page size requested, a refused week, a truncated series, the 202 then 200 sequence, and the field mapping of participation and commit activity.",
   "ownerAgent": "github-integration-engineer",
   "dependencies": ["RS-API-03"],
   "expectedOutputs": ["src/github/repo-client.js", "src/github/stars-client.js", "src/github/stats-client.js", "tests/repo-client.test.js", "tests/stars-client.test.js", "tests/stats-client.test.js"],
@@ -193,7 +193,7 @@ the run.
     "kind": "implementation",
     "requirements": [],
     "requirementRefs": ["docs/features/github-api-client.md#RS-API-FR-04", "docs/PRD.md#RS-VR-01"],
-    "acceptanceCriteria": ["The stargazer client requests the star-timestamp media type and the test asserts the header value", "A three-page stargazer listing is fully consumed and the test asserts the page numbers requested and the callback invocation count", "A 202 response from a statistics endpoint yields a retryable outcome and a following 200 yields parsed weekly data", "An empty participation response is reported as no statistics yet, not as an error", "The repository record maps stars, forks and watchers into plain fields with no interpretation"],
+    "acceptanceCriteria": ["The star-history client requests /repos/{owner}/{repo}/stargazers/history at the page size the vendor caps and the test asserts the URL", "A three-page star history is fully consumed and the test asserts the page numbers requested and the callback invocation count", "A week whose total disagrees with the sum of its own days is refused rather than reconciled, and a series past the vendor page cap is reported as truncated", "A 202 response from a statistics endpoint yields a retryable outcome and a following 200 yields parsed weekly data", "An empty participation response is reported as no statistics yet, not as an error", "The repository record maps stars, forks and watchers into plain fields with no interpretation"],
     "constraints": ["No writes, no repository mutation and no storage access in these modules", "Do not start a timer or scheduler in a client"],
     "constraintRefs": ["docs/features/github-api-client.md#RS-API-CON-01", "docs/PRD.md#RS-SC-04", "docs/PRD.md#RS-HO-01"],
     "references": ["docs/PRD.md#16. Open Questions"]
@@ -219,7 +219,7 @@ Key test scenarios:
 3. An exhausted rate-limit budget waits until the reset instant.
 4. A 202 retries for a statistics endpoint and does not retry for a traffic endpoint.
 5. A day breakdown longer than fourteen entries is rejected.
-6. A three-page stargazer listing is consumed without buffering.
+6. A three-page star history is consumed without buffering, and a malformed week is refused.
 7. A token-shaped value never appears in an error message.
 
 ---

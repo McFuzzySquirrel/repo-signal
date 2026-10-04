@@ -17,8 +17,8 @@
 | Value | Setting | Note |
 |-------|---------|------|
 | API version | `2026-03-10` | One exported constant; `2022-11-28` remains supported until 2028-03-10 |
-| Accept media type | `application/vnd.github+json` | Endpoint-specific for the stargazer list |
-| Stargazer media type | the documented star-timestamp type | Only this makes `starred_at` present |
+| Accept media type | `application/vnd.github+json` | The star history needs no endpoint-specific type |
+| Star history | `GET /repos/{owner}/{repo}/stargazers/history` | Not covered by the July 2026 admin-and-collaborator restriction that closed `/stargazers`; weeks are `{week, total, days[7]}` with `week` a UTC midnight |
 | Traffic window | 14 days, rolling | A longer breakdown is a contract misunderstanding |
 | Retryable | `429`, `5xx`, and `202` on statistics | Capped exponential backoff with jitter |
 | Fail fast | `401`, `403`, `404` | One attempt each, distinct typed kinds |

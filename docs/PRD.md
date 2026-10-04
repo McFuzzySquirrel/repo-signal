@@ -139,7 +139,7 @@ docs/reviews/                human review evidence files
 | `CredentialProvider` | `getToken(): Promise<string>`; the collector never learns where the token came from |
 | `GitHubClient` | `request(method, path, {accept, query, allowRetries})`; enforces host allowlist, sends `Accept`, `Authorization`, `X-GitHub-Api-Version`, `User-Agent` |
 | Traffic clients | `clones(repo, per)`, `views(repo, per)`, `referrers(repo)`, `popularPaths(repo)` returning normalized records with a UTC date |
-| Statistics clients | `participation(repo)`, `commitActivity(repo)`, `stargazerStars(repo, onPage)`; `202 Accepted` surfaces as a retryable outcome, not an error |
+| Statistics clients | `participation(repo)`, `commitActivity(repo)`, `starHistory(repo, onPage)`; `202 Accepted` surfaces as a retryable outcome, not an error |
 | `Database` | `migrate()`, repositories for day series, snapshots, repository state, runs, errors and heartbeat |
 | `collectRun(options)` | resolves enrollment, plans per-repository work, executes it, reports a run summary |
 | `healthForHome(home)` | per-repository collection status for the dashboard and the CLI |

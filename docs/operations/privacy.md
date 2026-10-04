@@ -48,11 +48,11 @@ The requests a collection run makes, per repository:
 | Traffic: referrers | a timestamped top-ten snapshot |
 | Traffic: popular paths | a timestamped top-ten snapshot |
 
-On a repository's first successful collection, two more kinds of request run once: the stargazer
-list with its star-timestamp media type, which reconstructs the star history, and the two
-statistics endpoints, which reconstruct a year of weekly development activity. After that, a
-steady-state run costs five requests per repository. The figures are the collector's own constants,
-and the count for a given run is printed on its `summary` line.
+On a repository's first successful collection, two more kinds of request run once: the weekly star
+history, which reconstructs the stars held before collection began, and the two statistics endpoints,
+which reconstruct a year of weekly development activity. After that, a steady-state run costs five
+requests per repository. The figures are the collector's own constants, and the count for a given run
+is printed on its `summary` line.
 
 Three things that request policy makes true rather than merely intended:
 

@@ -1,6 +1,6 @@
 ---
 name: github-rest-contract
-description: "The pinned GitHub REST contract RepoSignal depends on: the 2026-03-10 API version constant and its header set, the 14-day traffic window bound, 202 Accepted as retryable only for statistics endpoints, the stargazer star-timestamp media type with last-page pagination, the typed error taxonomy, and the vendor documentation pages that must be re-read rather than remembered. Use when writing or changing any code under src/github/, any test that mocks a GitHub response, or any claim about what an endpoint returns."
+description: "The pinned GitHub REST contract RepoSignal depends on: the 2026-03-10 API version constant and its header set, the 14-day traffic window bound, 202 Accepted as retryable only for statistics endpoints, the weekly star history at /stargazers/history with its last-page pagination and UTC-midnight week check, the typed error taxonomy, and the vendor documentation pages that must be re-read rather than remembered. Use when writing or changing any code under src/github/, any test that mocks a GitHub response, or any claim about what an endpoint returns."
 ---
 
 # Skill: GitHub REST Contract

@@ -106,7 +106,10 @@ A brand-new install has no history, because GitHub will not give it any. Some si
 cheaply reconstructable on first connect; others are gone before you can ask.
 
 **Backfilled on first connect:**
-- Full star history, via `Accept: application/vnd.github.star+json` (one paginated pass)
+- Full star history, via the weekly `/stargazers/history` feed (one paginated pass).
+  The per-star listing at `/stargazers` was the original route; GitHub limited it to
+  admins and collaborators in July 2026, and the weekly feed — which reports per-day
+  counts without naming a single user — was not part of that restriction
 - 52 weeks of commit and contributor activity, free from `/stats/participation` and
   `/stats/commit_activity`
 
