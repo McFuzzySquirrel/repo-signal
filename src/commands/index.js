@@ -12,6 +12,7 @@ import { dbBackup, dbMigrate, dbRestore, dbStatus, dbVerify } from './db.js';
 import { discover } from './discover.js';
 import { report } from './report.js';
 import { serve } from './serve.js';
+import { setup } from './setup.js';
 
 export const EXIT_SUCCESS = 0;
 export const EXIT_OPERATIONAL_FAILURE = 1;
@@ -223,4 +224,9 @@ registerCommand('serve', {
   summary: 'Start the read-only dashboard on 127.0.0.1 and print the URL it is listening on.',
   usage: '[--port 0]',
   run: serve,
+});
+registerCommand('setup', {
+  summary: 'Set up or change this home one question at a time, with the run actions behind the same visit.',
+  usage: '[--help] [--non-interactive]',
+  run: setup,
 });

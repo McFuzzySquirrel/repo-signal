@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current State
-**Phase**: SETUP-TERMINAL-UI-2
+**Phase**: SETUP-TERMINAL-UI-3
 **Status**: In Progress
-**Validation Gaps**: 1 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-04T21:17:49.478Z
+**Validation Gaps**: 3 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-04T21:43:10.652Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -40,13 +40,14 @@
   - Files: src/tui/config-manager.js, tests/tui-config-manager.test.js
 - [x] Phase SETUP-TERMINAL-UI-2, Task RS-TUI-05: Build the run-actions menu (@cli-engineer)
   - Files: src/tui/run-actions.js, tests/tui-run-actions.test.js
+- [x] Phase SETUP-TERMINAL-UI-3, Task RS-TUI-02: Register the setup command and mount the flow in the command registry (@cli-engineer)
+  - Files: src/commands/setup.js, src/commands/index.js, tests/tui-setup-command.test.js
 
 ## Current Task
 - None currently running
 
 ## Remaining
 - [ ] Phase OPERATIONS-AND-POSTURE-1: Phase 1: Posture review
-- [ ] Phase SETUP-TERMINAL-UI-3: Phase 3: Registration, mounting and composition root
 - [ ] Phase SETUP-TERMINAL-UI-4: Phase 4: Terminal accessibility, compatibility and documentation
 - [ ] Phase SETUP-TERMINAL-UI-5: Phase 5: Human review of the journey
 
@@ -55,6 +56,8 @@
 
 ## Validation Gaps
 - Task RS-TUI-03: Interruption was proven through the prompt primitives' cancellation path and end-of-input from a pipe; proving Ctrl-C against a real terminal needs a pty and belongs to RS-TUI-06
+- Task RS-TUI-02: Proving Ctrl-C against a real terminal needs a pty and belongs to RS-TUI-06; interruption was observed through q at the first three steps of a first run and through a cancelled or failed flow's own refusal
+- Task RS-TUI-02: A token's non-echo was asserted from the transcript and from the credential file's mode, not from a pty's terminal echo state
 
 ## Notes
 - Workflow engine run ea22c784-90f1-4926-bfdd-d267434d6e40
