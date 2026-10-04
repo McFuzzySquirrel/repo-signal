@@ -49,9 +49,42 @@
       "completedAt": "2026-10-04T15:31:28.150Z"
     },
     "skills": {
-      "status": "pending",
+      "status": "complete",
       "inputFingerprint": "fb98ff70b3317bfb26d9e25fe8610d83243d59ff874c6de64b250ed5b2b504f8",
-      "outputs": []
+      "outputs": [
+        ".opencode/skills/verification-loop/SKILL.md",
+        ".opencode/skills/honest-data-rendering/SKILL.md",
+        ".opencode/skills/token-and-egress-safety/SKILL.md",
+        ".opencode/skills/github-rest-contract/SKILL.md",
+        ".opencode/skills/archive-storage-discipline/SKILL.md",
+        ".opencode/skills/cli-command-surface/SKILL.md",
+        ".opencode/skills/accessible-server-rendered-views/SKILL.md",
+        ".opencode/skills/documentation-contract-tests/SKILL.md",
+        ".opencode/skills/interactive-terminal-setup/SKILL.md"
+      ],
+      "startedAt": "2026-10-04T16:09:27.283Z",
+      "invocation": {
+        "runner": "opencode",
+        "requestedModel": "opencode/space-bunny-free",
+        "source": "project",
+        "effectiveModel": "opencode/space-bunny-free",
+        "inventoryVerifiedAt": "2026-10-04T15:24:00.525Z",
+        "runnerSource": "project",
+        "argv": [
+          "run",
+          "--auto",
+          "--model",
+          "opencode/space-bunny-free",
+          "/forge-build-project-skills Consume docs/SKILL-CANDIDATES.json. Use .opencode/skills/ and .opencode/agents/. Create or extend only planned skills, reuse unchanged packages, honor omit decisions, and run structural and per-axis review gates. Do not regenerate the team, modify its ownership or handoff, compile a manifest, or start the build. Headless: proceed with authorized defaults."
+        ],
+        "skill": "forge-build-project-skills"
+      },
+      "outputFingerprint": "eb14a5447608e23417b137b61499bd7ebbadfd35732671cc98e1035649ec84ea",
+      "completedAt": "2026-10-04T16:25:26.977Z",
+      "reusedSkills": [
+        "forge-task-implementation"
+      ],
+      "noSkillsRequired": false
     }
   }
 }
