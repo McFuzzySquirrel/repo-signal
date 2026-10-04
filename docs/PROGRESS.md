@@ -4,7 +4,7 @@
 **Phase**: SETUP-TERMINAL-UI-2
 **Status**: In Progress
 **Validation Gaps**: 1 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-04T20:05:35.585Z
+**Last Updated**: 2026-10-04T20:39:44.093Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -32,9 +32,12 @@
   - Files: src/tui/prompts.js, tests/tui-prompts.test.js
 - [x] Phase SETUP-TERMINAL-UI-2, Task RS-TUI-03: Build the first-run setup flow (@cli-engineer)
   - Files: src/tui/setup-wizard.js, tests/tui-setup-wizard.test.js
+- [x] Phase SETUP-TERMINAL-UI-2, Task RS-TUI-04: Build the configuration manager (@cli-engineer)
+  - Files: src/tui/config-manager.js, tests/tui-config-manager.test.js
 
 ## Current Task
-- None currently running
+- [ ] Phase DASHBOARD-VIEWS-1, Task RS-VWS-CONTRACT-01: Assert the section 4 order, the citation of it, and the printed gap wording (@documentation-engineer)
+  - Status: In progress
 
 ## Remaining
 - [ ] Phase DASHBOARD-VIEWS-1: Phase 1: Contract reconciliation
