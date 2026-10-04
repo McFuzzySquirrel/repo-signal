@@ -3,8 +3,8 @@
 ## Current State
 **Phase**: SETUP-TERMINAL-UI-4
 **Status**: In Progress
-**Validation Gaps**: 5 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-04T22:04:13.883Z
+**Validation Gaps**: 7 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-04T22:12:36.343Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -42,16 +42,16 @@
   - Files: src/tui/run-actions.js, tests/tui-run-actions.test.js
 - [x] Phase SETUP-TERMINAL-UI-3, Task RS-TUI-02: Register the setup command and mount the flow in the command registry (@cli-engineer)
   - Files: src/commands/setup.js, src/commands/index.js, tests/tui-setup-command.test.js
+- [x] Phase SETUP-TERMINAL-UI-4, Task RS-TUI-06: Prove the surface is keyboard-only, colour-free, non-terminal safe and interruptible (@qa-engineer)
+  - Files: tests/tui-accessibility.test.js, tests/integration/tui-setup-e2e.test.js
 - [x] Phase SETUP-TERMINAL-UI-4, Task RS-TUI-07: Document the setup command and assert it is registered and documented (@documentation-engineer)
   - Files: README.md, docs/operations/scheduled-collection.md, tests/contract-setup-command.test.js
 
 ## Current Task
-- [ ] Phase SETUP-TERMINAL-UI-4, Task RS-TUI-06: Prove the surface is keyboard-only, colour-free, non-terminal safe and interruptible (@qa-engineer)
-  - Status: In progress
+- None currently running
 
 ## Remaining
 - [ ] Phase OPERATIONS-AND-POSTURE-1: Phase 1: Posture review
-- [ ] Phase SETUP-TERMINAL-UI-4: Phase 4: Terminal accessibility, compatibility and documentation
 - [ ] Phase SETUP-TERMINAL-UI-5: Phase 5: Human review of the journey
 
 ## Blockers
@@ -61,6 +61,8 @@
 - Task RS-TUI-03: Interruption was proven through the prompt primitives' cancellation path and end-of-input from a pipe; proving Ctrl-C against a real terminal needs a pty and belongs to RS-TUI-06
 - Task RS-TUI-02: Proving Ctrl-C against a real terminal needs a pty and belongs to RS-TUI-06; interruption was observed through q at the first three steps of a first run and through a cancelled or failed flow's own refusal
 - Task RS-TUI-02: A token's non-echo was asserted from the transcript and from the credential file's mode, not from a pty's terminal echo state
+- Task RS-TUI-06: A human at a real keyboard still has to confirm the journey (RS-TUI-REV-01); a green run here mocks the service and drives a pipe or a pty, and no suite of mine claims a review passed
+- Task RS-TUI-06: Ctrl-C is delivered as the byte a terminal's line discipline delivers in raw mode through script(1); no assertion covers a mouse, a terminal without readline's raw mode, or a window resize
 - Task RS-TUI-07: Masking is asserted from promptSecret muting the terminal, the wizard routing the value to the credential writer, and the token never being passed to an output function; proving the absence of characters on a real pty belongs to RS-TUI-06
 - Task RS-TUI-07: The suite drives --help, --non-interactive and a usage error through the real entry point; a complete first run against the loopback GitHub stub is the integration suite's job, so what a full visit writes is read from the wizard's own write call sites instead of observed end to end
 
