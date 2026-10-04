@@ -67,6 +67,36 @@ Three things that request policy makes true rather than merely intended:
 
 ---
 
+## Test-only transport variables
+
+Two environment variables change where the GitHub client points. Both exist
+for the automated test suite, and neither can widen the product to any real
+host beyond `api.github.com`:
+
+- `REPO_SIGNAL_GITHUB_BASE_URL` replaces the base URL the client uses for
+  every endpoint (read in `src/commands/collect.js` and
+  `src/commands/discover.js`). On its own it changes nothing about what the
+  transport will reach: a base URL that is not `https://api.github.com` and
+  not the explicitly gated loopback origin is refused on every request,
+  before any socket opens, in `src/github/http.js`. It therefore cannot
+  point a collection at another real host.
+- `REPO_SIGNAL_ALLOW_LOCAL_TRANSPORT`, when set to any value, opens the
+  allowlist to exactly one extra origin: a loopback base URL whose hostname
+  is `127.0.0.1`, and only so the test suite can drive a local stub. It
+  cannot enable any other host, and a non-loopback base URL is refused even
+  when it is set.
+
+Neither variable is read from `config.json` or settable through the
+configuration file; the only way to set them is the shell environment. The
+gate is evaluated on every request rather than at startup, so unsetting it
+restores the production allowlist immediately.
+
+Every request the client makes carries the API version header the project
+pins: `X-GitHub-Api-Version: 2026-03-10` (exported as `GITHUB_API_VERSION`
+from `src/github/http.js`).
+
+---
+
 ## What is never collected
 
 There is **no telemetry** in this product, and the list below is the whole of it:
@@ -206,6 +236,7 @@ node src/cli.js db verify
 | Claim | Enforced in |
 |-------|-------------|
 | The only permitted host is `api.github.com`; redirects are refused; requests are `GET` | `src/github/http.js`, checked on every request before a socket opens |
+| `REPO_SIGNAL_GITHUB_BASE_URL` and `REPO_SIGNAL_ALLOW_LOCAL_TRANSPORT` only redirect the client at a test stub; `api.github.com` stays the only reachable real host, and neither is settable from `config.json` | `src/github/http.js`, re-checked on every request |
 | The credential file must be mode `0600`, and the token is held privately behind `getToken()` | `src/credentials/store.js` |
 | Token-shaped values are removed from every error surface | `src/credentials/redact.js` |
 | One home directory, mode `0700`, no state outside it, refusal to run inside a work tree | `src/paths.js` |
