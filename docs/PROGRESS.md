@@ -3,7 +3,8 @@
 ## Current State
 **Phase**: SETUP-TERMINAL-UI-2
 **Status**: In Progress
-**Last Updated**: 2026-10-04T20:00:40.185Z
+**Validation Gaps**: 1 unverified check(s) - see "Validation Gaps"
+**Last Updated**: 2026-10-04T20:05:35.585Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -29,10 +30,11 @@
   - Files: tests/contract-server.test.js
 - [x] Phase SETUP-TERMINAL-UI-1, Task RS-TUI-01: Build the line-oriented prompt primitives (@cli-engineer)
   - Files: src/tui/prompts.js, tests/tui-prompts.test.js
+- [x] Phase SETUP-TERMINAL-UI-2, Task RS-TUI-03: Build the first-run setup flow (@cli-engineer)
+  - Files: src/tui/setup-wizard.js, tests/tui-setup-wizard.test.js
 
 ## Current Task
-- [ ] Phase SETUP-TERMINAL-UI-2, Task RS-TUI-03: Build the first-run setup flow (@cli-engineer)
-  - Status: In progress
+- None currently running
 
 ## Remaining
 - [ ] Phase DASHBOARD-VIEWS-1: Phase 1: Contract reconciliation
@@ -46,7 +48,7 @@
 - Parallel task execution requires a clean working tree, but these paths are uncommitted: .opencode/agents/cli-engineer.md, .opencode/agents/documentation-engineer.md. Task sandboxes start from the last commit, so uncommitted requirements would be invisible to the agents. Commit or stash them, or run with --concurrency 1.
 
 ## Validation Gaps
-- None reported
+- Task RS-TUI-03: Interruption was proven through the prompt primitives' cancellation path and end-of-input from a pipe; proving Ctrl-C against a real terminal needs a pty and belongs to RS-TUI-06
 
 ## Notes
 - Workflow engine run ea22c784-90f1-4926-bfdd-d267434d6e40
