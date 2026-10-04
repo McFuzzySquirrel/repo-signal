@@ -1,9 +1,9 @@
 # Project Progress
 
 ## Current State
-**Phase**: ENROLLMENT-AND-COLLECTION-1
+**Phase**: FIRST-CONNECT-BACKFILL-1
 **Status**: In Progress
-**Last Updated**: 2026-10-04T18:25:03.012Z
+**Last Updated**: 2026-10-04T18:42:51.115Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -19,12 +19,13 @@
   - Files: README.md, docs/operations/backup-and-migrate.md, tests/contract-storage.test.js
 - [x] Phase ENROLLMENT-AND-COLLECTION-1, Task RS-COL-CONTRACT-01: Assert the documented request budget and collection line vocabulary against the code (@documentation-engineer)
   - Files: tests/contract-collect.test.js, docs/operations/scheduled-collection.md
+- [x] Phase FIRST-CONNECT-BACKFILL-1, Task RS-BKL-CONTRACT-01: Assert the documented provenance and refusal claims against the modules that keep them (@documentation-engineer)
+  - Files: tests/contract-backfill.test.js
 
 ## Current Task
 - None currently running
 
 ## Remaining
-- [ ] Phase FIRST-CONNECT-BACKFILL-1: Phase 1: Contract reconciliation
 - [ ] Phase COLLECTION-SUPERVISION-AND-REPORT-1: Phase 1: Contract reconciliation
 - [ ] Phase CHART-AND-INSIGHT-1: Phase 1: Contract reconciliation
 - [ ] Phase DASHBOARD-SERVER-1: Phase 1: Contract reconciliation
