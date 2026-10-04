@@ -1,9 +1,9 @@
 # Project Progress
 
 ## Current State
-**Phase**: GITHUB-API-CLIENT-1
-**Status**: Failed
-**Last Updated**: 2026-10-04T17:48:45.873Z
+**Phase**: ARCHIVE-STORAGE-1
+**Status**: In Progress
+**Last Updated**: 2026-10-04T18:00:34.544Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -15,12 +15,13 @@
   - Files: README.md, tests/release-contract.test.js
 - [x] Phase GITHUB-API-CLIENT-1, Task RS-GHC-CONTRACT-01: Document the transport gate and its two environment variables, and assert the contract (@documentation-engineer)
   - Files: docs/operations/privacy.md, tests/contract-transport.test.js
+- [x] Phase ARCHIVE-STORAGE-1, Task RS-STO-CONTRACT-01: Document the write-ahead side files and assert the home inventory against the schema (@documentation-engineer)
+  - Files: README.md, docs/operations/backup-and-migrate.md, tests/contract-storage.test.js
 
 ## Current Task
 - None currently running
 
 ## Remaining
-- [ ] Phase ARCHIVE-STORAGE-1: Phase 1: Contract reconciliation
 - [ ] Phase ENROLLMENT-AND-COLLECTION-1: Phase 1: Contract reconciliation
 - [ ] Phase FIRST-CONNECT-BACKFILL-1: Phase 1: Contract reconciliation
 - [ ] Phase COLLECTION-SUPERVISION-AND-REPORT-1: Phase 1: Contract reconciliation

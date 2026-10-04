@@ -221,13 +221,24 @@ All durable state is in one home directory, resolved in this order:
 2. `XDG_DATA_HOME/repo-signal`
 3. `~/.local/share/repo-signal`
 
-The home is created with mode `0700` and holds three files:
+The home is created with mode `0700` and holds three files of its own, plus the two write-ahead
+side files the archive keeps beside itself while it is open:
 
 | File | What it is |
 |------|------------|
 | `config.json` | the repositories you enrolled, the optional deny list, the UTC collection hour and per-repository flags |
 | `credentials.json` | your token, read only at mode `0600` |
 | `archive.sqlite3` | the archive: every day-series fact, every snapshot capture, the run journal and the collection health evidence |
+| `archive.sqlite3-wal` | the archive's write-ahead log: the part of the archive not yet checkpointed into `archive.sqlite3`, present while the archive is open |
+| `archive.sqlite3-shm` | the shared-memory index that belongs to that log, present while the archive is open |
+
+**Those two side files belong to the open archive rather than to a separate copy.** They are not a
+second archive and not a backup: they hold the pages written since the last checkpoint, so an
+archive read without them is not the whole archive. That is why a copy is taken with
+`node src/cli.js db backup`, which folds them into one self-contained file, rather than by copying
+`archive.sqlite3` by hand. A clean shutdown folds the log back into the archive and takes both side
+files with it, and `node src/cli.js db restore` removes them, because it replaces the archive the
+log belonged to.
 
 **The archive lives at `archive.sqlite3` inside that home directory** and nowhere else - no state
 path outside the home exists, and the tool refuses to start when the resolved home is a git

@@ -20,13 +20,25 @@ All durable state is in one home directory, resolved in this order:
 2. `XDG_DATA_HOME/repo-signal`
 3. `~/.local/share/repo-signal`
 
-The home is created with mode `0700` and holds three files:
+The home is created with mode `0700` and holds three files of its own, plus the two write-ahead
+side files the archive keeps beside itself while it is open:
 
 | File | What it is |
 |------|------------|
 | `config.json` | the enrolled repository list, an optional deny list, an optional per-repository flag and the UTC collection hour |
 | `credentials.json` | the access token; the tool refuses to read it unless its mode is exactly `0600` |
 | `archive.sqlite3` | the archive: every day-series fact, snapshot entry and run journal row |
+| `archive.sqlite3-wal` | the archive's write-ahead log: the part of the archive not yet checkpointed into `archive.sqlite3`, present while the archive is open |
+| `archive.sqlite3-shm` | the shared-memory index that belongs to that log, present while the archive is open |
+
+**The two side files belong to the open archive, not to a separate copy.** They are not a backup and
+not a second archive: while the archive is open they hold the pages written since the last
+checkpoint, so a plain file copy of `archive.sqlite3` on its own can miss the most recent writes.
+A clean shutdown folds the log back into the archive and takes both side files with it. A restore
+removes them, because `node src/cli.js db restore` replaces the archive the log belonged to; the
+warning box below says so at the point where it matters. That is the whole reason a copy is taken
+through `db backup`, which folds the log into one self-contained file, and it is why you should not
+assemble a backup by copying files out of a home yourself.
 
 RepoSignal refuses to start when the resolved home is a git repository root, so the home
 must sit outside every work tree, including this repository's own checkout. `REPO_SIGNAL_HOME`
