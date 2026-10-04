@@ -2,8 +2,8 @@
 
 ## Current State
 **Phase**: GITHUB-API-CLIENT-1
-**Status**: In Progress
-**Last Updated**: 2026-10-04T17:47:34.331Z
+**Status**: Failed
+**Last Updated**: 2026-10-04T17:48:45.873Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -35,7 +35,7 @@
 - [ ] Phase SETUP-TERMINAL-UI-5: Phase 5: Human review of the journey
 
 ## Blockers
-- None
+- Parallel task execution requires a clean working tree, but these paths are uncommitted: .opencode/agents/cli-engineer.md, .opencode/agents/documentation-engineer.md. Task sandboxes start from the last commit, so uncommitted requirements would be invisible to the agents. Commit or stash them, or run with --concurrency 1.
 
 ## Validation Gaps
 - None reported
