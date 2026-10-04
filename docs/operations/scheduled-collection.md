@@ -47,6 +47,10 @@ repository, which is useful for a manual catch-up of a single repository.
 
 The only other RepoSignal commands this page needs are `config init` and `config check` (to create
 and validate a home) and the `db` commands (to check, migrate, verify and back up the archive).
+`node src/cli.js setup` will create and check that home for you one question at a time, and it can
+record the collection hour discussed below - but it installs no schedule, so a schedule entry is
+still something you write yourself; see
+[Before you install a schedule entry](#before-you-install-a-schedule-entry).
 
 ---
 
@@ -67,7 +71,11 @@ the interpreter and the checkout by absolute path.
 **Match the configured hour.** `collectionHourUtc` in `config.json` records the UTC hour you intend
 to collect in; the collector reads no clock to defer a run, so it is a statement of intent, not a
 scheduler. Choose the same hour in the schedule entry and in `config.json`, or one of the two will
-be a lie. The default is `0`, midnight UTC.
+be a lie. The default is `0`, midnight UTC. `node src/cli.js setup` will ask you for that hour and
+save it into `config.json` for you, and that is the whole of its relationship with scheduling:
+**the flow sets the hour and installs no schedule** - no crontab line, no launchd plist, no systemd
+unit, no timer of any kind - so the entries below are still yours to write and the operating system
+still owns the daily run.
 
 **Send the output somewhere durable.** A scheduler's own mail is not a log you can read next year.
 The entries below redirect to a file you choose, outside every work tree. The collector redacts
@@ -403,6 +411,7 @@ because a repository needs attention. Use it as a weekly digest rather than as a
 | `node src/cli.js collect --repo owner/name` | collect one enrolled repository |
 | `node src/cli.js config init` | create the configuration and credential templates |
 | `node src/cli.js config check` | validate them without printing the token |
+| `node src/cli.js setup` | ask the home the questions it needs, including the collection hour; installs no schedule |
 | `node src/cli.js db status` | read the database path and the schema versions |
 | `node src/cli.js db verify` | run SQLite's integrity check over the archive |
 | `node src/cli.js report` | print a written summary of what the archive holds |

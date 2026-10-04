@@ -133,6 +133,13 @@ node src/cli.js report
    are never mistaken for observed ones. It contacts no host, reads no credential, and exits `0`
    whenever it read the archive, so a scheduled run never fails because a repository needs attention.
 
+**Or let `setup` ask you.** `node src/cli.js setup` is the guided alternative to those six commands:
+it asks the same questions, runs the same command modules and writes the same files, so a first run
+does not need the list above memorised in order. It replaces nothing - every command in the list
+still works exactly as it is documented here, and the runbooks below still describe running them
+directly - and [Setup](#setup-the-guided-alternative-to-the-six-commands) says what it writes, how the
+token is entered and what to run on a machine with no keyboard.
+
 Editing the templates: `config.json` takes `enrolled` (the repositories you chose, as `owner/name`),
 an optional `denyList` that wins over enrollment, an optional `collectionHourUtc` recording the UTC
 hour you intend to collect in, and an optional per-repository `enabled` map. The `config init`
@@ -141,6 +148,71 @@ template carries whole-line `//` comments, and every command that reads `config.
 after a value and a trailing comma are refused everywhere. Leave the credential template's
 placeholder token in place until you have a real one - local validation is not authentication, and
 the placeholder is deliberately not a GitHub token.
+
+---
+
+## Setup: the guided alternative to the six commands
+
+```
+node src/cli.js setup
+```
+
+`setup` asks the questions the six commands above answer by hand, one line at a time. It is an
+alternative, not a replacement: every command in that list still works exactly as documented here,
+and nothing it does is a capability those commands do not already have - it runs those same command
+modules, so the request budget, the state words, the redaction and the exit codes are the ones the
+commands already have.
+
+**Which visit you get is decided by looking at the home, not by a flag.** A home with no
+configuration file gets the first-run flow; a home that already has one gets the returning visit,
+even when that file does not load, because a broken configuration is not a home nobody has set up
+and the first-run flow would refuse it before its first question anyway.
+
+**A first run writes two files in the home and nothing else.** It offers to write `config.json` and
+`credentials.json` through the same initialiser `config init` uses, at mode `0600`; it writes your
+token into `credentials.json` and into no other file; it writes the repositories you selected and the
+collection hour into `config.json` through the same schema and loader `config check` uses; and it
+writes nothing outside the home. It then runs the configuration check and offers a first collection
+that prints exactly what `collect` prints for that home. Nothing is written until the answer it
+belongs to is complete, so an interruption leaves no half-written file: each file lands whole or not
+at all, and a file that was already there is left exactly as it was.
+
+**It installs no timer and no schedule.** The collection hour it asks for is a number in
+`config.json`, recorded so a schedule entry can be made to match; the operating system still owns the
+daily run, and
+[docs/operations/scheduled-collection.md](docs/operations/scheduled-collection.md) is where you write
+one.
+
+**The token is entered masked and is never echoed.** The field writes nothing to the terminal while
+you type, so no character of the token appears on screen, in the transcript, in an error message or in
+a log line. It is stored only in `credentials.json` at mode `0600`, the same file and the same mode
+every other command reads it from. **No command takes a token on the command line**, so there is no
+command line that could leave one in your shell history.
+
+Two flags answer everything without asking, and both read no file and write none:
+
+```
+node src/cli.js setup --help
+node src/cli.js setup --non-interactive
+```
+
+- **`--help`** prints the steps of both visits and exits `0`.
+- **`--non-interactive`** prints the scriptable equivalent of every step - the command to run where a
+  question would have been asked - and exits `0`. That is the escape hatch for a machine with no
+  terminal to answer in, and it is how you read the whole flow as plain text before you start it.
+
+Every question is answered by typing the number that was printed; `q` cancels a step and Ctrl-C ends
+the visit. Every prompt, state and refusal is a word, never a colour or a symbol, so the transcript
+is the same under `NO_COLOR` and on a dumb terminal, and a standard input that is not a terminal and
+carries nothing at all is refused with exit `1` rather than hanging.
+
+The exit codes are the ones every command uses: `0` when the visit ended as asked, `1` when it was
+refused, cancelled or failed, and `2` when the command line was a usage error - `setup` accepts
+`--help` and `--non-interactive` and refuses any other argument.
+
+A returning visit opens a three-row menu: change what this install watches, run an action - `collect`
+now, `report` for one repository or for the install, `serve` to start the dashboard - or leave. One
+visit mounts one of those flows and ends when it returns.
 
 ---
 
@@ -187,9 +259,9 @@ state word and the next command.
 ## The registered commands
 
 Three of the registered commands are the runtime: `collect`, `serve` and `report`. The other
-eight - `config init`, `config check`, `discover`, `db migrate`, `db status`, `db verify`,
-`db backup` and `db restore` - are setup and maintenance, documented in the runbooks below.
-Every command the registry registers is listed here exactly once, with its role.
+nine - `setup`, `config init`, `config check`, `discover`, `db migrate`, `db status`, `db verify`,
+`db backup` and `db restore` - are setup and maintenance, documented above and in the runbooks
+below. Every command the registry registers is listed here exactly once, with its role.
 `node src/cli.js --help` is the authority on which of them your build registers; a build
 whose registry does not include `serve` has the collector without the dashboard, and every
 other instruction on this page still applies.
@@ -199,6 +271,7 @@ other instruction on this page still applies.
 | `node src/cli.js collect` | Reads every enrolled repository once and writes the observations into the archive. It runs once and exits; it embeds no timer and no scheduler. |
 | `node src/cli.js serve` | Starts the read-only dashboard on `127.0.0.1`, serving the archive as server-rendered HTML with no client-side JavaScript. |
 | `node src/cli.js report` | Prints a plain-text written summary of what the archive already holds, without contacting GitHub. |
+| `node src/cli.js setup` | Asks a home the questions the commands below answer, one line at a time: writes the two templates, takes the token in a masked field, selects repositories to enrol, and offers a first collection. |
 | `node src/cli.js config init` | Creates the private `config.json` and `credentials.json` templates in the home directory. |
 | `node src/cli.js config check` | Validates the local configuration and credentials without printing the token. |
 | `node src/cli.js discover` | Lists the repositories your token can reach and prints ready-to-paste configuration lines. |
