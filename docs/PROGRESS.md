@@ -4,7 +4,7 @@
 **Phase**: SETUP-TERMINAL-UI-2
 **Status**: In Progress
 **Validation Gaps**: 1 unverified check(s) - see "Validation Gaps"
-**Last Updated**: 2026-10-04T21:12:40.303Z
+**Last Updated**: 2026-10-04T21:17:49.478Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -38,14 +38,14 @@
   - Files: src/tui/setup-wizard.js, tests/tui-setup-wizard.test.js
 - [x] Phase SETUP-TERMINAL-UI-2, Task RS-TUI-04: Build the configuration manager (@cli-engineer)
   - Files: src/tui/config-manager.js, tests/tui-config-manager.test.js
+- [x] Phase SETUP-TERMINAL-UI-2, Task RS-TUI-05: Build the run-actions menu (@cli-engineer)
+  - Files: src/tui/run-actions.js, tests/tui-run-actions.test.js
 
 ## Current Task
-- [ ] Phase SETUP-TERMINAL-UI-2, Task RS-TUI-05: Build the run-actions menu (@cli-engineer)
-  - Status: In progress
+- None currently running
 
 ## Remaining
 - [ ] Phase OPERATIONS-AND-POSTURE-1: Phase 1: Posture review
-- [ ] Phase SETUP-TERMINAL-UI-2: Phase 2: First-run flow, configuration manager and run actions
 - [ ] Phase SETUP-TERMINAL-UI-3: Phase 3: Registration, mounting and composition root
 - [ ] Phase SETUP-TERMINAL-UI-4: Phase 4: Terminal accessibility, compatibility and documentation
 - [ ] Phase SETUP-TERMINAL-UI-5: Phase 5: Human review of the journey
