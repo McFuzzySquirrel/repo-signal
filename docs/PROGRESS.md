@@ -1,9 +1,9 @@
 # Project Progress
 
 ## Current State
-**Phase**: SETUP-TERMINAL-UI-1
+**Phase**: SETUP-TERMINAL-UI-2
 **Status**: In Progress
-**Last Updated**: 2026-10-04T19:32:43.950Z
+**Last Updated**: 2026-10-04T20:00:40.185Z
 **Run ID**: ea22c784-90f1-4926-bfdd-d267434d6e40
 **Harness**: opencode
 **Execution Mode**: auto
@@ -25,14 +25,16 @@
   - Files: tests/contract-report.test.js
 - [x] Phase CHART-AND-INSIGHT-1, Task RS-INS-CONTRACT-01: Assert the thresholds in section 9 and the code's citations of this document (@documentation-engineer)
   - Files: tests/contract-insight.test.js, docs/features/chart-and-insight.md
+- [x] Phase DASHBOARD-SERVER-1, Task RS-SRV-CONTRACT-01: Assert the documented dashboard claims against the server implementation (@documentation-engineer)
+  - Files: tests/contract-server.test.js
 - [x] Phase SETUP-TERMINAL-UI-1, Task RS-TUI-01: Build the line-oriented prompt primitives (@cli-engineer)
   - Files: src/tui/prompts.js, tests/tui-prompts.test.js
 
 ## Current Task
-- None currently running
+- [ ] Phase SETUP-TERMINAL-UI-2, Task RS-TUI-03: Build the first-run setup flow (@cli-engineer)
+  - Status: In progress
 
 ## Remaining
-- [ ] Phase DASHBOARD-SERVER-1: Phase 1: Contract reconciliation
 - [ ] Phase DASHBOARD-VIEWS-1: Phase 1: Contract reconciliation
 - [ ] Phase OPERATIONS-AND-POSTURE-1: Phase 1: Posture review
 - [ ] Phase SETUP-TERMINAL-UI-2: Phase 2: First-run flow, configuration manager and run actions
